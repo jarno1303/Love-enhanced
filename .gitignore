@@ -1,0 +1,48 @@
+# Tietokannat
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+
+# SQLite DB Pro
+*.sqbpro
+*.sqbpro2.sqbpro
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# Environment variables
+.env
+.env.local
+
+# Lokit
+logs/
+*.log
+
+# Word-dokumentit (valinnainen)
+*.docx
+*.doc
+
+# Tekstimuistiinpanot
+*.txt
+!requirements.txt
+!requirements_test.txt
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
