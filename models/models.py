@@ -14,7 +14,8 @@ class User(UserMixin):
     password: Optional[str] = None
     status: str = 'active'
     created_at: Optional[str] = None
-    
+    expires_at: Optional[datetime] = None # <-- KORJAUS TÄSSÄ
+
     def get_id(self):
         return str(self.id)
     
@@ -36,7 +37,7 @@ class Question:
     ease_factor: float = 2.5
     interval: int = 1
     hint_type: Optional[str] = None
-    created_at: Optional[str] = None    
+    created_at: Optional[str] = None
 
 @dataclass
 class QuestionAttempt:
