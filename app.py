@@ -1,10 +1,14 @@
 # app.py
 
-# AIVAN ENSIMMÄISENÄ: Lataa ympäristömuuttujat
+# ============================================================================
+# YMPÄRISTÖMUUTTUJIEN LATAUS - TÄYTYY OLLA ENSIMMÄISENÄ!
+# ============================================================================
 from dotenv import load_dotenv
 load_dotenv()
 
-# Standardikirjasto-importit
+# ============================================================================
+# STANDARDIKIRJASTO-IMPORTIT
+# ============================================================================
 import os
 import sqlite3
 import random
@@ -21,7 +25,9 @@ from logging.handlers import RotatingFileHandler
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-# Third-party kirjastot
+# ============================================================================
+# THIRD-PARTY KIRJASTOT
+# ============================================================================
 from flask import Flask, jsonify, render_template, request, redirect, url_for, flash
 from flask_bcrypt import Bcrypt
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
@@ -45,7 +51,9 @@ from docx import Document
 from docx.shared import Inches, Pt, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 
-# Omat moduulit
+# ============================================================================
+# OMAT MODUULIT
+# ============================================================================
 from data_access.database_manager import DatabaseManager
 from logic.stats_manager import EnhancedStatsManager
 from logic.achievement_manager import EnhancedAchievementManager, ENHANCED_ACHIEVEMENTS
@@ -53,13 +61,12 @@ from logic.spaced_repetition import SpacedRepetitionManager
 from models.models import User
 from constants import DISTRACTORS
 
-#==============================================================================
-# --- SOVELLUKSEN ALUSTUS ---
-#==============================================================================
-
+# ============================================================================
+# FLASK-SOVELLUKSEN ALUSTUS
+# ============================================================================
 app = Flask(__name__)
 
-# Vaadi SECRET_KEY ympäristömuuttujana tuotannossa
+# Hae SECRET_KEY ympäristömuuttujasta (PAKOLLINEN tuotannossa!)
 SECRET_KEY = os.environ.get('SECRET_KEY')
 if not SECRET_KEY:
     import sys
@@ -70,15 +77,19 @@ if not SECRET_KEY:
 
 app.config['SECRET_KEY'] = SECRET_KEY
 
-# Aseta DEBUG ympäristömuuttujasta
+# DEBUG-tila: päällä vain jos FLASK_ENV=development
 DEBUG_MODE = os.environ.get('FLASK_ENV') == 'development'
 app.config['DEBUG'] = DEBUG_MODE
 
+# ProxyFix: Korjaa X-Forwarded-* headerit (Railway, Heroku, ym.)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 
+# CSRF-suojaus
 csrf = CSRFProtect(app)
 
-# Luo logs-kansio jos ei ole olemassa
+# ============================================================================
+# LOKITUS
+# ============================================================================
 if not os.path.exists('logs'):
     os.mkdir('logs')
 
@@ -92,6 +103,9 @@ app.logger.addHandler(file_handler)
 app.logger.setLevel(logging.INFO)
 app.logger.info('LOVe Enhanced startup')
 
+# ============================================================================
+# RATE LIMITING
+# ============================================================================
 limiter = Limiter(
     get_remote_address,
     app=app,
@@ -99,19 +113,31 @@ limiter = Limiter(
     storage_uri="memory://"
 )
 
+# ============================================================================
+# TIETOKANTA JA MANAGERIT
+# ============================================================================
+# DatabaseManager havaitsee automaattisesti PostgreSQL (Railway) vs SQLite (local)
 db_manager = DatabaseManager()
 stats_manager = EnhancedStatsManager(db_manager)
 achievement_manager = EnhancedAchievementManager(db_manager)
 spaced_repetition_manager = SpacedRepetitionManager(db_manager)
 bcrypt = Bcrypt(app)
 
+# ============================================================================
+# TIETOKANNAN ALUSTUSTOIMINNOT
+# ============================================================================
+
 def init_distractor_table():
-    """Luo distractor_attempts taulu jos sitä ei ole."""
+    """
+    Luo distractor_attempts-taulu jos sitä ei vielä ole.
+    Toimii sekä PostgreSQL:n (Railway) että SQLite:n (local) kanssa.
+    """
     try:
         conn = db_manager.get_connection()
         cursor = conn.cursor()
         
         if db_manager.is_postgres:
+            # PostgreSQL-syntaksi (Railway)
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS distractor_attempts (
                     id SERIAL PRIMARY KEY,
@@ -126,6 +152,7 @@ def init_distractor_table():
                 )
             ''')
         else:
+            # SQLite-syntaksi (paikallinen kehitys)
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS distractor_attempts (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -139,46 +166,24 @@ def init_distractor_table():
                     FOREIGN KEY (user_id) REFERENCES users(id)
                 )
             ''')
+        
         conn.commit()
         cursor.close()
         conn.close()
+        
     except Exception as e:
         app.logger.error(f"Virhe häiriötekijätaulun luomisessa: {e}")
 
-def add_distractor_probability_column():
-    """POISTETTU - Ei tarvita enää."""
-    pass
-
-def add_distractor_probability_column():
-    try:
-        with sqlite3.connect(db_manager.db_path) as conn:
-            cursor = conn.execute("PRAGMA table_info(users)")
-            columns = [row[1] for row in cursor.fetchall()]
-            
-            if 'distractor_probability' not in columns:
-                conn.execute("ALTER TABLE users ADD COLUMN distractor_probability INTEGER DEFAULT 25")
-                conn.commit()
-                app.logger.info("Lisätty distractor_probability sarake")
-    except sqlite3.Error as e:
-        app.logger.error(f"Virhe sarakkeen lisäämisessä: {e}")
-
-def add_user_expiration_column():
-    try:
-        with sqlite3.connect(db_manager.db_path) as conn:
-            cursor = conn.execute("PRAGMA table_info(users)")
-            columns = [row[1] for row in cursor.fetchall()]
-            if 'expires_at' not in columns:
-                conn.execute("ALTER TABLE users ADD COLUMN expires_at TIMESTAMP")
-                conn.commit()
-                app.logger.info("Lisätty expires_at sarake users-tauluun.")
-    except sqlite3.Error as e:
-        app.logger.error(f"Virhe expires_at sarakkeen lisäämisessä: {e}")
-
+# Kutsu taulun luontifunktio sovelluksen käynnistyessä
 init_distractor_table()
-add_distractor_probability_column()
-add_user_expiration_column()
 
+# HUOM: Sarakkeiden lisäysfunktiot (add_distractor_probability_column ja 
+# add_user_expiration_column) on POISTETTU, koska DatabaseManager hoitaa 
+# migraatiot automaattisesti migrate_database() metodissa!
 
+# ============================================================================
+# FLASK-LOGIN SETUP
+# ============================================================================
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login_route'
@@ -187,46 +192,40 @@ login_manager.login_message_category = "info"
 
 @login_manager.user_loader
 def load_user(user_id):
+    """
+    Lataa käyttäjän tiedot tietokannasta.
+    Käyttää db_manager._execute() metodia joka toimii sekä PostgreSQL:n että SQLite:n kanssa.
+    """
     try:
-        with sqlite3.connect(db_manager.db_path) as conn:
-            conn.row_factory = sqlite3.Row
-            try:
-                user_data = conn.execute(
-                    "SELECT id, username, email, role, distractors_enabled, distractor_probability, expires_at FROM users WHERE id = ?",
-                    (user_id,)
-                ).fetchone()
-                
-                if user_data:
-                    return User(
-                        id=user_data['id'],
-                        username=user_data['username'],
-                        email=user_data['email'],
-                        role=user_data['role'],
-                        distractors_enabled=bool(user_data['distractors_enabled']),
-                        distractor_probability=user_data['distractor_probability'] or 25,
-                        expires_at=user_data['expires_at']
-                    )
-            except sqlite3.OperationalError:
-                user_data = conn.execute(
-                    "SELECT id, username, email, role FROM users WHERE id = ?",
-                    (user_id,)
-                ).fetchone()
-                
-                if user_data:
-                    return User(
-                        id=user_data['id'],
-                        username=user_data['username'],
-                        email=user_data['email'],
-                        role=user_data['role'],
-                        distractors_enabled=False,
-                        distractor_probability=25,
-                        expires_at=None
-                    )
-    except sqlite3.Error as e:
+        # Käytä db_manager:in _execute metodia (toimii sekä PostgreSQL että SQLite)
+        user_data = db_manager._execute(
+            "SELECT id, username, email, role, distractors_enabled, distractor_probability, expires_at FROM users WHERE id = ?",
+            (user_id,),
+            fetch='one'
+        )
+        
+        if user_data:
+            return User(
+                id=user_data['id'],
+                username=user_data['username'],
+                email=user_data['email'],
+                role=user_data['role'],
+                distractors_enabled=bool(user_data.get('distractors_enabled', False)),
+                distractor_probability=user_data.get('distractor_probability', 25),
+                expires_at=user_data.get('expires_at')
+            )
+            
+    except Exception as e:
         app.logger.error(f"Virhe käyttäjän lataamisessa: {e}")
+    
     return None
 
+# ============================================================================
+# APUFUNKTIOT
+# ============================================================================
+
 def admin_required(f):
+    """Dekoraattori joka vaatii admin-oikeudet."""
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated or current_user.role != 'admin':
@@ -236,7 +235,10 @@ def admin_required(f):
     return decorated_function
 
 def generate_secure_password(length=10):
-    """Luo turvallisen salasanan, joka täyttää vaatimukset."""
+    """
+    Luo turvallisen satunnaisen salasanan.
+    Sisältää: isoja kirjaimia, pieniä kirjaimia ja numeroita.
+    """
     if length < 8:
         length = 8
     
@@ -244,25 +246,25 @@ def generate_secure_password(length=10):
     isot = string.ascii_uppercase
     numerot = string.digits
     
-    # Varmista, että salasanassa on vähintään yksi merkki kustakin vaaditusta ryhmästä
+    # Varmista että salasanassa on vähintään yksi jokaisesta ryhmästä
     salasana = [
         random.choice(pienet),
         random.choice(isot),
         random.choice(numerot),
     ]
     
-    # Täytä loput salasanasta satunnaisilla merkeillä
+    # Täytä loput satunnaisilla merkeillä
     kaikki_merkit = pienet + isot + numerot
     for _ in range(length - len(salasana)):
         salasana.append(random.choice(kaikki_merkit))
     
+    # Sekoita järjestys
     random.shuffle(salasana)
     return "".join(salasana)
 
-
-#==============================================================================
-# --- SALASANAN PALAUTUS ---
-#==============================================================================
+# ============================================================================
+# SALASANAN PALAUTUS
+# ============================================================================
 
 def generate_reset_token(email):
     serializer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
