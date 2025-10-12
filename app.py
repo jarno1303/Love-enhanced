@@ -1256,39 +1256,9 @@ def logout_route():
 # --- SALASANAN PALAUTUS REITIT ---
 #==============================================================================
 
-@app.route("/forgot-password", methods=['GET', 'POST'])
-def forgot_password_route():
-    if request.method == 'POST':
-        email = request.form.get('email', '').strip()
-        
-        if not email:
-            flash('Sähköpostiosoite on pakollinen.', 'danger')
-            return render_template("forgot_password.html")
-        
-        try:
-            conn = db_manager.get_connection()
-            conn.row_factory = sqlite3.Row
-            user = conn.execute("SELECT id, username, email FROM users WHERE email = ?", (email,)).fetchone()
-        except Exception as e:
-            app.logger.error(f"Virhe käyttäjän haussa: {e}")
-            user = None
-        
-        if user:
-            token = generate_reset_token(email)
-            reset_url = url_for('reset_password_route', token=token, _external=True)
-            
-            if send_reset_email(email, reset_url):
-                flash('Salasanan palautuslinkki on lähetetty sähköpostiisi.', 'success')
-                app.logger.info(f"Password reset requested for: {email}")
-            else:
-                flash('Sähköpostin lähetys epäonnistui. Yritä myöhemmin uudelleen.', 'danger')
-        else:
-            flash('Jos sähköpostiosoite on rekisteröity, saat palautuslinkin sähköpostiisi.', 'info')
-            app.logger.warning(f"Password reset requested for non-existent email: {email}")
-        
-        return redirect(url_for('login_route'))
-    
-    return render_template("forgot_password.html")
+git add app.py
+git commit -m "Fix: Korjaa salasanan palautus PostgreSQL-yhteensopivaksi"
+git push
 
 @app.route("/reset-password/<token>", methods=['GET', 'POST'])
 def reset_password_route(token):
