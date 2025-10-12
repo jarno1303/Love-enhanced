@@ -1362,55 +1362,6 @@ def reset_password_route(token):
 # --- YLLÄPITÄJÄN REITIT ---
 #==============================================================================
 
-@app.route('/admin/create-test-users', methods=['POST'])
-@admin_required
-def admin_create_test_users_route():
-    """Luo määritetyn määrän testikäyttäjiä ja näyttää niiden tunnukset."""
-    try:
-        user_count = int(request.form.get('user_count', 0))
-        expiration_days = int(request.form.get('expiration_days', 30))
-
-        if not 1 <= user_count <= 200:
-            flash('Käyttäjien määrän tulee olla 1-200 välillä.', 'danger')
-            return redirect(url_for('admin_users_route'))
-        if not 1 <= expiration_days <= 365:
-            flash('Voimassaoloajan tulee olla 1-365 päivän välillä.', 'danger')
-            return redirect(url_for('admin_users_route'))
-
-    except (ValueError, TypeError):
-        flash('Virheellinen syöte. Anna numerot.', 'danger')
-        return redirect(url_for('admin_users_route'))
-
-    created_users = []
-    failed_users = []
-    expires_at = datetime.now() + timedelta(days=expiration_days)
-
-    start_index = db_manager.get_next_test_user_number()
-
-    for i in range(start_index, start_index + user_count):
-        username = f'testuser{i}'
-        email = f'test{i}@example.com'
-        password = generate_secure_password()
-        hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
-
-        success, error = db_manager.create_user(username, email, hashed_password, expires_at=expires_at)
-        
-        if success:
-            created_users.append({'username': username, 'password': password})
-        else:
-            failed_users.append(username)
-            app.logger.error(f"Testikäyttäjän {username} luonti epäonnistui: {error}")
-
-    if created_users:
-        flash(f'✅ Luotiin {len(created_users)} uutta testikäyttäjää!', 'success')
-        app.logger.info(f"Admin {current_user.username} created {len(created_users)} test users.")
-    
-    if failed_users:
-        flash(f"⚠️ {len(failed_users)} käyttäjän luonti epäonnistui (nimet olivat ehkä jo varattuja).", "warning")
-
-    return render_template('admin_show_created_users.html', created_users=created_users, expiration_days=expiration_days, expires_at=expires_at)
-
-
 @app.route("/admin/bulk_delete_duplicates", methods=['POST'])
 @admin_required
 def admin_bulk_delete_duplicates_route():
