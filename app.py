@@ -2457,6 +2457,88 @@ def emergency_reset_admin():
 # --- SOVELLUKSEN KÄYNNISTYS ---
 #==============================================================================
 
+@app.route('/init-database-now')
+def init_database_now():
+    """LUO KAIKKI TAULUT"""
+    try:
+        with sqlite3.connect(db_manager.db_path) as conn:
+            # Luo users-taulu
+            conn.execute('''
+                CREATE TABLE IF NOT EXISTS users (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    username TEXT UNIQUE NOT NULL,
+                    email TEXT UNIQUE NOT NULL,
+                    password TEXT NOT NULL,
+                    role TEXT DEFAULT 'user',
+                    status TEXT DEFAULT 'active',
+                    distractors_enabled INTEGER DEFAULT 0,
+                    distractor_probability INTEGER DEFAULT 25,
+                    last_practice_categories TEXT,
+                    last_practice_difficulties TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            conn.commit()
+        return "✅ Tietokannan taulut luotu onnistuneesti!"
+    except Exception as e:
+        return f"❌ Virhe taulujen luomisessa: {str(e)}"
+
+
+@app.route('/emergency-reset-admin')
+def emergency_reset_admin():
+    """VÄLIAIKAINEN: Resetoi admin-salasana"""
+    admin_username = "Jarno"
+    admin_email = "tehostettuaoppimista@gmail.com"
+    new_password = "TempPass123!"
+    
+    try:
+        # Luo taulut jos ei ole
+        with sqlite3.connect(db_manager.db_path) as conn:
+            conn.execute('''
+                CREATE TABLE IF NOT EXISTS users (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    username TEXT UNIQUE NOT NULL,
+                    email TEXT UNIQUE NOT NULL,
+                    password TEXT NOT NULL,
+                    role TEXT DEFAULT 'user',
+                    status TEXT DEFAULT 'active',
+                    distractors_enabled INTEGER DEFAULT 0,
+                    distractor_probability INTEGER DEFAULT 25,
+                    last_practice_categories TEXT,
+                    last_practice_difficulties TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            conn.commit()
+        
+        # Tarkista onko käyttäjä olemassa
+        with sqlite3.connect(db_manager.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            user = conn.execute("SELECT * FROM users WHERE username = ?", (admin_username,)).fetchone()
+            
+            hashed_pw = bcrypt.generate_password_hash(new_password).decode('utf-8')
+            
+            if user:
+                # Päivitä salasana
+                conn.execute("UPDATE users SET password = ? WHERE username = ?", (hashed_pw, admin_username))
+                conn.commit()
+                return f"✅ Admin-käyttäjän '{admin_username}' salasana vaihdettu!<br><br>Kirjaudu sisään salasanalla: <strong>{new_password}</strong><br><br><a href='/login'>Kirjaudu sisään</a>"
+            else:
+                # Luo uusi admin
+                conn.execute(
+                    "INSERT INTO users (username, email, password, role, status) VALUES (?, ?, ?, ?, ?)",
+                    (admin_username, admin_email, hashed_pw, 'admin', 'active')
+                )
+                conn.commit()
+                return f"✅ Uusi admin-käyttäjä '{admin_username}' luotu!<br><br>Sähköposti: {admin_email}<br>Salasana: <strong>{new_password}</strong><br><br><a href='/login'>Kirjaudu sisään</a>"
+                
+    except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
+        app.logger.error(f"Emergency reset error: {error_details}")
+        return f"❌ Virhe: {str(e)}<br><br><pre>{error_details}</pre>"
+
+
 if __name__ == '__main__':
     # Käytä ympäristömuuttujaa debug-tilalle
     DEBUG_MODE = os.environ.get('FLASK_ENV', 'production') == 'development'
