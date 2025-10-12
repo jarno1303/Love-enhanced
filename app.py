@@ -2406,20 +2406,56 @@ def ratelimit_error(error):
 # --- SOVELLUKSEN KÄYNNISTYS ---
 #==============================================================================
 
+@app.route('/init-database-now')
+def init_database_now():
+    """LUO KAIKKI TAULUT"""
+    try:
+        db.create_all()
+        return "✅ Tietokannan taulut luotu onnistuneesti!"
+    except Exception as e:
+        return f"❌ Virhe taulujen luomisessa: {str(e)}"
+
+
 @app.route('/emergency-reset-admin')
 def emergency_reset_admin():
     """VÄLIAIKAINEN: Resetoi admin-salasana"""
-    # VAIHDA tähän admin-käyttäjänimesi:
-    admin_username = "Jarno"  # TAI mikä se nyt on
-    new_password = "TempPass123!"  # Väliaikainen salasana
+    admin_username = "Jarno"
+    new_password = "TempPass123!"
     
-    user = User.query.filter_by(username=admin_username).first()
-    if user:
-        user.password = bcrypt.generate_password_hash(new_password).decode('utf-8')
-        db.session.commit()
-        return f"Admin-käyttäjän '{admin_username}' salasana vaihdettu! Kirjaudu sisään salasanalla: {new_password}"
-    else:
-        return f"Käyttäjää '{admin_username}' ei löytynyt!"
+    try:
+        # Varmista että taulut on luotu
+        db.create_all()
+        
+        # Hae käyttäjä
+        user = db.session.execute(
+            db.select(User).filter_by(username=admin_username)
+        ).scalar_one_or_none()
+        
+        if user:
+            # Päivitä salasana
+            user.password = bcrypt.generate_password_hash(new_password).decode('utf-8')
+            db.session.commit()
+            return f"✅ Admin-käyttäjän '{admin_username}' salasana vaihdettu!<br><br>Kirjaudu sisään salasanalla: <strong>{new_password}</strong><br><br><a href='/login'>Kirjaudu sisään</a>"
+        else:
+            # Luo uusi admin
+            hashed_pw = bcrypt.generate_password_hash(new_password).decode('utf-8')
+            new_admin = User(
+                username=admin_username,
+                email="tehostettuaoppimista@gmail.com",
+                password=hashed_pw,
+                role='admin'
+            )
+            db.session.add(new_admin)
+            db.session.commit()
+            return f"✅ Uusi admin-käyttäjä '{admin_username}' luotu!<br><br>Sähköposti: tehostettuaoppimista@gmail.com<br>Salasana: <strong>{new_password}</strong><br><br><a href='/login'>Kirjaudu sisään</a>"
+            
+    except Exception as e:
+        return f"❌ Virhe: {str(e)}<br><br>Tarkista Railway Logs lisätietoja varten."
+
+
+#==============================================================================
+# --- SOVELLUKSEN KÄYNNISTYS ---
+#==============================================================================
 
 if __name__ == '__main__':
     # Käytä ympäristömuuttujaa debug-tilalle
@@ -2428,10 +2464,10 @@ if __name__ == '__main__':
     print("Käynnistetään Flask-sovellus...")
     print(f"Ympäristö: {os.environ.get('FLASK_ENV', 'production')}")
     print(f"Debug-tila: {DEBUG_MODE}")
-    print(f"Tietokanta: {db_manager.db_path}")
+    print(f"Tietokanta: PostgreSQL (Railway)" if os.environ.get('DATABASE_URL') else "SQLite (Local)")
     
     app.run(
-        debug=DEBUG_MODE,  # ✅ Käyttää ympäristömuuttujaa
-        host='127.0.0.1',
-        port=5000
+        debug=DEBUG_MODE,
+        host='0.0.0.0',
+        port=int(os.environ.get('PORT', 5000))
     )
