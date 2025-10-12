@@ -1121,67 +1121,56 @@ def settings_route():
 @app.route("/login", methods=['GET', 'POST'])
 @limiter.limit("10 per minute")
 def login_route():
-    """Kirjautumissivu - KORJATTU PostgreSQL:lle"""
+    """Kirjautumissivu"""
     if current_user.is_authenticated:
         return redirect(url_for('dashboard_route'))
-    
+
     if request.method == 'POST':
         username = request.form.get('username', '').strip()
         password = request.form.get('password', '')
-        
+
         if not username or not password:
             flash('Syötä käyttäjänimi ja salasana.', 'danger')
             return render_template("login.html")
-        
+
         try:
-            # KORJATTU: Käytä db_manager._execute()
             user_data = db_manager._execute(
                 "SELECT * FROM users WHERE username = ?", 
                 (username,),
                 fetch='one'
             )
-            
-            if user_data:
-                # Tarkista käyttäjän voimassaolo
+
+            if user_data and bcrypt.check_password_hash(user_data['password'], password):
+                # Check if account is expired
                 if user_data.get('expires_at'):
-                    try:
-                        expires_at_str = user_data['expires_at']
-                        if isinstance(expires_at_str, str):
-                            expires_at = datetime.fromisoformat(expires_at_str.replace('Z', '+00:00'))
-                        else:
-                            expires_at = expires_at_str
-                            
-                        if datetime.now(expires_at.tzinfo if hasattr(expires_at, 'tzinfo') else None) > expires_at:
-                            flash('Käyttäjätilisi on vanhentunut. Ota yhteyttä ylläpitoon.', 'danger')
+                    expires_at = user_data['expires_at']
+                    # Psycopg2 returns datetime objects, handle them directly
+                    if isinstance(expires_at, datetime):
+                        # Make a naive datetime timezone-aware if needed for comparison
+                        now = datetime.now(expires_at.tzinfo)
+                        if now > expires_at:
+                            flash('Käyttäjätilisi on vanhentunut.', 'danger')
                             return render_template("login.html")
-                    except Exception as e:
-                        app.logger.error(f"Expire date parsing error: {e}")
-                
-                # Tarkista salasana
-                if bcrypt.check_password_hash(user_data['password'], password):
-                    user = User(
-                        id=user_data['id'],
-                        username=user_data['username'],
-                        email=user_data['email'],
-                        role=user_data['role'],
-                        distractors_enabled=bool(user_data.get('distractors_enabled', False)),
-                        distractor_probability=user_data.get('distractor_probability', 25),
-                        expires_at=user_data.get('expires_at')
-                    )
-                    login_user(user)
-                    app.logger.info(f"User {username} logged in successfully.")
-                    
-                    next_page = request.args.get('next')
-                    return redirect(next_page) if next_page else redirect(url_for('dashboard_route'))
-                else:
-                    flash('Virheellinen käyttäjänimi tai salasana.', 'danger')
+
+                user = User(
+                    id=user_data['id'],
+                    username=user_data['username'],
+                    email=user_data['email'],
+                    role=user_data['role'],
+                    expires_at=user_data.get('expires_at')
+                )
+                login_user(user)
+                app.logger.info(f"User {username} logged in successfully.")
+
+                next_page = request.args.get('next')
+                return redirect(next_page or url_for('dashboard_route'))
             else:
                 flash('Virheellinen käyttäjänimi tai salasana.', 'danger')
-                
+
         except Exception as e:
             app.logger.error(f"Login error: {e}")
-            flash('Kirjautumisessa tapahtui virhe. Yritä uudelleen.', 'danger')
-    
+            flash('Kirjautumisessa tapahtui odottamaton virhe.', 'danger')
+
     return render_template("login.html")
 
 @app.route("/register", methods=['GET', 'POST'])
@@ -1256,59 +1245,39 @@ def logout_route():
 # --- SALASANAN PALAUTUS REITIT ---
 #==============================================================================
 
-@app.route("/reset-password/<token>", methods=['GET', 'POST'])
-def reset_password_route(token):
-    email = verify_reset_token(token)
-    
-    if not email:
-        flash('Virheellinen tai vanhentunut palautuslinkki. Pyydä uusi linkki.', 'danger')
-        return redirect(url_for('forgot_password_route'))
-    
+@app.route("/forgot-password", methods=['GET', 'POST'])
+def forgot_password_route():
     if request.method == 'POST':
-        new_password = request.form.get('new_password', '')
-        confirm_password = request.form.get('confirm_password', '')
-        
-        if not new_password or not confirm_password:
-            flash('Molemmat kentät ovat pakollisia.', 'danger')
-            return render_template("reset_password.html", token=token, email=email)
-        
-        if new_password != confirm_password:
-            flash('Salasanat eivät täsmää.', 'danger')
-            return render_template("reset_password.html", token=token, email=email)
-        
-        if len(new_password) < 8:
-            flash('Salasanan tulee olla vähintään 8 merkkiä pitkä.', 'danger')
-            return render_template("reset_password.html", token=token, email=email)
-        
-        if not re.search(r'[A-Z]', new_password):
-            flash('Salasanan tulee sisältää vähintään yksi iso kirjain.', 'danger')
-            return render_template("reset_password.html", token=token, email=email)
-        
-        if not re.search(r'[a-z]', new_password):
-            flash('Salasanan tulee sisältää vähintään yksi pieni kirjain.', 'danger')
-            return render_template("reset_password.html", token=token, email=email)
-        
-        if not re.search(r'[0-9]', new_password):
-            flash('Salasanan tulee sisältää vähintään yksi numero.', 'danger')
-            return render_template("reset_password.html", token=token, email=email)
-        
+        email = request.form.get('email', '').strip()
+
+        if not email:
+            flash('Sähköpostiosoite on pakollinen.', 'danger')
+            return render_template("forgot_password.html")
+
         try:
-            hashed_password = bcrypt.generate_password_hash(new_password).decode('utf-8')
-            
-            conn = db_manager.get_connection()
-            conn.execute("UPDATE users SET password = ? WHERE email = ?", (hashed_password, email))
-            conn.commit()
-            
-            flash('Salasana vaihdettu onnistuneesti! Voit nyt kirjautua sisään.', 'success')
-            app.logger.info(f"Password reset successful for: {email}")
-            return redirect(url_for('login_route'))
-            
+            user = db_manager._execute(
+                "SELECT id, username, email FROM users WHERE email = ?", 
+                (email,), 
+                fetch='one'
+            )
         except Exception as e:
-            flash('Salasanan vaihto epäonnistui. Yritä uudelleen.', 'danger')
-            app.logger.error(f"Password reset error: {e}")
-            return render_template("reset_password.html", token=token, email=email)
-    
-    return render_template("reset_password.html", token=token, email=email)
+            app.logger.error(f"Error fetching user by email: {e}")
+            user = None
+
+        if user:
+            token = generate_reset_token(email)
+            reset_url = url_for('reset_password_route', token=token, _external=True)
+
+            if send_reset_email(email, reset_url):
+                flash('Salasanan palautuslinkki on lähetetty sähköpostiisi.', 'success')
+            else:
+                flash('Sähköpostin lähetys epäonnistui.', 'danger')
+        else:
+            flash('Jos sähköpostiosoite löytyy järjestelmästä, siihen on lähetetty palautuslinkki.', 'info')
+
+        return redirect(url_for('login_route'))
+
+    return render_template("forgot_password.html")
 
 #==============================================================================
 # --- YLLÄPITÄJÄN REITIT ---
