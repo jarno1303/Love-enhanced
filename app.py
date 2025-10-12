@@ -743,7 +743,7 @@ def delete_active_session_route():
         return jsonify({'success': True})
     else:
         app.logger.error(f"Virhe aktiivisen session poistossa käyttäjälle {current_user.id}: {error}")
-        return jsonify({'success': False, 'error': str(error)}), 500    
+        return jsonify({'success': False, 'error': str(error)}), 500   
 
 @app.route("/api/stats")
 @login_required
@@ -845,11 +845,9 @@ def terms_route():
 @login_required
 def dashboard_route():
     # Hae kaikki käyttäjän tilastot kerralla
-
     analytics = stats_manager.get_learning_analytics(current_user.id)
     
     # Etsi valmentajan valinta (heikoin kategoria)
-
     coach_pick = None
     weak_categories = [
         cat for cat in analytics.get('categories', []) 
@@ -859,7 +857,6 @@ def dashboard_route():
         coach_pick = min(weak_categories, key=lambda x: x['success_rate'])
 
     # Etsi vahvin kategoria
-
     strength_pick = None
     strong_categories = [
         cat for cat in analytics.get('categories', []) 
@@ -869,7 +866,6 @@ def dashboard_route():
         strength_pick = max(strong_categories, key=lambda x: x['success_rate'])
 
     # Hae virheiden määrä
-
     with sqlite3.connect(db_manager.db_path) as conn:
         mistake_count = conn.execute("""
             SELECT COUNT(DISTINCT question_id) FROM question_attempts 
@@ -877,7 +873,6 @@ def dashboard_route():
         """, (current_user.id,)).fetchone()[0]
 
     # Vanhat toiminnot säilyvät ennallaan
-
     user_data_row = db_manager.get_user_by_id(current_user.id)
     user_data = dict(user_data_row) if user_data_row else {}
     
@@ -942,12 +937,10 @@ def simulation_route():
     resume = request.args.get('resume', 'false').lower() == 'true'
     
     # Tarkista onko aktiivista sessiota
-
     active_session = db_manager.get_active_session(current_user.id)
     has_active = active_session is not None and active_session.get('session_type') == 'simulation'
     
     # Jos pyydetään jatkamaan JA on aktiivinen sessio
-
     if resume and has_active:
         app.logger.info(f"Jatketaan simulaatiota käyttäjälle {current_user.username}")
         
@@ -968,8 +961,8 @@ def simulation_route():
                 active_session['answers'] = answers
             
             app.logger.info(f"Session ladattu: index={active_session['current_index']}, "
-                          f"time={active_session['time_remaining']}s, "
-                          f"answered={len([a for a in answers if a is not None])}/{len(question_ids)}")
+                              f"time={active_session['time_remaining']}s, "
+                              f"answered={len([a for a in answers if a is not None])}/{len(question_ids)}")
             
         except (json.JSONDecodeError, KeyError, TypeError) as e:
             app.logger.error(f"Virhe session datan parsinnassa: {e}")
@@ -986,12 +979,11 @@ def simulation_route():
         
         questions_data = [asdict(q) for q in questions]
         return render_template("simulation.html", 
-                             session_data=active_session, 
-                             questions_data=questions_data,
-                             has_existing_session=False)
+                               session_data=active_session, 
+                               questions_data=questions_data,
+                               has_existing_session=False)
     
     # Jos on aktiivinen sessio MUTTA ei pyydetty jatkamaan eikä pakoteta uutta
-
     elif has_active and not force_new:
         
         try:
@@ -1015,10 +1007,10 @@ def simulation_route():
             }
             
             return render_template("simulation.html",
-                                 session_data={},
-                                 questions_data=[],
-                                 has_existing_session=True,
-                                 session_info=session_info)
+                                   session_data={},
+                                   questions_data=[],
+                                   has_existing_session=True,
+                                   session_info=session_info)
         except Exception as e:
             app.logger.error(f"Virhe session infon parsinnassa: {e}")
             # Jos virhe, poista viallinen sessio ja jatka normaalisti uuteen
@@ -1061,9 +1053,9 @@ def simulation_route():
     app.logger.info(f"Uusi simulaatio luotu: {len(questions)} kysymystä")
     
     return render_template("simulation.html", 
-                         session_data=new_session, 
-                         questions_data=questions_data,
-                         has_existing_session=False)
+                           session_data=new_session, 
+                           questions_data=questions_data,
+                           has_existing_session=False)
 
 @app.route("/profile")
 @login_required
@@ -1602,13 +1594,13 @@ def admin_route():
             difficulties = [row[0] for row in conn.execute("SELECT DISTINCT difficulty FROM questions ORDER BY difficulty").fetchall()]
             
             return render_template("admin.html", 
-                                 questions=[dict(row) for row in questions],
-                                 categories=categories,
-                                 difficulties=difficulties,
-                                 search_query=search_query,
-                                 category_filter=category_filter,
-                                 difficulty_filter=difficulty_filter,
-                                 total_count=len(questions))
+                                   questions=[dict(row) for row in questions],
+                                   categories=categories,
+                                   difficulties=difficulties,
+                                   search_query=search_query,
+                                   category_filter=category_filter,
+                                   difficulty_filter=difficulty_filter,
+                                   total_count=len(questions))
     except sqlite3.Error as e:
         flash(f'Virhe kysymysten haussa: {e}', 'danger')
         app.logger.error(f"Admin questions fetch error: {e}")
@@ -1653,8 +1645,8 @@ def admin_stats_route():
             ''').fetchall()
             
             return render_template("admin_stats.html",
-                                 general_stats=dict(general_stats),
-                                 category_stats=[dict(row) for row in category_stats])
+                                   general_stats=dict(general_stats),
+                                   category_stats=[dict(row) for row in category_stats])
     except sqlite3.Error as e:
         flash(f'Virhe tilastojen haussa: {e}', 'danger')
         app.logger.error(f"Admin stats fetch error: {e}")
@@ -1898,8 +1890,8 @@ def admin_export_questions_document_route():
             total_questions = conn.execute("SELECT COUNT(*) FROM questions").fetchone()[0]
             
         return render_template('admin_export_document.html', 
-                             categories=categories,
-                             total_questions=total_questions)
+                               categories=categories,
+                               total_questions=total_questions)
     except Exception as e:
         flash(f'Virhe sivun lataamisessa: {str(e)}', 'danger')
         app.logger.error(f"Export page load error: {e}")
@@ -1910,10 +1902,10 @@ def create_pdf_document(questions, include_answers, duplicate_info=None):
     """Luo ammattimaisen PDF-dokumentin kysymyksistä."""
     buffer = BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4, 
-                           topMargin=0.75*inch, 
-                           bottomMargin=0.75*inch,
-                           leftMargin=0.75*inch,
-                           rightMargin=0.75*inch)
+                            topMargin=0.75*inch, 
+                            bottomMargin=0.75*inch,
+                            leftMargin=0.75*inch,
+                            rightMargin=0.75*inch)
     
     # Tyylit
     styles = getSampleStyleSheet()
@@ -1993,7 +1985,7 @@ def create_pdf_document(questions, include_answers, duplicate_info=None):
     
     if duplicate_info:
         warning_style = ParagraphStyle('Warning', parent=styles['Normal'], fontSize=10, 
-                                      textColor=colors.HexColor('#F59E0B'))
+                                       textColor=colors.HexColor('#F59E0B'))
         story.append(Paragraph(duplicate_info, warning_style))
     
     story.append(Spacer(1, 0.3*inch))
@@ -2401,57 +2393,6 @@ def ratelimit_error(error):
         'error': 'Liikaa pyyntöjä. Odota hetki ja yritä uudelleen.',
         'retry_after': error.description
     }), 429
-
-#==============================================================================
-# --- SOVELLUKSEN KÄYNNISTYS ---
-#==============================================================================
-
-@app.route('/init-database-now')
-def init_database_now():
-    """LUO KAIKKI TAULUT"""
-    try:
-        db.create_all()
-        return "✅ Tietokannan taulut luotu onnistuneesti!"
-    except Exception as e:
-        return f"❌ Virhe taulujen luomisessa: {str(e)}"
-
-
-@app.route('/emergency-reset-admin')
-def emergency_reset_admin():
-    """VÄLIAIKAINEN: Resetoi admin-salasana"""
-    admin_username = "Jarno"
-    new_password = "TempPass123!"
-    
-    try:
-        # Varmista että taulut on luotu
-        db.create_all()
-        
-        # Hae käyttäjä
-        user = db.session.execute(
-            db.select(User).filter_by(username=admin_username)
-        ).scalar_one_or_none()
-        
-        if user:
-            # Päivitä salasana
-            user.password = bcrypt.generate_password_hash(new_password).decode('utf-8')
-            db.session.commit()
-            return f"✅ Admin-käyttäjän '{admin_username}' salasana vaihdettu!<br><br>Kirjaudu sisään salasanalla: <strong>{new_password}</strong><br><br><a href='/login'>Kirjaudu sisään</a>"
-        else:
-            # Luo uusi admin
-            hashed_pw = bcrypt.generate_password_hash(new_password).decode('utf-8')
-            new_admin = User(
-                username=admin_username,
-                email="tehostettuaoppimista@gmail.com",
-                password=hashed_pw,
-                role='admin'
-            )
-            db.session.add(new_admin)
-            db.session.commit()
-            return f"✅ Uusi admin-käyttäjä '{admin_username}' luotu!<br><br>Sähköposti: tehostettuaoppimista@gmail.com<br>Salasana: <strong>{new_password}</strong><br><br><a href='/login'>Kirjaudu sisään</a>"
-            
-    except Exception as e:
-        return f"❌ Virhe: {str(e)}<br><br>Tarkista Railway Logs lisätietoja varten."
-
 
 #==============================================================================
 # --- SOVELLUKSEN KÄYNNISTYS ---
