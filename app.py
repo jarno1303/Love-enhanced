@@ -2406,6 +2406,21 @@ def ratelimit_error(error):
 # --- SOVELLUKSEN KÄYNNISTYS ---
 #==============================================================================
 
+@app.route('/emergency-reset-admin')
+def emergency_reset_admin():
+    """VÄLIAIKAINEN: Resetoi admin-salasana"""
+    # VAIHDA tähän admin-käyttäjänimesi:
+    admin_username = "Jarno"  # TAI mikä se nyt on
+    new_password = "TempPass123!"  # Väliaikainen salasana
+    
+    user = User.query.filter_by(username=admin_username).first()
+    if user:
+        user.password = bcrypt.generate_password_hash(new_password).decode('utf-8')
+        db.session.commit()
+        return f"Admin-käyttäjän '{admin_username}' salasana vaihdettu! Kirjaudu sisään salasanalla: {new_password}"
+    else:
+        return f"Käyttäjää '{admin_username}' ei löytynyt!"
+
 if __name__ == '__main__':
     # Käytä ympäristömuuttujaa debug-tilalle
     DEBUG_MODE = os.environ.get('FLASK_ENV', 'production') == 'development'
