@@ -106,9 +106,27 @@ spaced_repetition_manager = SpacedRepetitionManager(db_manager)
 bcrypt = Bcrypt(app)
 
 def init_distractor_table():
+    """Luo distractor_attempts taulu jos sitä ei ole."""
     try:
-        with sqlite3.connect(db_manager.db_path) as conn:
-            conn.execute('''
+        conn = db_manager.get_connection()
+        cursor = conn.cursor()
+        
+        if db_manager.is_postgres:
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS distractor_attempts (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER NOT NULL,
+                    distractor_scenario TEXT NOT NULL,
+                    user_choice INTEGER NOT NULL,
+                    correct_choice INTEGER NOT NULL,
+                    is_correct BOOLEAN NOT NULL,
+                    response_time INTEGER,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id)
+                )
+            ''')
+        else:
+            cursor.execute('''
                 CREATE TABLE IF NOT EXISTS distractor_attempts (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     user_id INTEGER NOT NULL,
@@ -121,9 +139,15 @@ def init_distractor_table():
                     FOREIGN KEY (user_id) REFERENCES users(id)
                 )
             ''')
-            conn.commit()
-    except sqlite3.Error as e:
+        conn.commit()
+        cursor.close()
+        conn.close()
+    except Exception as e:
         app.logger.error(f"Virhe häiriötekijätaulun luomisessa: {e}")
+
+def add_distractor_probability_column():
+    """POISTETTU - Ei tarvita enää."""
+    pass
 
 def add_distractor_probability_column():
     try:
@@ -2497,14 +2521,14 @@ def init_database_now():
 
 @app.route('/emergency-reset-admin')
 def emergency_reset_admin():
-    """VÄLIAIKAINEN: Resetoi admin-salasana"""
+    """VÄLIAIKAINEN: Luo taulut JA resetoi admin-salasana"""
     admin_username = "Jarno"
     admin_email = "tehostettuaoppimista@gmail.com"
     new_password = "TempPass123!"
     
     try:
-        # Luo taulut jos ei ole
         with sqlite3.connect(db_manager.db_path) as conn:
+            # Luo users-taulu
             conn.execute('''
                 CREATE TABLE IF NOT EXISTS users (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -2517,10 +2541,95 @@ def emergency_reset_admin():
                     distractor_probability INTEGER DEFAULT 25,
                     last_practice_categories TEXT,
                     last_practice_difficulties TEXT,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    expires_at TIMESTAMP
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             ''')
+            
+            # Luo distractor_attempts taulu
+            conn.execute('''
+                CREATE TABLE IF NOT EXISTS distractor_attempts (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    distractor_scenario TEXT NOT NULL,
+                    user_choice INTEGER NOT NULL,
+                    correct_choice INTEGER NOT NULL,
+                    is_correct BOOLEAN NOT NULL,
+                    response_time INTEGER,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id)
+                )
+            ''')
+            
+            # Luo questions taulu
+            conn.execute('''
+                CREATE TABLE IF NOT EXISTS questions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    question TEXT NOT NULL,
+                    question_normalized TEXT,
+                    options TEXT NOT NULL,
+                    correct INTEGER NOT NULL,
+                    explanation TEXT,
+                    category TEXT,
+                    difficulty TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            
+            # Luo user_question_progress taulu
+            conn.execute('''
+                CREATE TABLE IF NOT EXISTS user_question_progress (
+                    user_id INTEGER NOT NULL,
+                    question_id INTEGER NOT NULL,
+                    times_shown INTEGER DEFAULT 0,
+                    times_correct INTEGER DEFAULT 0,
+                    last_shown TIMESTAMP,
+                    interval INTEGER DEFAULT 1,
+                    ease_factor REAL DEFAULT 2.5,
+                    PRIMARY KEY (user_id, question_id),
+                    FOREIGN KEY (user_id) REFERENCES users(id),
+                    FOREIGN KEY (question_id) REFERENCES questions(id)
+                )
+            ''')
+            
+            # Luo question_attempts taulu
+            conn.execute('''
+                CREATE TABLE IF NOT EXISTS question_attempts (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    question_id INTEGER NOT NULL,
+                    correct INTEGER NOT NULL,
+                    time_taken INTEGER,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id),
+                    FOREIGN KEY (question_id) REFERENCES questions(id)
+                )
+            ''')
+            
+            # Luo achievements taulu
+            conn.execute('''
+                CREATE TABLE IF NOT EXISTS achievements (
+                    user_id INTEGER NOT NULL,
+                    achievement_id TEXT NOT NULL,
+                    unlocked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY (user_id, achievement_id),
+                    FOREIGN KEY (user_id) REFERENCES users(id)
+                )
+            ''')
+            
+            # Luo active_sessions taulu
+            conn.execute('''
+                CREATE TABLE IF NOT EXISTS active_sessions (
+                    user_id INTEGER PRIMARY KEY,
+                    session_type TEXT NOT NULL,
+                    question_ids TEXT NOT NULL,
+                    answers TEXT NOT NULL,
+                    current_index INTEGER DEFAULT 0,
+                    time_remaining INTEGER,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id)
+                )
+            ''')
+            
             conn.commit()
         
         # Tarkista onko käyttäjä olemassa
@@ -2534,7 +2643,15 @@ def emergency_reset_admin():
                 # Päivitä salasana
                 conn.execute("UPDATE users SET password = ? WHERE username = ?", (hashed_pw, admin_username))
                 conn.commit()
-                return f"✅ Admin-käyttäjän '{admin_username}' salasana vaihdettu!<br><br>Kirjaudu sisään salasanalla: <strong>{new_password}</strong><br><br><a href='/login'>Kirjaudu sisään</a>"
+                return f"""
+                ✅ <strong>TIETOKANTA ALUSTETTU!</strong><br><br>
+                ✅ Admin-käyttäjän '{admin_username}' salasana vaihdettu!<br><br>
+                📊 Luotiin taulut: users, questions, distractor_attempts, user_question_progress, question_attempts, achievements, active_sessions<br><br>
+                <strong>Kirjaudu sisään:</strong><br>
+                Käyttäjänimi: <strong>{admin_username}</strong><br>
+                Salasana: <strong>{new_password}</strong><br><br>
+                <a href='/login' style='background:#5A67D8;color:white;padding:10px 20px;text-decoration:none;border-radius:5px;display:inline-block;'>Kirjaudu sisään</a>
+                """
             else:
                 # Luo uusi admin
                 conn.execute(
@@ -2542,23 +2659,22 @@ def emergency_reset_admin():
                     (admin_username, admin_email, hashed_pw, 'admin', 'active')
                 )
                 conn.commit()
-                return f"✅ Uusi admin-käyttäjä '{admin_username}' luotu!<br><br>Sähköposti: {admin_email}<br>Salasana: <strong>{new_password}</strong><br><br><a href='/login'>Kirjaudu sisään</a>"
+                return f"""
+                ✅ <strong>TIETOKANTA ALUSTETTU!</strong><br><br>
+                ✅ Uusi admin-käyttäjä '{admin_username}' luotu!<br><br>
+                📊 Luotiin taulut: users, questions, distractor_attempts, user_question_progress, question_attempts, achievements, active_sessions<br><br>
+                <strong>Kirjautumistiedot:</strong><br>
+                Käyttäjänimi: <strong>{admin_username}</strong><br>
+                Sähköposti: <strong>{admin_email}</strong><br>
+                Salasana: <strong>{new_password}</strong><br><br>
+                <a href='/login' style='background:#5A67D8;color:white;padding:10px 20px;text-decoration:none;border-radius:5px;display:inline-block;'>Kirjaudu sisään</a>
+                """
                 
     except Exception as e:
         import traceback
         error_details = traceback.format_exc()
         app.logger.error(f"Emergency reset error: {error_details}")
         return f"❌ Virhe: {str(e)}<br><br><pre>{error_details}</pre>"
-
-
-if __name__ == '__main__':
-    # Käytä ympäristömuuttujaa debug-tilalle
-    DEBUG_MODE = os.environ.get('FLASK_ENV', 'production') == 'development'
-    
-    print("Käynnistetään Flask-sovellus...")
-    print(f"Ympäristö: {os.environ.get('FLASK_ENV', 'production')}")
-    print(f"Debug-tila: {DEBUG_MODE}")
-    print(f"Tietokanta: PostgreSQL (Railway)" if os.environ.get('DATABASE_URL') else "SQLite (Local)")
     
     app.run(
         debug=DEBUG_MODE,
