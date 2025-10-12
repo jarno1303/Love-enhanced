@@ -12,8 +12,9 @@ import json
 import re
 import smtplib
 import logging
+import string
 from dataclasses import asdict
-from datetime import datetime
+from datetime import datetime, timedelta
 from functools import wraps
 from io import BytesIO
 from logging.handlers import RotatingFileHandler
@@ -137,8 +138,22 @@ def add_distractor_probability_column():
     except sqlite3.Error as e:
         app.logger.error(f"Virhe sarakkeen lisäämisessä: {e}")
 
+def add_user_expiration_column():
+    try:
+        with sqlite3.connect(db_manager.db_path) as conn:
+            cursor = conn.execute("PRAGMA table_info(users)")
+            columns = [row[1] for row in cursor.fetchall()]
+            if 'expires_at' not in columns:
+                conn.execute("ALTER TABLE users ADD COLUMN expires_at TIMESTAMP")
+                conn.commit()
+                app.logger.info("Lisätty expires_at sarake users-tauluun.")
+    except sqlite3.Error as e:
+        app.logger.error(f"Virhe expires_at sarakkeen lisäämisessä: {e}")
+
 init_distractor_table()
 add_distractor_probability_column()
+add_user_expiration_column()
+
 
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -153,7 +168,7 @@ def load_user(user_id):
             conn.row_factory = sqlite3.Row
             try:
                 user_data = conn.execute(
-                    "SELECT id, username, email, role, distractors_enabled, distractor_probability FROM users WHERE id = ?",
+                    "SELECT id, username, email, role, distractors_enabled, distractor_probability, expires_at FROM users WHERE id = ?",
                     (user_id,)
                 ).fetchone()
                 
@@ -164,7 +179,8 @@ def load_user(user_id):
                         email=user_data['email'],
                         role=user_data['role'],
                         distractors_enabled=bool(user_data['distractors_enabled']),
-                        distractor_probability=user_data['distractor_probability'] or 25
+                        distractor_probability=user_data['distractor_probability'] or 25,
+                        expires_at=user_data['expires_at']
                     )
             except sqlite3.OperationalError:
                 user_data = conn.execute(
@@ -179,7 +195,8 @@ def load_user(user_id):
                         email=user_data['email'],
                         role=user_data['role'],
                         distractors_enabled=False,
-                        distractor_probability=25
+                        distractor_probability=25,
+                        expires_at=None
                     )
     except sqlite3.Error as e:
         app.logger.error(f"Virhe käyttäjän lataamisessa: {e}")
@@ -193,6 +210,31 @@ def admin_required(f):
             return redirect(url_for('dashboard_route'))
         return f(*args, **kwargs)
     return decorated_function
+
+def generate_secure_password(length=10):
+    """Luo turvallisen salasanan, joka täyttää vaatimukset."""
+    if length < 8:
+        length = 8
+    
+    pienet = string.ascii_lowercase
+    isot = string.ascii_uppercase
+    numerot = string.digits
+    
+    # Varmista, että salasanassa on vähintään yksi merkki kustakin vaaditusta ryhmästä
+    salasana = [
+        random.choice(pienet),
+        random.choice(isot),
+        random.choice(numerot),
+    ]
+    
+    # Täytä loput salasanasta satunnaisilla merkeillä
+    kaikki_merkit = pienet + isot + numerot
+    for _ in range(length - len(salasana)):
+        salasana.append(random.choice(kaikki_merkit))
+    
+    random.shuffle(salasana)
+    return "".join(salasana)
+
 
 #==============================================================================
 # --- SALASANAN PALAUTUS ---
@@ -1119,7 +1161,7 @@ def login_route():
             with sqlite3.connect(db_manager.db_path) as conn:
                 conn.row_factory = sqlite3.Row
                 user_data = conn.execute(
-                    "SELECT id, username, email, password, role, status FROM users WHERE username = ?",
+                    "SELECT * FROM users WHERE username = ?",
                     (username,)
                 ).fetchone()
                 
@@ -1128,18 +1170,21 @@ def login_route():
                     app.logger.warning(f"Failed login attempt for username: {username} (user not found)")
                     return render_template("login.html")
                 
+                # TARKISTA VANHENEMINEN
+                if user_data['expires_at']:
+                    expires_at = datetime.strptime(user_data['expires_at'].split('.')[0], '%Y-%m-%d %H:%M:%S')
+                    if datetime.now() > expires_at:
+                        flash('Käyttäjätunnuksesi on vanhentunut.', 'danger')
+                        app.logger.warning(f"Expired user tried to login: {username}")
+                        return render_template("login.html")
+                
                 if user_data['status'] != 'active':
                     flash('Käyttäjätilisi on estetty. Ota yhteyttä ylläpitoon.', 'danger')
                     app.logger.warning(f"Blocked user tried to login: {username}")
                     return render_template("login.html")
                 
                 if bcrypt.check_password_hash(user_data['password'], password):
-                    user = User(
-                        id=user_data['id'],
-                        username=user_data['username'],
-                        email=user_data['email'],
-                        role=user_data['role']
-                    )
+                    user = User(id=user_data['id'], username=user_data['username'], email=user_data['email'], role=user_data['role'])
                     login_user(user)
                     flash(f'Tervetuloa takaisin, {user.username}!', 'success')
                     app.logger.info(f"User {user.username} logged in successfully")
@@ -1316,6 +1361,55 @@ def reset_password_route(token):
 #==============================================================================
 # --- YLLÄPITÄJÄN REITIT ---
 #==============================================================================
+
+@app.route('/admin/create-test-users', methods=['POST'])
+@admin_required
+def admin_create_test_users_route():
+    """Luo määritetyn määrän testikäyttäjiä ja näyttää niiden tunnukset."""
+    try:
+        user_count = int(request.form.get('user_count', 0))
+        expiration_days = int(request.form.get('expiration_days', 30))
+
+        if not 1 <= user_count <= 200:
+            flash('Käyttäjien määrän tulee olla 1-200 välillä.', 'danger')
+            return redirect(url_for('admin_users_route'))
+        if not 1 <= expiration_days <= 365:
+            flash('Voimassaoloajan tulee olla 1-365 päivän välillä.', 'danger')
+            return redirect(url_for('admin_users_route'))
+
+    except (ValueError, TypeError):
+        flash('Virheellinen syöte. Anna numerot.', 'danger')
+        return redirect(url_for('admin_users_route'))
+
+    created_users = []
+    failed_users = []
+    expires_at = datetime.now() + timedelta(days=expiration_days)
+
+    start_index = db_manager.get_next_test_user_number()
+
+    for i in range(start_index, start_index + user_count):
+        username = f'testuser{i}'
+        email = f'test{i}@example.com'
+        password = generate_secure_password()
+        hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
+
+        success, error = db_manager.create_user(username, email, hashed_password, expires_at=expires_at)
+        
+        if success:
+            created_users.append({'username': username, 'password': password})
+        else:
+            failed_users.append(username)
+            app.logger.error(f"Testikäyttäjän {username} luonti epäonnistui: {error}")
+
+    if created_users:
+        flash(f'✅ Luotiin {len(created_users)} uutta testikäyttäjää!', 'success')
+        app.logger.info(f"Admin {current_user.username} created {len(created_users)} test users.")
+    
+    if failed_users:
+        flash(f"⚠️ {len(failed_users)} käyttäjän luonti epäonnistui (nimet olivat ehkä jo varattuja).", "warning")
+
+    return render_template('admin_show_created_users.html', created_users=created_users, expiration_days=expiration_days, expires_at=expires_at)
+
 
 @app.route("/admin/bulk_delete_duplicates", methods=['POST'])
 @admin_required
@@ -2340,6 +2434,57 @@ def edit_user_settings(user_id):
         flash(f'Virhe päivitettäessä asetuksia: {error}', 'error')
     return redirect(url_for('admin_users_route'))
 
+#==============================================================================
+# --- ADMIN: TESTIKÄYTTÄJIEN LUONTI ---
+#==============================================================================
+@app.route('/admin/create-test-users', methods=['POST'])
+@admin_required
+def admin_create_test_users_route():
+    """Luo määritetyn määrän testikäyttäjiä ja näyttää niiden tunnukset."""
+    try:
+        user_count = int(request.form.get('user_count', 0))
+        expiration_days = int(request.form.get('expiration_days', 30))
+
+        if not 1 <= user_count <= 200:
+            flash('Käyttäjien määrän tulee olla 1-200 välillä.', 'danger')
+            return redirect(url_for('admin_users_route'))
+        if not 1 <= expiration_days <= 365:
+            flash('Voimassaoloajan tulee olla 1-365 päivän välillä.', 'danger')
+            return redirect(url_for('admin_users_route'))
+
+    except (ValueError, TypeError):
+        flash('Virheellinen syöte. Anna numerot.', 'danger')
+        return redirect(url_for('admin_users_route'))
+
+    created_users = []
+    failed_users = []
+    expires_at = datetime.now() + timedelta(days=expiration_days)
+
+    start_index = db_manager.get_next_test_user_number()
+
+    for i in range(start_index, start_index + user_count):
+        username = f'testuser{i}'
+        email = f'test{i}@example.com'
+        password = generate_secure_password()
+        hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
+
+        success, error = db_manager.create_user(username, email, hashed_password, expires_at=expires_at)
+        
+        if success:
+            created_users.append({'username': username, 'password': password})
+        else:
+            failed_users.append(username)
+            app.logger.error(f"Testikäyttäjän {username} luonti epäonnistui: {error}")
+
+    if created_users:
+        flash(f'✅ Luotiin {len(created_users)} uutta testikäyttäjää!', 'success')
+        app.logger.info(f"Admin {current_user.username} created {len(created_users)} test users.")
+    
+    if failed_users:
+        flash(f"⚠️ {len(failed_users)} käyttäjän luonti epäonnistui (nimet olivat ehkä jo varattuja).", "warning")
+
+    return render_template('admin_show_created_users.html', created_users=created_users, expiration_days=expiration_days, expires_at=expires_at)
+
 
 #==============================================================================
 # --- VIRHEKÄSITTELY ---
@@ -2347,44 +2492,17 @@ def edit_user_settings(user_id):
 
 @app.errorhandler(404)
 def not_found_error(error):
-    return '''
-    <html>
-    <head><title>404 - Sivua ei löytynyt</title></head>
-    <body style="font-family: Arial; text-align: center; padding: 50px;">
-        <h1>404 - Sivua ei löytynyt</h1>
-        <p>Hakemaasi sivua ei löytynyt.</p>
-        <a href="/" style="color: #007bff;">Palaa etusivulle</a>
-    </body>
-    </html>
-    ''', 404
+    return render_template('404.html'), 404
 
 @app.errorhandler(500)
 def internal_error(error):
     app.logger.error(f"Internal server error: {error}")
-    return '''
-    <html>
-    <head><title>500 - Palvelinvirhe</title></head>
-    <body style="font-family: Arial, text-align: center; padding: 50px;">
-        <h1>500 - Palvelinvirhe</h1>
-        <p>Tapahtui odottamaton virhe.</p>
-        <a href="/" style="color: #007bff;">Palaa etusivulle</a>
-    </body>
-    </html>
-    ''', 500
+    return render_template('500.html'), 500
 
 @app.errorhandler(403)
 def forbidden_error(error):
     app.logger.warning(f"Forbidden access attempt: {error}")
-    return '''
-    <html>
-    <head><title>403 - Pääsy kielletty</title></head>
-    <body style="font-family: Arial, text-align: center; padding: 50px;">
-        <h1>403 - Pääsy kielletty</h1>
-        <p>Sinulla ei ole oikeuksia tähän sivuun.</p>
-        <a href="/" style="color: #007bff;">Palaa etusivulle</a>
-    </body>
-    </html>
-    ''', 403
+    return render_template('403.html'), 403
 
 @app.errorhandler(429)
 def ratelimit_error(error):
@@ -2416,7 +2534,8 @@ def init_database_now():
                     distractor_probability INTEGER DEFAULT 25,
                     last_practice_categories TEXT,
                     last_practice_difficulties TEXT,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    expires_at TIMESTAMP
                 )
             ''')
             conn.commit()
@@ -2447,7 +2566,8 @@ def emergency_reset_admin():
                     distractor_probability INTEGER DEFAULT 25,
                     last_practice_categories TEXT,
                     last_practice_difficulties TEXT,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    expires_at TIMESTAMP
                 )
             ''')
             conn.commit()
