@@ -1256,10 +1256,6 @@ def logout_route():
 # --- SALASANAN PALAUTUS REITIT ---
 #==============================================================================
 
-git add app.py
-git commit -m "Fix: Korjaa salasanan palautus PostgreSQL-yhteensopivaksi"
-git push
-
 @app.route("/reset-password/<token>", methods=['GET', 'POST'])
 def reset_password_route(token):
     email = verify_reset_token(token)
