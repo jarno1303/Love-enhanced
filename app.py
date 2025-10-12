@@ -2495,191 +2495,213 @@ def ratelimit_error(error):
 
 @app.route('/init-database-now')
 def init_database_now():
-    """LUO KAIKKI TAULUT"""
+    """
+    LUO KAIKKI TAULUT PostgreSQL:iin tai SQLite:en.
+    KÄYTÄ VAIN KERRAN ENSIMMÄISELLÄ KERRALLA!
+    """
     try:
-        with sqlite3.connect(db_manager.db_path) as conn:
-            # Luo users-taulu
-            conn.execute('''
-                CREATE TABLE IF NOT EXISTS users (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    username TEXT UNIQUE NOT NULL,
-                    email TEXT UNIQUE NOT NULL,
-                    password TEXT NOT NULL,
-                    role TEXT DEFAULT 'user',
-                    status TEXT DEFAULT 'active',
-                    distractors_enabled INTEGER DEFAULT 0,
-                    distractor_probability INTEGER DEFAULT 25,
-                    last_practice_categories TEXT,
-                    last_practice_difficulties TEXT,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    expires_at TIMESTAMP
-                )
-            ''')
-            conn.commit()
-        return "✅ Tietokannan taulut luotu onnistuneesti!"
+        # Kutsu DatabaseManager:in omaa init_database metodia
+        db_manager.init_database()
+        
+        app.logger.info("Tietokanta alustettu onnistuneesti")
+        return "✅ Tietokannan taulut luotu onnistuneesti!<br><br><a href='/emergency-reset-admin'>Seuraavaksi: Luo admin-käyttäjä</a>"
+        
     except Exception as e:
+        app.logger.error(f"Virhe tietokannan alustuksessa: {e}")
         return f"❌ Virhe taulujen luomisessa: {str(e)}"
 
 
 @app.route('/emergency-reset-admin')
 def emergency_reset_admin():
-    """VÄLIAIKAINEN: Luo taulut JA resetoi admin-salasana"""
+    """
+    VÄLIAIKAINEN: Luo taulut JA resetoi admin-salasana.
+    ⚠️ POISTA TÄMÄ ROUTE KUN ADMIN ON LUOTU!
+    """
     admin_username = "Jarno"
     admin_email = "tehostettuaoppimista@gmail.com"
     new_password = "TempPass123!"
     
     try:
-        with sqlite3.connect(db_manager.db_path) as conn:
-            # Luo users-taulu
-            conn.execute('''
-                CREATE TABLE IF NOT EXISTS users (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    username TEXT UNIQUE NOT NULL,
-                    email TEXT UNIQUE NOT NULL,
-                    password TEXT NOT NULL,
-                    role TEXT DEFAULT 'user',
-                    status TEXT DEFAULT 'active',
-                    distractors_enabled INTEGER DEFAULT 0,
-                    distractor_probability INTEGER DEFAULT 25,
-                    last_practice_categories TEXT,
-                    last_practice_difficulties TEXT,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            ''')
-            
-            # Luo distractor_attempts taulu
-            conn.execute('''
-                CREATE TABLE IF NOT EXISTS distractor_attempts (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    user_id INTEGER NOT NULL,
-                    distractor_scenario TEXT NOT NULL,
-                    user_choice INTEGER NOT NULL,
-                    correct_choice INTEGER NOT NULL,
-                    is_correct BOOLEAN NOT NULL,
-                    response_time INTEGER,
-                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (user_id) REFERENCES users(id)
-                )
-            ''')
-            
-            # Luo questions taulu
-            conn.execute('''
-                CREATE TABLE IF NOT EXISTS questions (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    question TEXT NOT NULL,
-                    question_normalized TEXT,
-                    options TEXT NOT NULL,
-                    correct INTEGER NOT NULL,
-                    explanation TEXT,
-                    category TEXT,
-                    difficulty TEXT,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            ''')
-            
-            # Luo user_question_progress taulu
-            conn.execute('''
-                CREATE TABLE IF NOT EXISTS user_question_progress (
-                    user_id INTEGER NOT NULL,
-                    question_id INTEGER NOT NULL,
-                    times_shown INTEGER DEFAULT 0,
-                    times_correct INTEGER DEFAULT 0,
-                    last_shown TIMESTAMP,
-                    interval INTEGER DEFAULT 1,
-                    ease_factor REAL DEFAULT 2.5,
-                    PRIMARY KEY (user_id, question_id),
-                    FOREIGN KEY (user_id) REFERENCES users(id),
-                    FOREIGN KEY (question_id) REFERENCES questions(id)
-                )
-            ''')
-            
-            # Luo question_attempts taulu
-            conn.execute('''
-                CREATE TABLE IF NOT EXISTS question_attempts (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    user_id INTEGER NOT NULL,
-                    question_id INTEGER NOT NULL,
-                    correct INTEGER NOT NULL,
-                    time_taken INTEGER,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (user_id) REFERENCES users(id),
-                    FOREIGN KEY (question_id) REFERENCES questions(id)
-                )
-            ''')
-            
-            # Luo achievements taulu
-            conn.execute('''
-                CREATE TABLE IF NOT EXISTS achievements (
-                    user_id INTEGER NOT NULL,
-                    achievement_id TEXT NOT NULL,
-                    unlocked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    PRIMARY KEY (user_id, achievement_id),
-                    FOREIGN KEY (user_id) REFERENCES users(id)
-                )
-            ''')
-            
-            # Luo active_sessions taulu
-            conn.execute('''
-                CREATE TABLE IF NOT EXISTS active_sessions (
-                    user_id INTEGER PRIMARY KEY,
-                    session_type TEXT NOT NULL,
-                    question_ids TEXT NOT NULL,
-                    answers TEXT NOT NULL,
-                    current_index INTEGER DEFAULT 0,
-                    time_remaining INTEGER,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (user_id) REFERENCES users(id)
-                )
-            ''')
-            
-            conn.commit()
+        # VAIHE 1: Luo kaikki taulut DatabaseManager:in kautta
+        app.logger.info("Luodaan tietokantataulut...")
+        db_manager.init_database()
+        app.logger.info("Taulut luotu onnistuneesti!")
         
-        # Tarkista onko käyttäjä olemassa
-        with sqlite3.connect(db_manager.db_path) as conn:
-            conn.row_factory = sqlite3.Row
-            user = conn.execute("SELECT * FROM users WHERE username = ?", (admin_username,)).fetchone()
+        # VAIHE 2: Tarkista onko admin-käyttäjä jo olemassa
+        user = db_manager._execute(
+            "SELECT * FROM users WHERE username = ?",
+            (admin_username,),
+            fetch='one'
+        )
+        
+        # Hashaa salasana
+        hashed_pw = bcrypt.generate_password_hash(new_password).decode('utf-8')
+        
+        if user:
+            # Admin löytyi - päivitä salasana
+            db_manager._execute(
+                "UPDATE users SET password = ? WHERE username = ?",
+                (hashed_pw, admin_username)
+            )
             
-            hashed_pw = bcrypt.generate_password_hash(new_password).decode('utf-8')
+            return f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Admin Päivitetty</title>
+                <meta charset="UTF-8">
+                <style>
+                    body {{ font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; }}
+                    .success {{ background: #D4EDDA; border: 1px solid #C3E6CB; padding: 20px; border-radius: 5px; }}
+                    .credential {{ background: #F8F9FA; padding: 10px; margin: 10px 0; border-left: 4px solid #5A67D8; }}
+                    .btn {{ background: #5A67D8; color: white; padding: 12px 24px; text-decoration: none; 
+                           border-radius: 5px; display: inline-block; margin-top: 20px; }}
+                </style>
+            </head>
+            <body>
+                <div class="success">
+                    <h2>✅ TIETOKANTA ALUSTETTU!</h2>
+                    <p>✅ Admin-käyttäjän '{admin_username}' salasana päivitetty!</p>
+                    
+                    <h3>📊 Luodut taulut:</h3>
+                    <ul>
+                        <li>users</li>
+                        <li>questions</li>
+                        <li>distractor_attempts</li>
+                        <li>user_question_progress</li>
+                        <li>question_attempts</li>
+                        <li>user_achievements</li>
+                        <li>active_sessions</li>
+                        <li>study_sessions</li>
+                    </ul>
+                    
+                    <h3>🔐 Kirjautumistiedot:</h3>
+                    <div class="credential">
+                        <strong>Käyttäjänimi:</strong> {admin_username}<br>
+                        <strong>Salasana:</strong> {new_password}
+                    </div>
+                    
+                    <a href='/login' class="btn">Kirjaudu sisään</a>
+                    
+                    <hr style="margin: 30px 0;">
+                    <p style="color: #856404; background: #FFF3CD; padding: 10px; border-radius: 5px;">
+                        ⚠️ <strong>TÄRKEÄÄ:</strong> Poista /emergency-reset-admin route 
+                        app.py:stä välittömästi kun olet kirjautunut sisään!
+                    </p>
+                </div>
+            </body>
+            </html>
+            """
+        else:
+            # Admin ei löytynyt - luo uusi
+            success, error = db_manager.create_user(
+                username=admin_username,
+                email=admin_email,
+                hashed_password=hashed_pw,
+                expires_at=None  # Admin ei vanhene
+            )
             
-            if user:
-                # Päivitä salasana
-                conn.execute("UPDATE users SET password = ? WHERE username = ?", (hashed_pw, admin_username))
-                conn.commit()
+            if success:
+                # Aseta rooli admin:ksi
+                db_manager._execute(
+                    "UPDATE users SET role = ? WHERE username = ?",
+                    ('admin', admin_username)
+                )
+                
                 return f"""
-                ✅ <strong>TIETOKANTA ALUSTETTU!</strong><br><br>
-                ✅ Admin-käyttäjän '{admin_username}' salasana vaihdettu!<br><br>
-                📊 Luotiin taulut: users, questions, distractor_attempts, user_question_progress, question_attempts, achievements, active_sessions<br><br>
-                <strong>Kirjaudu sisään:</strong><br>
-                Käyttäjänimi: <strong>{admin_username}</strong><br>
-                Salasana: <strong>{new_password}</strong><br><br>
-                <a href='/login' style='background:#5A67D8;color:white;padding:10px 20px;text-decoration:none;border-radius:5px;display:inline-block;'>Kirjaudu sisään</a>
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Admin Luotu</title>
+                    <meta charset="UTF-8">
+                    <style>
+                        body {{ font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; }}
+                        .success {{ background: #D4EDDA; border: 1px solid #C3E6CB; padding: 20px; border-radius: 5px; }}
+                        .credential {{ background: #F8F9FA; padding: 10px; margin: 10px 0; border-left: 4px solid #5A67D8; }}
+                        .btn {{ background: #5A67D8; color: white; padding: 12px 24px; text-decoration: none; 
+                               border-radius: 5px; display: inline-block; margin-top: 20px; }}
+                    </style>
+                </head>
+                <body>
+                    <div class="success">
+                        <h2>✅ TIETOKANTA ALUSTETTU!</h2>
+                        <p>✅ Uusi admin-käyttäjä '{admin_username}' luotu!</p>
+                        
+                        <h3>📊 Luodut taulut:</h3>
+                        <ul>
+                            <li>users</li>
+                            <li>questions</li>
+                            <li>distractor_attempts</li>
+                            <li>user_question_progress</li>
+                            <li>question_attempts</li>
+                            <li>user_achievements</li>
+                            <li>active_sessions</li>
+                            <li>study_sessions</li>
+                        </ul>
+                        
+                        <h3>🔐 Kirjautumistiedot:</h3>
+                        <div class="credential">
+                            <strong>Käyttäjänimi:</strong> {admin_username}<br>
+                            <strong>Sähköposti:</strong> {admin_email}<br>
+                            <strong>Salasana:</strong> {new_password}
+                        </div>
+                        
+                        <a href='/login' class="btn">Kirjaudu sisään</a>
+                        
+                        <hr style="margin: 30px 0;">
+                        <p style="color: #856404; background: #FFF3CD; padding: 10px; border-radius: 5px;">
+                            ⚠️ <strong>TÄRKEÄÄ:</strong> Poista /emergency-reset-admin route 
+                            app.py:stä välittömästi kun olet kirjautunut sisään!
+                        </p>
+                    </div>
+                </body>
+                </html>
                 """
             else:
-                # Luo uusi admin
-                conn.execute(
-                    "INSERT INTO users (username, email, password, role, status) VALUES (?, ?, ?, ?, ?)",
-                    (admin_username, admin_email, hashed_pw, 'admin', 'active')
-                )
-                conn.commit()
                 return f"""
-                ✅ <strong>TIETOKANTA ALUSTETTU!</strong><br><br>
-                ✅ Uusi admin-käyttäjä '{admin_username}' luotu!<br><br>
-                📊 Luotiin taulut: users, questions, distractor_attempts, user_question_progress, question_attempts, achievements, active_sessions<br><br>
-                <strong>Kirjautumistiedot:</strong><br>
-                Käyttäjänimi: <strong>{admin_username}</strong><br>
-                Sähköposti: <strong>{admin_email}</strong><br>
-                Salasana: <strong>{new_password}</strong><br><br>
-                <a href='/login' style='background:#5A67D8;color:white;padding:10px 20px;text-decoration:none;border-radius:5px;display:inline-block;'>Kirjaudu sisään</a>
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Virhe</title>
+                    <meta charset="UTF-8">
+                    <style>
+                        body {{ font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; }}
+                        .error {{ background: #F8D7DA; border: 1px solid #F5C6CB; padding: 20px; border-radius: 5px; }}
+                    </style>
+                </head>
+                <body>
+                    <div class="error">
+                        <h2>❌ Virhe käyttäjän luomisessa</h2>
+                        <p>{error}</p>
+                    </div>
+                </body>
+                </html>
                 """
                 
     except Exception as e:
         import traceback
         error_details = traceback.format_exc()
         app.logger.error(f"Emergency reset error: {error_details}")
-        return f"❌ Virhe: {str(e)}<br><br><pre>{error_details}</pre>"
-    
-    app.run(
-        debug=DEBUG_MODE,
-        host='0.0.0.0',
-        port=int(os.environ.get('PORT', 5000))
-    )
+        
+        return f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Kriittinen Virhe</title>
+            <meta charset="UTF-8">
+            <style>
+                body {{ font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }}
+                .error {{ background: #F8D7DA; border: 1px solid #F5C6CB; padding: 20px; border-radius: 5px; }}
+                pre {{ background: #F8F9FA; padding: 15px; overflow-x: auto; border-radius: 3px; }}
+            </style>
+        </head>
+        <body>
+            <div class="error">
+                <h2>❌ Kriittinen virhe</h2>
+                <p><strong>Virheviesti:</strong> {str(e)}</p>
+                <h3>Tekninen virheraportti:</h3>
+                <pre>{error_details}</pre>
+            </div>
+        </body>
+        </html>
+        """
