@@ -1140,23 +1140,23 @@ def login_route():
                 fetch='one'
             )
 
+            # Tarkistetaan ensin, löytyykö käyttäjä ja täsmääkö salasana
             if user_data and bcrypt.check_password_hash(user_data['password'], password):
-                # Check if account is expired
-                if user_data.get('expires_at'):
-                    expires_at = user_data['expires_at']
-                    # Psycopg2 returns datetime objects, handle them directly
-                    if isinstance(expires_at, datetime):
-                        # Make a naive datetime timezone-aware if needed for comparison
-                        now = datetime.now(expires_at.tzinfo)
-                        if now > expires_at:
-                            flash('Käyttäjätilisi on vanhentunut.', 'danger')
-                            return render_template("login.html")
 
+                # Tarkistetaan, onko tili vanhentunut (jos expires_at on asetettu)
+                if user_data.get('expires_at') and isinstance(user_data['expires_at'], datetime):
+                    if datetime.now(user_data['expires_at'].tzinfo) > user_data['expires_at']:
+                        flash('Käyttäjätilisi on vanhentunut. Ota yhteyttä ylläpitoon.', 'danger')
+                        return render_template("login.html")
+
+                # KORJATTU OSA: Luodaan User-olio KAIKILLA tarvittavilla tiedoilla
                 user = User(
                     id=user_data['id'],
                     username=user_data['username'],
                     email=user_data['email'],
                     role=user_data['role'],
+                    distractors_enabled=bool(user_data.get('distractors_enabled', False)),
+                    distractor_probability=user_data.get('distractor_probability', 25),
                     expires_at=user_data.get('expires_at')
                 )
                 login_user(user)
