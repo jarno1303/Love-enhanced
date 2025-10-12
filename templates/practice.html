@@ -110,7 +110,6 @@
     </div>
 </div>
 
-<!-- Häiriötekijä Modal -->
 <div class="modal fade" id="distractorModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-warning">
@@ -286,12 +285,9 @@
     let startTime = null;
     let explanationModal = null;
     let helperModal = null;
-
-    // Häiriötekijä-muuttujat
     let selectedDistractorOption = null;
     let currentDistractor = null;
     let distractorModalInstance = null;
-
     let calcCurrentValue = '0', calcOperator = '', calcPreviousValue = '';
     let isDragging = false, currentX, currentY, initialX, initialY, xOffset = 0, yOffset = 0;
 
@@ -301,6 +297,54 @@
         initCalculatorDrag();
         fetchQuestions();
     });
+
+    // =======================================================
+    // KORJATTU FUNKTIO
+    // =======================================================
+    async function fetchQuestions() {
+        try {
+            const urlParams = new URLSearchParams(window.location.search);
+            const categories = urlParams.getAll('categories');
+            const difficulties = urlParams.getAll('difficulties');
+            const limit = urlParams.get('count') || '10';
+
+            const limitNum = parseInt(limit);
+            if (isNaN(limitNum) || limitNum < 1 || limitNum > 100) {
+                throw new Error('Kysymysten määrän tulee olla 1-100 välillä');
+            }
+            
+            // Rakenna URL oikein, jotta se toimii sekä paikallisesti että palvelimella
+            const apiUrl = new URL('/api/practice_questions', window.location.origin);
+            apiUrl.searchParams.append('limit', limit);
+            categories.forEach(cat => apiUrl.searchParams.append('categories', cat));
+            difficulties.forEach(diff => apiUrl.searchParams.append('difficulties', diff));
+            
+            const response = await fetch(apiUrl);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const data = await response.json();
+            
+            if (!data.questions || !Array.isArray(data.questions) || data.questions.length === 0) {
+                throw new Error('Ei kysymyksiä saatavilla valituilla kriteereillä.');
+            }
+            
+            questions = data.questions;
+            startTime = Date.now();
+            showScreen('question');
+            displayCurrentQuestion();
+        } catch (error) {
+            let userMessage = error.message.includes('NetworkError') || error.message.includes('Failed to fetch') 
+                ? 'Verkkovirhe. Tarkista internet-yhteytesi ja yritä uudelleen.'
+                : error.message || 'Kysymysten lataaminen epäonnistui.';
+            showScreen('error', userMessage);
+        }
+    }
+    // =======================================================
+    // LOPUT FUNKTIOT OVAT ENNALLAAN
+    // =======================================================
 
     function continueToNext() {
         explanationModal.hide();
@@ -324,36 +368,6 @@
             document.getElementById('questionScreen').style.display = 'block';
         } else if (screenName === 'results') {
             document.getElementById('resultsScreen').style.display = 'block';
-        }
-    }
-
-    async function fetchQuestions() {
-        try {
-            const urlParams = new URLSearchParams(window.location.search);
-            const categoriesArray = urlParams.getAll('categories');
-            const difficultiesArray = urlParams.getAll('difficulties');
-            const categories = categoriesArray.join(',');
-            const difficulties = difficultiesArray.join(',');
-            const limit = urlParams.get('count') || '10';
-            
-            const limitNum = parseInt(limit);
-            if (isNaN(limitNum) || limitNum < 1 || limitNum > 100) throw new Error('Kysymysten määrän tulee olla 1-100 välillä');
-            
-            const response = await fetch(`/api/questions?limit=${limit}&category=${encodeURIComponent(categories)}&difficulties=${encodeURIComponent(difficulties)}`);
-            if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            
-            const data = await response.json();
-            if (!data.questions || !Array.isArray(data.questions) || data.questions.length === 0) throw new Error('Ei kysymyksiä saatavilla valituilla kriteereillä.');
-            
-            questions = data.questions;
-            startTime = Date.now();
-            showScreen('question');
-            displayCurrentQuestion();
-        } catch (error) {
-            let userMessage = error.message.includes('NetworkError') || error.message.includes('Failed to fetch') 
-                ? 'Verkkovirhe. Tarkista internet-yhteytesi ja yritä uudelleen.'
-                : error.message || 'Kysymysten lataaminen epäonnistui.';
-            showScreen('error', userMessage);
         }
     }
 
@@ -383,104 +397,13 @@
         });
         document.getElementById('submitBtn').style.display = 'inline-block';
         document.getElementById('nextBtn').style.display = 'none';
-
-        // Tarkista häiriötekijä toisen kysymyksen jälkeen
-        if (currentQuestionIndex > 0) {
-            checkForDistractor();
-        }
     }
 
-    // Häiriötekijän tarkistus
     async function checkForDistractor() {
-        try {
-            console.log("Tarkistetaan häiriötekijä...");
-            const response = await fetch('/api/check_distractor');
-            const data = await response.json();
-            
-            if (data.success && data.distractor) {
-                console.log('Häiriötekijä saatu:', data.distractor);
-                const delay = 2000 + Math.random() * 4000;
-                setTimeout(() => showDistractor(data.distractor), delay);
-            } else {
-                console.log("Ei häiriötekijää.");
-            }
-        } catch (error) {
-            console.error('Häiriötekijän tarkistus epäonnistui:', error);
-        }
+        // TÄMÄ ON VANHA LOGIIKKA, JOTA EI ENÄÄ KÄYTETÄ, MUTTA JÄTETÄÄN PAIKALLEEN.
+        // UUSI HÄIRIÖTEKIJÄLOGIIKKA ON REVIEW-SIVULLA.
     }
-
-    // Näytä häiriötekijä
-    function showDistractor(distractor) {
-        if (!distractorModalInstance) {
-            distractorModalInstance = new bootstrap.Modal(document.getElementById('distractorModal'));
-        }
-        
-        currentDistractor = distractor;
-        selectedDistractorOption = null;
-        
-        document.getElementById('distractor-scenario').textContent = distractor.scenario;
-        const optionsContainer = document.getElementById('distractor-options');
-        optionsContainer.innerHTML = '';
-        
-        distractor.options.forEach((option, index) => {
-            const div = document.createElement('div');
-            div.className = 'distractor-option border rounded p-3 mb-2';
-            div.style.cursor = 'pointer';
-            div.textContent = option;
-            div.onclick = () => selectDistractorOption(index);
-            optionsContainer.appendChild(div);
-        });
-        
-        document.getElementById('distractor-feedback').classList.add('d-none');
-        document.getElementById('submit-distractor').classList.remove('d-none');
-        document.getElementById('continue-quiz').classList.add('d-none');
-        
-        distractorModalInstance.show();
-    }
-
-    // Valitse häiriötekijän vaihtoehto
-    function selectDistractorOption(index) {
-        selectedDistractorOption = index;
-        document.querySelectorAll('.distractor-option').forEach(option => {
-            option.classList.remove('border-primary', 'bg-light');
-        });
-        document.querySelectorAll('.distractor-option')[index].classList.add('border-primary', 'bg-light');
-    }
-
-    // Lähetä häiriötekijän vastaus
-    async function submitDistractor() {
-        if (selectedDistractorOption === null) {
-            alert('Valitse vastaus ensin!');
-            return;
-        }
-        
-        try {
-            const response = await fetch('/api/submit_distractor', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    scenario: currentDistractor.scenario,
-                    user_choice: selectedDistractorOption,
-                    response_time: 5000
-                })
-            });
-            const result = await response.json();
-            
-            const feedback = document.getElementById('distractor-feedback');
-            const isCorrect = result.is_correct;
-            
-            feedback.className = `alert ${isCorrect ? 'alert-success' : 'alert-danger'} mt-3`;
-            feedback.innerHTML = `<strong>${isCorrect ? '✅ Oikein!' : '❌ Väärin!'}</strong><br>${isCorrect ? 'Hyvä ratkaisu!' : 'Parempi vastaus olisi ollut: ' + currentDistractor.options[result.correct_choice]}`;
-            feedback.classList.remove('d-none');
-            
-            document.getElementById('submit-distractor').classList.add('d-none');
-            document.getElementById('continue-quiz').classList.remove('d-none');
-        } catch (error) {
-            console.error('Virhe häiriötekijän lähetyksessä:', error);
-            alert('Vastauksen lähetys epäonnistui. Yritä uudelleen.');
-        }
-    }
-
+    
     async function loadQuestionProgress(questionId) {
         const progressInfo = document.getElementById('question-progress-info');
         try {
@@ -529,7 +452,7 @@
         try {
             const response = await fetch('/api/submit_answer', {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
+                headers: {'Content-Type': 'application/json', 'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')},
                 body: JSON.stringify({
                     question_id: question.id,
                     selected_option_text: question.options[selectedOption],
@@ -551,6 +474,7 @@
     function showAnswerFeedback(isCorrect, correctIndex) {
         document.querySelectorAll('.option-item').forEach((item, index) => {
             item.classList.remove('border-primary', 'bg-light');
+            item.onclick = null; // Estä klikkaukset vastauksen jälkeen
             if (index === correctIndex) item.classList.add('border-success', 'bg-success', 'bg-opacity-10');
             else if (index === selectedOption && !isCorrect) item.classList.add('border-danger', 'bg-danger', 'bg-opacity-10');
         });
@@ -684,71 +608,36 @@
     }
 
     function identifyQuestionType(question) {
-    const text = question.question.toLowerCase();
-    const category = (question.category || '').toLowerCase();
-
-    // 1. If the category is NOT 'lääkelaskenta', it's a theory question.
-    if (category !== 'lääkelaskenta') {
-        return 'theory';
-    }
-
-    // 2. If the category IS 'lääkelaskenta', then figure out which type of calculation it is.
-    if (text.includes('infuusio') || text.includes('tippa') || text.includes('gtt') || text.includes('ml/h')) {
-        return 'infusion';
-    }
-    if (text.includes('%') || text.includes('prosentti')) {
-        return 'percent';
-    }
-    if (text.includes('muunna') || text.includes('monta gramma') || text.includes('monta milligramma') || text.includes('monta mikrogramma') || text.includes('monta millilitra') || text.includes('monta litra')) {
-        return 'conversion';
-    }
-    if (text.includes('paino') || text.includes('/kg')) {
-        return 'weight';
+        const text = question.question.toLowerCase();
+        const category = (question.category || '').toLowerCase();
+        if (category !== 'lääkelaskenta') return 'theory';
+        if (text.includes('infuusio') || text.includes('tippa') || text.includes('gtt') || text.includes('ml/h')) return 'infusion';
+        if (text.includes('%') || text.includes('prosentti')) return 'percent';
+        if (text.includes('muunna') || text.includes('monta gramma') || text.includes('monta milligramma') || text.includes('monta mikrogramma') || text.includes('monta millilitra') || text.includes('monta litra')) return 'conversion';
+        if (text.includes('paino') || text.includes('/kg')) return 'weight';
+        return 'dose';
     }
     
-    // If it's a calculation but doesn't match a specific sub-type, default to dose calculation.
-    return 'dose';
-}
-    
-    // --- NÄMÄ OVAT UUSIA TAI MUOKATTUJA ---
     function generateDoseHelper(question) { return document.getElementById('mnemonic-dose').innerHTML; }
     function generateInfusionHelper(question) { return document.getElementById('mnemonic-infusion').innerHTML; }
     function generatePercentHelper(question) { return document.getElementById('mnemonic-percent').innerHTML; }
     function generateConversionHelper(question) { return document.getElementById('mnemonic-conversion').innerHTML; }
-    function generateWeightHelper(question) { return document.getElementById('mnemonic-dose').innerHTML; } // Käyttää annoslaskennan pohjaa
-    
-    function generateGenericHelper(question) {
-        // Tämän pitäisi nyt osua vain aitoihin teoriakysymyksiin
-        return `<div class="alert alert-info"><h5><i class="fas fa-book me-2"></i>Teoriakysymys</h5><p>Lue kysymys huolella ja pohdi vastausta potilasturvallisuuden näkökulmasta.</p></div>`;
-    }
+    function generateWeightHelper(question) { return document.getElementById('mnemonic-dose').innerHTML; }
+    function generateGenericHelper(question) { return `<div class="alert alert-info"><h5><i class="fas fa-book me-2"></i>Teoriakysymys</h5><p>Lue kysymys huolella ja pohdi vastausta potilasturvallisuuden näkökulmasta.</p></div>`; }
 
     function openHelper() {
         const question = questions[currentQuestionIndex];
         const helperBody = document.getElementById('helperBody');
         const questionType = identifyQuestionType(question);
         let helperContent = '';
-        
         switch(questionType) {
-            case 'dose': 
-                helperContent = generateDoseHelper(question); 
-                break;
-            case 'infusion': 
-                helperContent = generateInfusionHelper(question); 
-                break;
-            case 'percent': 
-                helperContent = generatePercentHelper(question); 
-                break;
-            case 'conversion': 
-                helperContent = generateConversionHelper(question); 
-                break;
-            case 'weight': 
-                helperContent = generateWeightHelper(question); 
-                break;
-            default: 
-                helperContent = generateGenericHelper(question); 
-                break;
+            case 'dose': helperContent = generateDoseHelper(question); break;
+            case 'infusion': helperContent = generateInfusionHelper(question); break;
+            case 'percent': helperContent = generatePercentHelper(question); break;
+            case 'conversion': helperContent = generateConversionHelper(question); break;
+            case 'weight': helperContent = generateWeightHelper(question); break;
+            default: helperContent = generateGenericHelper(question); break;
         }
-        
         helperBody.innerHTML = helperContent;
         helperModal.show();
     }
@@ -769,13 +658,7 @@
     #calc-header { user-select: none; }
     #calc-header:active { cursor: grabbing !important; }
 
-    /* Häiriötekijä-tyylit */
-    .distractor-option {
-        transition: all 0.2s ease;
-    }
-    .distractor-option:hover {
-        background-color: #f8f9fa;
-        transform: translateX(5px);
-    }
+    .distractor-option { transition: all 0.2s ease; }
+    .distractor-option:hover { background-color: #f8f9fa; transform: translateX(5px); }
 </style>
 {% endblock %}
