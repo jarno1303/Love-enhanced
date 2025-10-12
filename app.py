@@ -211,85 +211,79 @@ def verify_reset_token(token, expiration=3600):
         return None
 
 def send_reset_email(user_email, reset_url):
-    SMTP_SERVER = os.environ.get('SMTP_SERVER', 'smtp.gmail.com')
-    SMTP_PORT = int(os.environ.get('SMTP_PORT', 587))
-    SMTP_USERNAME = os.environ.get('SMTP_USERNAME', '')
-    SMTP_PASSWORD = os.environ.get('SMTP_PASSWORD', '')
-    FROM_EMAIL = os.environ.get('FROM_EMAIL', 'noreply@loveenhanced.fi')
+    """Lähettää salasanan palautusviestin Brevo:n kautta."""
     
-    if not SMTP_USERNAME or not SMTP_PASSWORD:
-        app.logger.warning(f"SMTP ei konfiguroitu. Salasanan palautuslinkki: {reset_url}")
+    BREVO_API_KEY = os.environ.get('BREVO_API_KEY')
+    FROM_EMAIL = os.environ.get('FROM_EMAIL', 'noreply@example.com')
+    
+    if not BREVO_API_KEY:
+        # Kehitysympäristössä printtaa linkki
+        app.logger.warning(f"Brevo ei konfiguroitu. Palautuslinkki: {reset_url}")
         print(f"\n{'='*80}")
-        print(f"SALASANAN PALAUTUSLINKKI (kopioi selaimeen):")
+        print(f"SALASANAN PALAUTUSLINKKI:")
         print(f"{reset_url}")
         print(f"{'='*80}\n")
         return True
     
-    msg = MIMEMultipart('alternative')
-    msg['Subject'] = 'LOVe Enhanced - Salasanan palautus'
-    msg['From'] = FROM_EMAIL
-    msg['To'] = user_email
+    import requests
     
-    html = f"""
-    <html>
-      <head></head>
-      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-        <div style="max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f7fafc; border-radius: 10px;">
-          <h2 style="color: #5A67D8; text-align: center;">LOVe Enhanced</h2>
-          <h3>Salasanan palautuspyyntö</h3>
-          <p>Hei,</p>
-          <p>Saimme pyynnön palauttaa tilisi salasana. Jos et tehnyt tätä pyyntöä, voit jättää tämän viestin huomiotta.</p>
-          <p>Palauttaaksesi salasanasi, klikkaa alla olevaa nappia:</p>
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="{reset_url}" style="background-color: #5A67D8; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">
-              Palauta salasana
-            </a>
-          </div>
-          <p>Tai kopioi ja liitä tämä linkki selaimeesi:</p>
-          <p style="word-break: break-all; background-color: #e2e8f0; padding: 10px; border-radius: 5px;">
-            {reset_url}
-          </p>
-          <p style="color: #718096; font-size: 12px;">Tämä linkki on voimassa 1 tunnin.</p>
-          <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;">
-          <p style="color: #718096; font-size: 12px; text-align: center;">
-            © 2024 LOVe Enhanced. Kaikki oikeudet pidätetään.
-          </p>
-        </div>
-      </body>
-    </html>
-    """
+    url = "https://api.brevo.com/v3/smtp/email"
     
-    text = f"""
-    LOVe Enhanced - Salasanan palautus
+    headers = {
+        "accept": "application/json",
+        "api-key": BREVO_API_KEY,
+        "content-type": "application/json"
+    }
     
-    Hei,
-    
-    Saimme pyynnön palauttaa tilisi salasana. Jos et tehnyt tätä pyyntöä, voit jättää tämän viestin huomiotta.
-    
-    Palauttaaksesi salasanasi, kopioi ja liitä tämä linkki selaimeesi:
-    
-    {reset_url}
-    
-    Tämä linkki on voimassa 1 tunnin.
-    
-    © 2024 LOVe Enhanced
-    """
-    
-    part1 = MIMEText(text, 'plain')
-    part2 = MIMEText(html, 'html')
-    
-    msg.attach(part1)
-    msg.attach(part2)
+    payload = {
+        "sender": {
+            "name": "LOVe Enhanced",
+            "email": FROM_EMAIL
+        },
+        "to": [
+            {
+                "email": user_email,
+                "name": user_email.split('@')[0]
+            }
+        ],
+        "subject": "LOVe Enhanced - Salasanan palautus",
+        "htmlContent": f"""
+        <html>
+          <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+            <div style="max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f7fafc; border-radius: 10px;">
+              <h2 style="color: #5A67D8; text-align: center;">LOVe Enhanced</h2>
+              <h3>Salasanan palautuspyyntö</h3>
+              <p>Hei,</p>
+              <p>Saimme pyynnön palauttaa tilisi salasana.</p>
+              <p>Klikkaa alla olevaa painiketta palauttaaksesi salasanasi:</p>
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="{reset_url}" style="background-color: #5A67D8; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+                  Palauta salasana
+                </a>
+              </div>
+              <p>Tai kopioi ja liitä tämä linkki selaimeesi:</p>
+              <p style="background-color: #e2e8f0; padding: 10px; border-radius: 5px; word-break: break-all;">
+                {reset_url}
+              </p>
+              <p><strong>Tämä linkki on voimassa 1 tunnin.</strong></p>
+              <p>Jos et pyytänyt salasanan palautusta, voit jättää tämän viestin huomiotta.</p>
+              <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;">
+              <p style="font-size: 12px; color: #718096; text-align: center;">
+                LOVe Enhanced - Lääkehoidon osaamisen vahvistaminen
+              </p>
+            </div>
+          </body>
+        </html>
+        """
+    }
     
     try:
-        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
-            server.starttls()
-            server.login(SMTP_USERNAME, SMTP_PASSWORD)
-            server.send_message(msg)
-        app.logger.info(f"Salasanan palautuslinkki lähetetty osoitteeseen: {user_email}")
+        response = requests.post(url, json=payload, headers=headers)
+        response.raise_for_status()
+        app.logger.info(f"Password reset email sent to {user_email}")
         return True
     except Exception as e:
-        app.logger.error(f"Virhe sähköpostin lähetyksessä: {e}")
+        app.logger.error(f"Failed to send email via Brevo: {e}")
         return False
 
 #==============================================================================
