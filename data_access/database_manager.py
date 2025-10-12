@@ -161,17 +161,21 @@ class DatabaseManager:
         except sqlite3.Error as e:
             print(f"Tietokannan migraatiovirhe: {e}")
 
-    # MUOKATTU FUNKTIO
+    #CREATE USER#
     def create_user(self, username, email, hashed_password, expires_at=None):
         try:
             with sqlite3.connect(self.db_path) as conn:
+                # Määritä rooli: ensimmäinen käyttäjä on admin
                 role = 'admin' if conn.execute("SELECT COUNT(*) FROM users").fetchone()[0] == 0 else 'user'
+                
+                # Suorita SQL-kysely, joka sisältää nyt myös expires_at-sarakkeen
                 conn.execute(
                     "INSERT INTO users (username, email, password, role, expires_at) VALUES (?, ?, ?, ?, ?)",
                     (username, email, hashed_password, role, expires_at)
                 )
             return True, None
         except sqlite3.IntegrityError as e:
+            # Tämä virhe tulee, jos käyttäjänimi tai sähköposti on jo varattu
             return False, str(e)
             
     # UUSI FUNKTIO
