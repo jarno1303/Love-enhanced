@@ -558,11 +558,11 @@ def get_questions_api():
         limit = int(request.args.get('limit', 10))
         
         questions = db_manager.get_questions(
-    user_id=current_user.id,
-        categories=None if category == 'all' else [category], # KORJATTU TÄHÄN
-        difficulty=None if difficulty == 'all' else difficulty,
-        limit=limit
-    )
+            user_id=current_user.id,
+            categories=None if category == 'all' else [category],
+            difficulties=None if difficulty == 'all' else [difficulty], # KORJATTU TÄHÄN
+            limit=limit
+        )
         
         questions_list = []
         for q in questions:
