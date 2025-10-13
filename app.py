@@ -538,12 +538,13 @@ def get_questions_api():
         questions_list = []
         for q in questions:
             # Sekoitetaan vastausvaihtoehtojen järjestys joka kerta
-            # Tallenna alkuperäinen oikea vastaus
-            original_correct_text = q.options[q.correct]
-            # Sekoita vaihtoehdot
-            random.shuffle(q.options)
-            # Etsi uusi indeksi sekoitetusta listasta
-            q.correct = q.options.index(original_correct_text)
+            if q.options and q.correct < len(q.options):
+                # Tallenna alkuperäinen oikea vastaus
+                original_correct_text = q.options[q.correct]
+                # Sekoita vaihtoehdot
+                random.shuffle(q.options)
+                # Etsi uusi indeksi sekoitetusta listasta
+                q.correct = q.options.index(original_correct_text)
 
             # Muunna dataclass-objekti sanakirjaksi
             q_dict = asdict(q)
@@ -558,6 +559,13 @@ def get_questions_api():
             import traceback
             traceback.print_exc()
         return jsonify({'error': str(e)}), 500
+
+# KORJATTU OSA: Lisätään uusi API-reitti häiriötekijöille
+@app.route("/api/distractors")
+@login_required
+def get_distractors_api():
+    """Palauttaa listan kaikista häiriötekijöistä."""
+    return jsonify(DISTRACTORS)
 
 
 @app.route("/api/submit_distractor", methods=['POST'])
@@ -787,25 +795,20 @@ def get_stats_api():
 def get_achievements_api():
     try:
         unlocked = achievement_manager.get_unlocked_achievements(current_user.id)
-        unlocked_ids = {ach.id for ach in unlocked}
+        unlocked_ids = {ach['achievement_id'] for ach in unlocked}
         
         all_achievements = []
         for ach_id, ach_obj in ENHANCED_ACHIEVEMENTS.items():
             try:
-                if hasattr(ach_obj, '__dataclass_fields__'):
-                    ach_data = asdict(ach_obj)
-                else:
-                    ach_data = {
-                        'id': getattr(ach_obj, 'id', ach_id),
-                        'name': getattr(ach_obj, 'name', ''),
-                        'description': getattr(ach_obj, 'description', ''),
-                        'icon': getattr(ach_obj, 'icon', ''),
-                        'unlocked': getattr(ach_obj, 'unlocked', False),
-                        'unlocked_at': getattr(ach_obj, 'unlocked_at', None)
-                    }
-                
+                ach_data = asdict(ach_obj)
                 ach_data['unlocked'] = ach_id in unlocked_ids
+                if ach_data['unlocked']:
+                    # Find the specific unlocked achievement to get the timestamp
+                    unlocked_data = next((item for item in unlocked if item["achievement_id"] == ach_id), None)
+                    if unlocked_data:
+                        ach_data['unlocked_at'] = unlocked_data.get('unlocked_at')
                 all_achievements.append(ach_data)
+
             except Exception as e:
                 app.logger.error(f"Virhe saavutuksen {ach_id} käsittelyssä: {e}")
                 continue
@@ -928,12 +931,14 @@ def dashboard_route():
 @app.route("/practice")
 @login_required
 def practice_route():
-    return render_template("practice.html", category="Kaikki kategoriat")
+    # Välitetään constants.py:n DISTRACTORS-lista templatelle
+    return render_template("practice.html", category="Kaikki kategoriat", constants={'DISTRACTORS': DISTRACTORS})
 
 @app.route("/practice/<category>")
 @login_required
 def practice_category_route(category):
-    return render_template("practice.html", category=category)
+    # Välitetään constants.py:n DISTRACTORS-lista templatelle
+    return render_template("practice.html", category=category, constants={'DISTRACTORS': DISTRACTORS})
 
 @app.route("/review")
 @login_required
@@ -2590,4 +2595,5 @@ def emergency_reset_admin():
         </body>
         </html>
         """
+
 
