@@ -390,7 +390,7 @@ def send_reset_email(user_email, reset_url):
         app.logger.error(f"Failed to send email via Brevo: {e}")
         return False
     
-    #==============================================================================
+#==============================================================================
 # --- API-REITIT ---
 #==============================================================================
 
@@ -545,6 +545,45 @@ def get_question_counts_api():
         })
     except Exception as e:
         app.logger.error(f"Virhe kysymysmäärien haussa: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route("/api/questions")
+@login_required
+@limiter.limit("60 per minute")
+def get_questions_api():
+    """Hakee kysymyksiä kategorian ja vaikeustason mukaan."""
+    try:
+        category = request.args.get('category', 'all')
+        difficulty = request.args.get('difficulty', 'all')
+        limit = int(request.args.get('limit', 10))
+        
+        questions = db_manager.get_questions(
+            user_id=current_user.id,
+            category=None if category == 'all' else category,
+            difficulty=None if difficulty == 'all' else difficulty,
+            limit=limit
+        )
+        
+        questions_list = []
+        for q in questions:
+            if hasattr(q, '__dict__'):
+                q_dict = {
+                    'id': q.id,
+                    'question': q.question,
+                    'options': q.options,
+                    'correct': q.correct,
+                    'explanation': q.explanation,
+                    'category': q.category,
+                    'difficulty': q.difficulty
+                }
+            else:
+                q_dict = dict(q)
+            questions_list.append(q_dict)
+        
+        return jsonify(questions_list)
+        
+    except Exception as e:
+        app.logger.error(f"Virhe kysymysten haussa: {e}")
         return jsonify({'error': str(e)}), 500
 
 @app.route("/api/submit_distractor", methods=['POST'])
