@@ -121,8 +121,7 @@
             <div class="modal-body">
                 <p class="fw-bold" id="distractor-scenario"></p>
                 <p><strong>Miten toimit?</strong></p>
-                <div id="distractor-options"></div>
-                <div id="distractor-feedback" class="d-none mt-3"></div>
+                <div id="distractor-options" class="d-grid gap-2"></div>
             </div>
             <div class="modal-footer">
                 <button type="button" id="submit-distractor" class="btn btn-warning" onclick="submitDistractor()">Vastaa</button>
@@ -291,9 +290,16 @@
     let calcCurrentValue = '0', calcOperator = '', calcPreviousValue = '';
     let isDragging = false, xOffset = 0, yOffset = 0;
 
+    // --- KORJATTU OSA: LISÄÄ DISTRACTOR-VAKIOT ---
+    const DISTRACTORS = {{ constants.DISTRACTORS|tojson|safe }};
+    const userDistractorsEnabled = {{ current_user.distractors_enabled|tojson|safe }};
+    const userDistractorProbability = {{ current_user.distractor_probability|tojson|safe }} / 100.0;
+    // --- KORJAUKSEN LOPPU ---
+
     document.addEventListener('DOMContentLoaded', function() {
         explanationModal = new bootstrap.Modal(document.getElementById('explanationModal'));
         helperModal = new bootstrap.Modal(document.getElementById('helperModal'));
+        distractorModalInstance = new bootstrap.Modal(document.getElementById('distractorModal'));
         initCalculatorDrag();
         fetchQuestions();
     });
@@ -364,7 +370,13 @@
         }
     }
 
-    function displayCurrentQuestion() {
+    async function displayCurrentQuestion() {
+        // --- KORJATTU OSA: LISÄÄ HÄIRIÖTEKIJÄN TARKISTUS ---
+        if (userDistractorsEnabled && Math.random() < userDistractorProbability) {
+            await showDistractor();
+        }
+        // --- KORJAUKSEN LOPPU ---
+
         if (currentQuestionIndex >= questions.length) {
             showResults();
             return;
@@ -391,6 +403,71 @@
         document.getElementById('submitBtn').style.display = 'inline-block';
         document.getElementById('nextBtn').style.display = 'none';
     }
+    
+    // --- KORJATTU OSA: LISÄÄ HÄIRIÖTEKIJÄN NÄYTTÄMINEN JA KÄSITTELY ---
+    function showDistractor() {
+        return new Promise(resolve => {
+            currentDistractor = DISTRACTORS[Math.floor(Math.random() * DISTRACTORS.length)];
+            
+            document.getElementById('distractor-scenario').textContent = currentDistractor.scenario;
+            const optionsContainer = document.getElementById('distractor-options');
+            optionsContainer.innerHTML = '';
+            
+            currentDistractor.options.forEach((opt, index) => {
+                const button = document.createElement('button');
+                button.className = 'btn btn-outline-secondary distractor-option';
+                button.textContent = opt;
+                button.onclick = () => {
+                    selectedDistractorOption = index;
+                    document.querySelectorAll('#distractor-options button').forEach((btn, i) => {
+                        btn.classList.toggle('active', i === index);
+                    });
+                };
+                optionsContainer.appendChild(button);
+            });
+
+            document.getElementById('submit-distractor').style.display = 'block';
+            document.getElementById('continue-quiz').style.display = 'none';
+            document.getElementById('distractor-feedback').classList.add('d-none');
+            
+            distractorModalInstance.show();
+            
+            // Tärkeää: odotetaan, että käyttäjä sulkee modaalin
+            document.getElementById('distractorModal').addEventListener('hidden.bs.modal', function onModalClose() {
+                document.getElementById('distractorModal').removeEventListener('hidden.bs.modal', onModalClose);
+                resolve();
+            }, { once: true });
+        });
+    }
+
+    async function submitDistractor() {
+        if (selectedDistractorOption === null) return;
+        
+        try {
+            await fetch('/api/submit_distractor', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    scenario: currentDistractor.scenario,
+                    user_choice: selectedDistractorOption
+                })
+            });
+        } catch(e) {
+            console.error("Häiriötekijän tallennus epäonnistui", e);
+        }
+
+        const isCorrect = selectedDistractorOption === currentDistractor.correct;
+        const feedback = document.getElementById('distractor-feedback');
+        feedback.classList.remove('d-none');
+        feedback.className = `alert ${isCorrect ? 'alert-success' : 'alert-warning'}`;
+        feedback.innerHTML = isCorrect ? 
+            '<strong>Oikein!</strong> Hyvä päätös paineen alla.' : 
+            `<strong>Huomio!</strong> Oikea toimintatapa olisi ollut: <i>"${currentDistractor.options[currentDistractor.correct]}"</i>`;
+            
+        document.getElementById('submit-distractor').style.display = 'none';
+        document.getElementById('continue-quiz').style.display = 'block';
+    }
+    // --- KORJAUKSEN LOPPU ---
     
     async function loadQuestionProgress(questionId) {
         const progressInfo = document.getElementById('question-progress-info');
@@ -572,7 +649,6 @@
 
         const rect = calcModal.getBoundingClientRect();
         
-        // Varmistetaan, että elementtiä siirretään top/left -arvoilla
         if (calcModal.style.right || calcModal.style.bottom) {
             calcModal.style.right = 'auto';
             calcModal.style.bottom = 'auto';
@@ -655,3 +731,4 @@
     .distractor-option:hover { background-color: #f8f9fa; transform: translateX(5px); }
 </style>
 {% endblock %}
+
