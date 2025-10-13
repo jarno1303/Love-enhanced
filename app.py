@@ -828,26 +828,22 @@ def get_review_questions_api():
     distractor = None
     
     try:
-        if hasattr(question, '__dataclass_fields__'):
-            question_data = asdict(question)
-        else:
-            question_data = {
-                'id': getattr(question, 'id', 0),
-                'question': getattr(question, 'question', ''),
-                'options': getattr(question, 'options', []),
-                'correct': getattr(question, 'correct', 0),
-                'explanation': getattr(question, 'explanation', ''),
-                'category': getattr(question, 'category', ''),
-                'difficulty': getattr(question, 'difficulty', 1)
-            }
+        # Muunna dataclass-objekti sanakirjaksi
+        question_data = asdict(question)
     except Exception as e:
         app.logger.error(f"Virhe review-kysymyksen käsittelyssä: {e}")
         return jsonify({'question': None, 'distractor': None})
     
-    if hasattr(current_user, 'distractors_enabled') and current_user.distractors_enabled and random.random() < 0.3:
-        distractor = random.choice(DISTRACTORS)
-    
+    # KORJATTU OSA: Käytä käyttäjän tallennettua todennäköisyyttä
+    if hasattr(current_user, 'distractors_enabled') and current_user.distractors_enabled:
+        # Muunna prosentti (0-100) desimaaliluvuksi (0.0-1.0)
+        probability = current_user.distractor_probability / 100.0
+        if random.random() < probability:
+            distractor = random.choice(DISTRACTORS)
+            app.logger.info(f"Näytetään häiriötekijä käyttäjälle {current_user.id} todennäköisyydellä {probability*100}%")
+
     return jsonify({'question': question_data, 'distractor': distractor})
+
 
 @app.route("/api/recommendations")
 @login_required
