@@ -314,7 +314,7 @@
             }
             
             // Rakenna URL oikein, jotta se toimii sekä paikallisesti että palvelimella
-            const apiUrl = new URL('/api/practice_questions', window.location.origin);
+            const apiUrl = new URL('/api/questions', window.location.origin);
             apiUrl.searchParams.append('limit', limit);
             categories.forEach(cat => apiUrl.searchParams.append('categories', cat));
             difficulties.forEach(diff => apiUrl.searchParams.append('difficulties', diff));
