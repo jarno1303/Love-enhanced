@@ -1016,7 +1016,8 @@ def simulation_route():
         return render_template("simulation.html", 
                                session_data=active_session, 
                                questions_data=questions_data,
-                               has_existing_session=False)
+                               has_existing_session=False,
+                               constants={'DISTRACTORS': DISTRACTORS})
     
     # Jos on aktiivinen sessio MUTTA ei pyydetty jatkamaan eikä pakoteta uutta
     elif has_active and not force_new:
@@ -1045,7 +1046,8 @@ def simulation_route():
                                    session_data={},
                                    questions_data=[],
                                    has_existing_session=True,
-                                   session_info=session_info)
+                                   session_info=session_info,
+                                   constants={'DISTRACTORS': DISTRACTORS})
         except Exception as e:
             app.logger.error(f"Virhe session infon parsinnassa: {e}")
             # Jos virhe, poista viallinen sessio ja jatka normaalisti uuteen
@@ -1090,7 +1092,8 @@ def simulation_route():
     return render_template("simulation.html", 
                            session_data=new_session, 
                            questions_data=questions_data,
-                           has_existing_session=False)
+                           has_existing_session=False,
+                           constants={'DISTRACTORS': DISTRACTORS})
 
 @app.route("/profile")
 @login_required
@@ -2595,4 +2598,3 @@ def emergency_reset_admin():
         </body>
         </html>
         """
-
