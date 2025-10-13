@@ -1,3 +1,5 @@
+osa 1 ja 2
+
 # app.py
 
 # ============================================================================
@@ -122,6 +124,40 @@ stats_manager = EnhancedStatsManager(db_manager)
 achievement_manager = EnhancedAchievementManager(db_manager)
 spaced_repetition_manager = SpacedRepetitionManager(db_manager)
 bcrypt = Bcrypt(app)
+
+# ============================================================================
+# POSTGRESQL YHTEENSOPIVUUS - HELPER FUNKTIO
+# ============================================================================
+
+def execute_query(query, params=(), fetch='all'):
+    """
+    Helper-funktio joka toimii sekä SQLite:n että PostgreSQL:n kanssa.
+    """
+    conn = db_manager.get_connection()
+    try:
+        if db_manager.is_postgres:
+            from psycopg2.extras import DictCursor
+            with conn.cursor(cursor_factory=DictCursor) as cur:
+                cur.execute(query, params)
+                if fetch == 'one':
+                    return cur.fetchone()
+                elif fetch == 'all':
+                    return cur.fetchall()
+                elif fetch == 'none':
+                    conn.commit()
+                    return None
+        else:
+            conn.row_factory = sqlite3.Row
+            result = conn.execute(query, params)
+            if fetch == 'one':
+                return result.fetchone()
+            elif fetch == 'all':
+                return result.fetchall()
+            elif fetch == 'none':
+                conn.commit()
+                return None
+    finally:
+        conn.close()
 
 # ============================================================================
 # TIETOKANNAN ALUSTUSTOIMINNOT
@@ -353,8 +389,8 @@ def send_reset_email(user_email, reset_url):
     except Exception as e:
         app.logger.error(f"Failed to send email via Brevo: {e}")
         return False
-
-#==============================================================================
+    
+    #==============================================================================
 # --- API-REITIT ---
 #==============================================================================
 
@@ -364,10 +400,7 @@ def send_reset_email(user_email, reset_url):
 def get_incorrect_questions_api():
     """Hakee kysymykset joihin käyttäjä on vastannut väärin."""
     try:
-        conn = db_manager.get_connection()
-        conn.row_factory = sqlite3.Row
-        
-        incorrect_questions = conn.execute("""
+        incorrect_questions = execute_query("""
             SELECT 
                 q.id,
                 q.question,
@@ -377,36 +410,15 @@ def get_incorrect_questions_api():
                 p.times_shown,
                 p.times_correct,
                 p.last_shown,
-                ROUND((p.times_correct * 100.0) / p.times_shown, 1) as success_rate
+                ROUND((p.times_correct * 100.0) / NULLIF(p.times_shown, 0), 1) as success_rate
             FROM questions q
             INNER JOIN user_question_progress p ON q.id = p.question_id
             WHERE p.user_id = ?
-                AND p.times_shown > 0
                 AND p.times_correct < p.times_shown
-            ORDER BY 
-                (p.times_correct * 1.0 / p.times_shown) ASC,
-                p.last_shown DESC
-            LIMIT 50
-        """, (current_user.id,)).fetchall()
+            ORDER BY success_rate ASC NULLS FIRST, p.times_shown DESC
+        """, (current_user.id,), fetch='all')
         
-        questions_list = []
-        for row in incorrect_questions:
-            questions_list.append({
-                'id': row['id'],
-                'question': row['question'],
-                'category': row['category'],
-                'difficulty': row['difficulty'],
-                'explanation': row['explanation'],
-                'times_shown': row['times_shown'],
-                'times_correct': row['times_correct'],
-                'success_rate': row['success_rate'],
-                'last_shown': row['last_shown']
-            })
-        
-        return jsonify({
-            'total_count': len(questions_list),
-            'questions': questions_list
-        })
+        return jsonify([dict(q) for q in incorrect_questions] if incorrect_questions else [])
             
     except Exception as e:
         app.logger.error(f"Virhe väärien vastausten haussa: {e}")
@@ -494,29 +506,27 @@ def update_distractor_probability_api():
 def get_question_counts_api():
     """Hakee kysymysmäärät kategorioittain ja vaikeustasoittain."""
     try:
-        conn = db_manager.get_connection()
-        conn.row_factory = sqlite3.Row
-        
-        category_counts = conn.execute("""
+        category_counts = execute_query("""
             SELECT category, COUNT(*) as count
             FROM questions
             GROUP BY category
             ORDER BY category
-        """).fetchall()
+        """, fetch='all')
         
-        difficulty_counts = conn.execute("""
+        difficulty_counts = execute_query("""
             SELECT difficulty, COUNT(*) as count
             FROM questions
             GROUP BY difficulty
-        """).fetchall()
+        """, fetch='all')
         
-        category_difficulty_counts = conn.execute("""
+        category_difficulty_counts = execute_query("""
             SELECT category, difficulty, COUNT(*) as count
             FROM questions
             GROUP BY category, difficulty
-        """).fetchall()
+        """, fetch='all')
         
-        total_count = conn.execute("SELECT COUNT(*) as count FROM questions").fetchone()['count']
+        total_result = execute_query("SELECT COUNT(*) as count FROM questions", fetch='one')
+        total_count = total_result['count'] if total_result else 0
         
         cat_diff_map = {}
         for row in category_difficulty_counts:
@@ -560,13 +570,11 @@ def submit_distractor_api():
         
         is_correct = user_choice == correct_choice
         
-        conn = db_manager.get_connection()
-        conn.execute('''
+        execute_query("""
             INSERT INTO distractor_attempts
             (user_id, distractor_scenario, user_choice, correct_choice, is_correct, response_time, created_at)
             VALUES (?, ?, ?, ?, ?, ?, ?)
-        ''', (current_user.id, scenario, user_choice, correct_choice, is_correct, response_time, datetime.now()))
-        conn.commit()
+        """, (current_user.id, scenario, user_choice, correct_choice, is_correct, response_time, datetime.now()), fetch='none')
         
         app.logger.info(f"User {current_user.username} submitted distractor: correct={is_correct}")
         
@@ -876,11 +884,11 @@ def dashboard_route():
 
     # Hae virheiden määrä
     try:
-        conn = db_manager.get_connection()
-        mistake_count = conn.execute("""
-            SELECT COUNT(DISTINCT question_id) FROM question_attempts 
-            WHERE user_id = ? AND correct = 0
-        """, (current_user.id,)).fetchone()[0]
+        result = execute_query("""
+            SELECT COUNT(DISTINCT question_id) as count FROM question_attempts 
+            WHERE user_id = ? AND correct = ?
+        """, (current_user.id, False if db_manager.is_postgres else 0), fetch='one')
+        mistake_count = result['count'] if result else 0
     except Exception as e:
         app.logger.error(f"Virhe virheiden määrän haussa: {e}")
         mistake_count = 0
@@ -1088,9 +1096,7 @@ def settings_route():
             return redirect(url_for('settings_route'))
         
         try:
-            conn = db_manager.get_connection()
-            conn.row_factory = sqlite3.Row
-            user_data = conn.execute("SELECT password FROM users WHERE id = ?", (current_user.id,)).fetchone()
+            user_data = execute_query("SELECT password FROM users WHERE id = ?", (current_user.id,), fetch='one')
             
             if not user_data or not bcrypt.check_password_hash(user_data['password'], current_password):
                 flash('Nykyinen salasana on väärä.', 'danger')
@@ -1272,6 +1278,55 @@ def forgot_password_route():
         return redirect(url_for('login_route'))
 
     return render_template("forgot_password.html")
+
+@app.route("/reset-password/<token>", methods=['GET', 'POST'])
+def reset_password_route(token):
+    """Salasanan resetointi tokenilla."""
+    try:
+        email = verify_reset_token(token)
+    except (SignatureExpired, BadSignature):
+        flash('Palautuslinkki on vanhentunut tai virheellinen.', 'danger')
+        return redirect(url_for('forgot_password_route'))
+
+    if not email:
+        flash('Palautuslinkki on vanhentunut tai virheellinen.', 'danger')
+        return redirect(url_for('forgot_password_route'))
+
+    if request.method == 'POST':
+        new_password = request.form.get('new_password', '').strip()
+        confirm_password = request.form.get('confirm_password', '').strip()
+
+        if not new_password or not confirm_password:
+            flash('Täytä molemmat kentät.', 'danger')
+            return render_template("reset_password.html", token=token, email=email)
+
+        if new_password != confirm_password:
+            flash('Salasanat eivät täsmää.', 'danger')
+            return render_template("reset_password.html", token=token, email=email)
+
+        if len(new_password) < 8:
+            flash('Salasanan tulee olla vähintään 8 merkkiä pitkä.', 'danger')
+            return render_template("reset_password.html", token=token, email=email)
+
+        try:
+            user = db_manager.get_user_by_email(email)
+            if user:
+                hashed_password = bcrypt.generate_password_hash(new_password).decode('utf-8')
+                success, error = db_manager.update_user_password(user['id'], hashed_password)
+
+                if success:
+                    flash('Salasana vaihdettu onnistuneesti! Voit nyt kirjautua sisään.', 'success')
+                    app.logger.info(f"Password reset successful for user: {user['username']}")
+                    return redirect(url_for('login_route'))
+                else:
+                    flash(f'Virhe salasanan vaihdossa: {error}', 'danger')
+            else:
+                flash('Käyttäjää ei löytynyt.', 'danger')
+        except Exception as e:
+            flash('Salasanan vaihdossa tapahtui virhe.', 'danger')
+            app.logger.error(f"Password reset error: {e}")
+
+    return render_template("reset_password.html", token=token, email=email)
 
 #==============================================================================
 # --- YLLÄPITÄJÄN REITIT ---
@@ -1521,10 +1576,7 @@ def admin_route():
     difficulty_filter = request.args.get('difficulty', '')
     
     try:
-        conn = db_manager.get_connection()
-        conn.row_factory = sqlite3.Row
-        
-        # Rakenna SQL-kysely dynaamisesti
+        # Rakenna kysely dynaamisesti
         query = "SELECT id, question, category, difficulty FROM questions WHERE 1=1"
         params = []
         
@@ -1546,21 +1598,24 @@ def admin_route():
         
         query += " ORDER BY id DESC"
         
-        questions = conn.execute(query, params).fetchall()
+        questions = execute_query(query, params, fetch='all')
         
         # Hae kaikki kategoriat ja vaikeustasot dropdown-valikoita varten
-        categories = [row[0] for row in conn.execute("SELECT DISTINCT category FROM questions ORDER BY category").fetchall()]
-        difficulties = [row[0] for row in conn.execute("SELECT DISTINCT difficulty FROM questions ORDER BY difficulty").fetchall()]
+        categories_result = execute_query("SELECT DISTINCT category FROM questions ORDER BY category", fetch='all')
+        categories = [row['category'] for row in categories_result] if categories_result else []
+        
+        difficulties_result = execute_query("SELECT DISTINCT difficulty FROM questions ORDER BY difficulty", fetch='all')
+        difficulties = [row['difficulty'] for row in difficulties_result] if difficulties_result else []
         
         return render_template("admin.html", 
-                               questions=[dict(row) for row in questions],
+                               questions=[dict(row) for row in questions] if questions else [],
                                categories=categories,
                                difficulties=difficulties,
                                search_query=search_query,
                                category_filter=category_filter,
                                difficulty_filter=difficulty_filter,
-                               total_count=len(questions))
-    except sqlite3.Error as e:
+                               total_count=len(questions) if questions else 0)
+    except Exception as e:
         flash(f'Virhe kysymysten haussa: {e}', 'danger')
         app.logger.error(f"Admin questions fetch error: {e}")
         return render_template("admin.html", questions=[], categories=[], difficulties=[])
@@ -1580,33 +1635,32 @@ def admin_users_route():
 @admin_required
 def admin_stats_route():
     try:
-        conn = db_manager.get_connection()
-        conn.row_factory = sqlite3.Row
+        correct_value = 'true' if db_manager.is_postgres else '1'
         
-        general_stats = conn.execute('''
+        general_stats = execute_query(f"""
             SELECT
                 COUNT(DISTINCT u.id) as total_users,
                 COUNT(qa.id) as total_attempts,
-                AVG(CASE WHEN qa.is_correct = 1 THEN 100.0 ELSE 0.0 END) as avg_success_rate
+                AVG(CASE WHEN qa.correct = {correct_value} THEN 100.0 ELSE 0.0 END) as avg_success_rate
             FROM users u
             LEFT JOIN question_attempts qa ON u.id = qa.user_id
-        ''').fetchone()
+        """, fetch='one')
         
-        category_stats = conn.execute('''
+        category_stats = execute_query(f"""
             SELECT
                 q.category,
                 COUNT(qa.id) as attempts,
-                AVG(CASE WHEN qa.is_correct = 1 THEN 100.0 ELSE 0.0 END) as success_rate
+                AVG(CASE WHEN qa.correct = {correct_value} THEN 100.0 ELSE 0.0 END) as success_rate
             FROM questions q
             LEFT JOIN question_attempts qa ON q.id = qa.question_id
             GROUP BY q.category
             ORDER BY attempts DESC
-        ''').fetchall()
+        """, fetch='all')
         
         return render_template("admin_stats.html",
-                               general_stats=dict(general_stats),
-                               category_stats=[dict(row) for row in category_stats])
-    except sqlite3.Error as e:
+                               general_stats=dict(general_stats) if general_stats else {},
+                               category_stats=[dict(row) for row in category_stats] if category_stats else [])
+    except Exception as e:
         flash(f'Virhe tilastojen haussa: {e}', 'danger')
         app.logger.error(f"Admin stats fetch error: {e}")
         return redirect(url_for('admin_route'))
@@ -1746,9 +1800,6 @@ def admin_export_questions_document_route():
         selected_difficulties = request.form.getlist('difficulties')
         
         try:
-            conn = db_manager.get_connection()
-            conn.row_factory = sqlite3.Row
-            
             # Rakenna kysely suodattimilla
             query = "SELECT * FROM questions WHERE 1=1"
             params = []
@@ -1773,7 +1824,7 @@ def admin_export_questions_document_route():
             }
             query += f" ORDER BY {sort_mapping.get(sort_by, 'id ASC')}"
             
-            questions = conn.execute(query, params).fetchall()
+            questions = execute_query(query, params, fetch='all')
                     
             if not questions:
                 flash('Ei kysymyksiä vietäväksi valituilla suodattimilla.', 'warning')
@@ -1837,8 +1888,8 @@ def admin_export_questions_document_route():
     try:
         categories = db_manager.get_categories()
         
-        conn = db_manager.get_connection()
-        total_questions = conn.execute("SELECT COUNT(*) FROM questions").fetchone()[0]
+        total_result = execute_query("SELECT COUNT(*) as count FROM questions", fetch='one')
+        total_questions = total_result['count'] if total_result else 0
         
         return render_template('admin_export_document.html', 
                                categories=categories,
@@ -2183,13 +2234,11 @@ def admin_merge_categories_route():
 def admin_export_questions_route():
     """Vie kaikki kysymykset JSON-tiedostoon."""
     try:
-        conn = db_manager.get_connection()
-        conn.row_factory = sqlite3.Row
-        questions = conn.execute("""
+        questions = execute_query("""
             SELECT id, question, explanation, options, correct, category, difficulty, created_at
             FROM questions
             ORDER BY category, id
-        """).fetchall()
+        """, fetch='all')
         
         questions_list = []
         for q in questions:
