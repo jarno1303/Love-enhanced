@@ -2596,4 +2596,3 @@ def emergency_reset_admin():
         </html>
         """
 
-
