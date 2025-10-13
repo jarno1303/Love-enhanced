@@ -134,6 +134,8 @@ def execute_query(query, params=(), fetch='all'):
     conn = db_manager.get_connection()
     try:
         if db_manager.is_postgres:
+            # PostgreSQL vaatii %s placeholdereita, ei ?
+            query = query.replace('?', '%s')
             from psycopg2.extras import DictCursor
             with conn.cursor(cursor_factory=DictCursor) as cur:
                 cur.execute(query, params)
