@@ -547,43 +547,57 @@ def get_question_counts_api():
         app.logger.error(f"Virhe kysymysmäärien haussa: {e}")
         return jsonify({'error': str(e)}), 500
 
-@app.route("/api/questions")
+@app.route("/api/practice_questions")
 @login_required
 @limiter.limit("60 per minute")
-def get_questions_api():
-    """Hakee kysymyksiä kategorian ja vaikeustason mukaan."""
+def get_practice_questions_api():
+    """Hakee harjoituskysymyksiä valintojen mukaan."""
     try:
-        category = request.args.get('category', 'all')
-        difficulty = request.args.get('difficulty', 'all')
-        limit = int(request.args.get('limit', 10))
-        
+        # Käytä getlist() hakemaan kaikki valinnat listoina
+        categories = request.args.getlist('categories')
+        difficulties = request.args.getlist('difficulties')
+        # Varmista, että tämä vastaa frontendin parametria (oli 'limit', nyt 'count')
+        limit = int(request.args.get('count', 10))
+
+        # Varmista, että tyhjät listat käsitellään oikein (tulkitaan "kaikki")
+        if not categories:
+            categories = None
+        if not difficulties:
+            difficulties = None
+
         questions = db_manager.get_questions(
             user_id=current_user.id,
-            categories=None if category == 'all' else [category],
-            difficulties=None if difficulty == 'all' else [difficulty], # KORJATTU TÄHÄN
+            categories=categories,
+            difficulties=difficulties,
             limit=limit
         )
-        
+
         questions_list = []
         for q in questions:
+            # Sekoitetaan vastausvaihtoehtojen järjestys joka kerta
+            # Tallenna alkuperäinen oikea vastaus
+            original_correct_text = q.options[q.correct]
+            # Sekoita vaihtoehdot
+            random.shuffle(q.options)
+            # Etsi uusi indeksi sekoitetusta listasta
+            q.correct = q.options.index(original_correct_text)
+
             if hasattr(q, '__dict__'):
-                q_dict = {
-                    'id': q.id,
-                    'question': q.question,
-                    'options': q.options,
-                    'correct': q.correct,
-                    'explanation': q.explanation,
-                    'category': q.category,
-                    'difficulty': q.difficulty
-                }
+                # Muunna dataclass-objekti sanakirjaksi
+                q_dict = asdict(q)
             else:
+                # Jos se on jo sanakirja-tyyppinen (esim. psycopg2 DictRow)
                 q_dict = dict(q)
             questions_list.append(q_dict)
-        
-        return jsonify(questions_list)
-        
+
+        return jsonify({'questions': questions_list})
+
     except Exception as e:
-        app.logger.error(f"Virhe kysymysten haussa: {e}")
+        app.logger.error(f"Virhe /api/practice_questions haussa: {e}")
+        # Lisää traceback lokiin debug-tilassa
+        if app.config['DEBUG']:
+            import traceback
+            traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 @app.route("/api/submit_distractor", methods=['POST'])
