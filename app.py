@@ -547,16 +547,16 @@ def get_question_counts_api():
         app.logger.error(f"Virhe kysymysmäärien haussa: {e}")
         return jsonify({'error': str(e)}), 500
 
-@app.route("/api/practice_questions")
+@app.route("/api/questions")
 @login_required
 @limiter.limit("60 per minute")
-def get_practice_questions_api():
+def get_questions_api():
     """Hakee harjoituskysymyksiä valintojen mukaan."""
     try:
         # Käytä getlist() hakemaan kaikki valinnat listoina
         categories = request.args.getlist('categories')
         difficulties = request.args.getlist('difficulties')
-        # Varmista, että tämä vastaa frontendin parametria (oli 'limit', nyt 'count')
+        # Varmista, että tämä vastaa frontendin parametria (count)
         limit = int(request.args.get('count', 10))
 
         # Varmista, että tyhjät listat käsitellään oikein (tulkitaan "kaikki")
@@ -593,7 +593,7 @@ def get_practice_questions_api():
         return jsonify({'questions': questions_list})
 
     except Exception as e:
-        app.logger.error(f"Virhe /api/practice_questions haussa: {e}")
+        app.logger.error(f"Virhe /api/questions haussa: {e}")
         # Lisää traceback lokiin debug-tilassa
         if app.config['DEBUG']:
             import traceback
