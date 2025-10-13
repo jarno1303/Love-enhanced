@@ -131,33 +131,7 @@ def execute_query(query, params=(), fetch='all'):
     """
     Helper-funktio joka toimii sekä SQLite:n että PostgreSQL:n kanssa.
     """
-    conn = db_manager.get_connection()
-    try:
-        if db_manager.is_postgres:
-            # PostgreSQL vaatii %s placeholdereita, ei ?
-            query = query.replace('?', '%s')
-            from psycopg2.extras import DictCursor
-            with conn.cursor(cursor_factory=DictCursor) as cur:
-                cur.execute(query, params)
-                if fetch == 'one':
-                    return cur.fetchone()
-                elif fetch == 'all':
-                    return cur.fetchall()
-                elif fetch == 'none':
-                    conn.commit()
-                    return None
-        else:
-            conn.row_factory = sqlite3.Row
-            result = conn.execute(query, params)
-            if fetch == 'one':
-                return result.fetchone()
-            elif fetch == 'all':
-                return result.fetchall()
-            elif fetch == 'none':
-                conn.commit()
-                return None
-    finally:
-        conn.close()
+    return db_manager._execute(query, params, fetch)
 
 # ============================================================================
 # TIETOKANNAN ALUSTUSTOIMINNOT
@@ -418,7 +392,7 @@ def get_incorrect_questions_api():
             ORDER BY success_rate ASC NULLS FIRST, p.times_shown DESC
         """, (current_user.id,), fetch='all')
         
-        return jsonify([dict(q) for q in incorrect_questions] if incorrect_questions else [])
+        return jsonify({'questions': [dict(q) for q in incorrect_questions] if incorrect_questions else []})
             
     except Exception as e:
         app.logger.error(f"Virhe väärien vastausten haussa: {e}")
@@ -430,10 +404,7 @@ def get_incorrect_questions_api():
 def get_question_progress_api(question_id):
     """Hakee käyttäjän edistymisen tietyssä kysymyksessä."""
     try:
-        conn = db_manager.get_connection()
-        conn.row_factory = sqlite3.Row
-        
-        progress = conn.execute("""
+        progress = execute_query("""
             SELECT 
                 times_shown,
                 times_correct,
@@ -444,15 +415,10 @@ def get_question_progress_api(question_id):
                 END as success_rate
             FROM user_question_progress
             WHERE user_id = ? AND question_id = ?
-        """, (current_user.id, question_id)).fetchone()
+        """, (current_user.id, question_id), fetch='one')
         
         if progress:
-            return jsonify({
-                'times_shown': progress['times_shown'],
-                'times_correct': progress['times_correct'],
-                'success_rate': progress['success_rate'],
-                'last_shown': progress['last_shown']
-            })
+            return jsonify(dict(progress))
         else:
             return jsonify({
                 'times_shown': 0,
@@ -473,12 +439,10 @@ def toggle_distractors_api():
     is_enabled = data.get('enabled', False)
     
     try:
-        conn = db_manager.get_connection()
-        conn.execute("UPDATE users SET distractors_enabled = ? WHERE id = ?", (is_enabled, current_user.id))
-        conn.commit()
+        execute_query("UPDATE users SET distractors_enabled = ? WHERE id = ?", (is_enabled, current_user.id), fetch='none')
         app.logger.info(f"User {current_user.username} toggled distractors: {is_enabled}")
         return jsonify({'success': True, 'distractors_enabled': is_enabled})
-    except sqlite3.Error as e:
+    except Exception as e:
         app.logger.error(f"Virhe häiriötekijöiden togglessa: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
@@ -491,12 +455,10 @@ def update_distractor_probability_api():
     probability = max(0, min(100, int(probability)))
     
     try:
-        conn = db_manager.get_connection()
-        conn.execute("UPDATE users SET distractor_probability = ? WHERE id = ?", (probability, current_user.id))
-        conn.commit()
+        execute_query("UPDATE users SET distractor_probability = ? WHERE id = ?", (probability, current_user.id), fetch='none')
         app.logger.info(f"User {current_user.username} updated distractor probability: {probability}%")
         return jsonify({'success': True, 'probability': probability})
-    except sqlite3.Error as e:
+    except Exception as e:
         app.logger.error(f"Virhe todennäköisyyden päivityksessä: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
@@ -529,17 +491,18 @@ def get_question_counts_api():
         total_count = total_result['count'] if total_result else 0
         
         cat_diff_map = {}
-        for row in category_difficulty_counts:
-            cat = row['category']
-            diff = row['difficulty']
-            count = row['count']
-            if cat not in cat_diff_map:
-                cat_diff_map[cat] = {}
-            cat_diff_map[cat][diff] = count
+        if category_difficulty_counts:
+            for row in category_difficulty_counts:
+                cat = row['category']
+                diff = row['difficulty']
+                count = row['count']
+                if cat not in cat_diff_map:
+                    cat_diff_map[cat] = {}
+                cat_diff_map[cat][diff] = count
         
         return jsonify({
-            'categories': {row['category']: row['count'] for row in category_counts},
-            'difficulties': {row['difficulty']: row['count'] for row in difficulty_counts},
+            'categories': {row['category']: row['count'] for row in category_counts} if category_counts else {},
+            'difficulties': {row['difficulty']: row['count'] for row in difficulty_counts} if difficulty_counts else {},
             'category_difficulty_map': cat_diff_map,
             'total': total_count
         })
@@ -582,12 +545,8 @@ def get_questions_api():
             # Etsi uusi indeksi sekoitetusta listasta
             q.correct = q.options.index(original_correct_text)
 
-            if hasattr(q, '__dict__'):
-                # Muunna dataclass-objekti sanakirjaksi
-                q_dict = asdict(q)
-            else:
-                # Jos se on jo sanakirja-tyyppinen (esim. psycopg2 DictRow)
-                q_dict = dict(q)
+            # Muunna dataclass-objekti sanakirjaksi
+            q_dict = asdict(q)
             questions_list.append(q_dict)
 
         return jsonify({'questions': questions_list})
@@ -599,6 +558,7 @@ def get_questions_api():
             import traceback
             traceback.print_exc()
         return jsonify({'error': str(e)}), 500
+
 
 @app.route("/api/submit_distractor", methods=['POST'])
 @login_required
@@ -1478,18 +1438,16 @@ def admin_add_question_route():
         correct = options.index(correct_answer_text)
 
         try:
-            conn = db_manager.get_connection()
             question_normalized = db_manager.normalize_question(question_text)
-            conn.execute('''
+            execute_query('''
                 INSERT INTO questions (question, question_normalized, options, correct, explanation, category, difficulty, created_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (question_text, question_normalized, json.dumps(options), correct, explanation, category, difficulty, datetime.now()))
-            conn.commit()
+            ''', (question_text, question_normalized, json.dumps(options), correct, explanation, category, difficulty, datetime.now()), fetch='none')
             
             flash('Kysymys lisätty onnistuneesti!', 'success')
             app.logger.info(f"Admin {current_user.username} added new question in category {category}")
             return redirect(url_for('admin_route'))
-        except sqlite3.Error as e:
+        except Exception as e:
             flash(f'Virhe kysymyksen lisäämisessä: {e}', 'danger')
             app.logger.error(f"Question add error: {e}")
 
@@ -1651,7 +1609,7 @@ def admin_route():
         
         query += " ORDER BY id DESC"
         
-        questions = execute_query(query, params, fetch='all')
+        questions = execute_query(query, tuple(params), fetch='all')
         
         # Hae kaikki kategoriat ja vaikeustasot dropdown-valikoita varten
         categories_result = execute_query("SELECT DISTINCT category FROM questions ORDER BY category", fetch='all')
@@ -1679,7 +1637,7 @@ def admin_users_route():
     try:
         users = db_manager.get_all_users_for_admin()
         return render_template("admin_users.html", users=users)
-    except sqlite3.Error as e:
+    except Exception as e:
         flash(f'Virhe käyttäjien haussa: {e}', 'danger')
         app.logger.error(f"Admin users fetch error: {e}")
         return redirect(url_for('admin_route'))
@@ -1877,7 +1835,7 @@ def admin_export_questions_document_route():
             }
             query += f" ORDER BY {sort_mapping.get(sort_by, 'id ASC')}"
             
-            questions = execute_query(query, params, fetch='all')
+            questions = execute_query(query, tuple(params), fetch='all')
                     
             if not questions:
                 flash('Ei kysymyksiä vietäväksi valituilla suodattimilla.', 'warning')
@@ -2470,7 +2428,8 @@ def emergency_reset_admin():
             # Admin löytyi - päivitä salasana
             db_manager._execute(
                 "UPDATE users SET password = ? WHERE username = ?",
-                (hashed_pw, admin_username)
+                (hashed_pw, admin_username),
+                fetch='none'
             )
             
             return f"""
@@ -2534,7 +2493,8 @@ def emergency_reset_admin():
                 # Aseta rooli admin:ksi
                 db_manager._execute(
                     "UPDATE users SET role = ? WHERE username = ?",
-                    ('admin', admin_username)
+                    ('admin', admin_username),
+                    fetch='none'
                 )
                 
                 return f"""
@@ -2634,3 +2594,4 @@ def emergency_reset_admin():
         </body>
         </html>
         """
+
