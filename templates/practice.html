@@ -289,7 +289,7 @@
     let currentDistractor = null;
     let distractorModalInstance = null;
     let calcCurrentValue = '0', calcOperator = '', calcPreviousValue = '';
-    let isDragging = false, currentX, currentY, initialX, initialY, xOffset = 0, yOffset = 0;
+    let isDragging = false, xOffset = 0, yOffset = 0;
 
     document.addEventListener('DOMContentLoaded', function() {
         explanationModal = new bootstrap.Modal(document.getElementById('explanationModal'));
@@ -298,9 +298,6 @@
         fetchQuestions();
     });
 
-    // =======================================================
-    // KORJATTU FUNKTIO
-    // =======================================================
     async function fetchQuestions() {
         try {
             const urlParams = new URLSearchParams(window.location.search);
@@ -313,9 +310,8 @@
                 throw new Error('Kysymysten määrän tulee olla 1-100 välillä');
             }
             
-            // Rakenna URL oikein, jotta se toimii sekä paikallisesti että palvelimella
             const apiUrl = new URL('/api/questions', window.location.origin);
-            apiUrl.searchParams.append('limit', limit);
+            apiUrl.searchParams.append('count', limit);
             categories.forEach(cat => apiUrl.searchParams.append('categories', cat));
             difficulties.forEach(diff => apiUrl.searchParams.append('difficulties', diff));
             
@@ -342,9 +338,6 @@
             showScreen('error', userMessage);
         }
     }
-    // =======================================================
-    // LOPUT FUNKTIOT OVAT ENNALLAAN
-    // =======================================================
 
     function continueToNext() {
         explanationModal.hide();
@@ -397,11 +390,6 @@
         });
         document.getElementById('submitBtn').style.display = 'inline-block';
         document.getElementById('nextBtn').style.display = 'none';
-    }
-
-    async function checkForDistractor() {
-        // TÄMÄ ON VANHA LOGIIKKA, JOTA EI ENÄÄ KÄYTETÄ, MUTTA JÄTETÄÄN PAIKALLEEN.
-        // UUSI HÄIRIÖTEKIJÄLOGIIKKA ON REVIEW-SIVULLA.
     }
     
     async function loadQuestionProgress(questionId) {
@@ -564,46 +552,51 @@
 
     function initCalculatorDrag() {
         const calcHeader = document.getElementById('calc-header');
+        const calcModal = document.getElementById('calculator-modal');
+
         calcHeader.addEventListener('mousedown', dragStart);
-        document.addEventListener('mousemove', drag);
         document.addEventListener('mouseup', dragEnd);
-        calcHeader.addEventListener('touchstart', dragStart);
-        document.addEventListener('touchmove', drag);
+        document.addEventListener('mousemove', drag);
+
+        calcHeader.addEventListener('touchstart', dragStart, { passive: false });
         document.addEventListener('touchend', dragEnd);
+        document.addEventListener('touchmove', drag, { passive: false });
     }
 
     function dragStart(e) {
-        if (e.type === "touchstart") {
-            initialX = e.touches[0].clientX - xOffset;
-            initialY = e.touches[0].clientY - yOffset;
-        } else {
-            initialX = e.clientX - xOffset;
-            initialY = e.clientY - yOffset;
+        const calcModal = document.getElementById('calculator-modal');
+        isDragging = true;
+        
+        const clientX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
+        const clientY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY;
+
+        const rect = calcModal.getBoundingClientRect();
+        
+        // Varmistetaan, että elementtiä siirretään top/left -arvoilla
+        if (calcModal.style.right || calcModal.style.bottom) {
+            calcModal.style.right = 'auto';
+            calcModal.style.bottom = 'auto';
+            calcModal.style.top = rect.top + 'px';
+            calcModal.style.left = rect.left + 'px';
         }
-        if (e.target.closest('#calc-header')) isDragging = true;
+
+        xOffset = clientX - calcModal.offsetLeft;
+        yOffset = clientY - calcModal.offsetTop;
     }
 
     function drag(e) {
         if (isDragging) {
             e.preventDefault();
             const calcModal = document.getElementById('calculator-modal');
-            if (e.type === "touchmove") {
-                currentX = e.touches[0].clientX - initialX;
-                currentY = e.touches[0].clientY - initialY;
-            } else {
-                currentX = e.clientX - initialX;
-                currentY = e.clientY - initialY;
-            }
-            xOffset = currentX; yOffset = currentY;
-            const rect = calcModal.getBoundingClientRect();
-            calcModal.style.right = 'auto'; calcModal.style.bottom = 'auto';
-            calcModal.style.left = `${rect.left + currentX}px`;
-            calcModal.style.top = `${rect.top + currentY}px`;
+            const clientX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
+            const clientY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY;
+            
+            calcModal.style.left = (clientX - xOffset) + 'px';
+            calcModal.style.top = (clientY - yOffset) + 'px';
         }
     }
 
     function dragEnd() {
-        initialX = currentX; initialY = currentY;
         isDragging = false;
     }
 
