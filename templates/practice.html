@@ -2,6 +2,15 @@
 
 {% block title %}Harjoittele - LOVe Enhanced{% endblock %}
 
+{% block extra_head %}
+<style>
+    .distractor-option:hover {
+        background-color: #e9ecef; /* Vaaleanharmaa korostus */
+        color: #212529 !important; /* Pakotetaan teksti tummaksi hover-tilassa */
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container">
     <div id="loadingScreen" class="text-center py-5">
@@ -211,62 +220,7 @@
 </div>
 
 <div id="mnemonic-templates" style="display: none;">
-    <style>
-        .mnemonic-card { border-radius: 8px; padding: 1.5rem; text-align: center; color: #fff; }
-        .mnemonic-card .icon { font-size: 2.5rem; margin-bottom: 1rem; }
-        .mnemonic-card h4 { font-weight: bold; }
-        .mnemonic-card .subtitle { font-size: 0.9rem; opacity: 0.8; margin-bottom: 1rem; }
-        .mnemonic-card p { margin-bottom: 1.25rem; }
-        .mnemonic-card .formula-box { background: rgba(0,0,0,0.2); padding: 0.75rem; border-radius: 4px; font-family: monospace, monospace; font-size: 1.1rem; }
-        .theme-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-        .theme-info { background: linear-gradient(135deg, #36d1dc 0%, #5b86e5 100%); }
-        .theme-warning { background: linear-gradient(135deg, #f7971e 0%, #ffd200 100%); }
-        .theme-success { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); }
-        .theme-danger { background: linear-gradient(135deg, #e53935 0%, #e35d5b 100%); }
-        .theme-accent { background: linear-gradient(135deg, #8E2DE2 0%, #4A00E0 100%); }
-    </style>
-    <div id="mnemonic-dose" class="mnemonic-card theme-primary">
-        <div class="icon"><i class="fas fa-calculator"></i></div>
-        <h4>Annoslaskennan perussääntö</h4>
-        <p class="subtitle">Jakolaskukaava</p>
-        <p>Jaa lääkärin määräämä annos lääkkeen saatavilla olevalla vahvuudella.</p>
-        <div class="formula-box">Määrätty &divide; Saatavilla = Tarvittava määrä</div>
-    </div>
-    <div id="mnemonic-infusion" class="mnemonic-card theme-info">
-        <div class="icon"><i class="fas fa-tint"></i></div>
-        <h4>Tippojen perusmuunnos</h4>
-        <p class="subtitle">1 ml = 20 gtt</p>
-        <p>Standardi tippakerroin on 20 tippaa per millilitra, ellei infuusiovälineistössä toisin mainita.</p>
-        <div class="formula-box">Helppo muistaa: "kaksi-nolla"</div>
-    </div>
-    <div id="mnemonic-percent" class="mnemonic-card theme-warning">
-         <div class="icon"><i class="fas fa-percentage"></i></div>
-         <h4>Prosenttiliuoksen periaate</h4>
-         <p class="subtitle">% = grammaa / 100 ml</p>
-         <p>Liuoksen prosentti tarkoittaa aina, kuinka monta grammaa vaikuttavaa ainetta on 100 ml:ssa nestettä.</p>
-         <div class="formula-box">Esim: 5 % glukoosi = 5g / 100ml</div>
-    </div>
-    <div id="mnemonic-conversion" class="mnemonic-card theme-success">
-        <div class="icon"><i class="fas fa-exchange-alt"></i></div>
-        <h4>Yksikkömuunnokset</h4>
-        <p class="subtitle">Tuhannen potenssit</p>
-        <p>Suuremmasta pienempään: kerro tuhannella. Pienemmästä suurempaan: jaa tuhannella.</p>
-        <div class="formula-box">g &rarr; mg: &times;1000 <br>L &rarr; ml: &times;1000</div>
-    </div>
-    <div id="mnemonic-check" class="mnemonic-card theme-danger">
-        <div class="icon"><i class="fas fa-clipboard-check"></i></div>
-        <h4>Tuloksen tarkistus</h4>
-        <p class="subtitle">Järkevyysarviointi</p>
-        <p>Varmista aina, että laskun lopputulos on käytännössä järkevä. Suuret tai hyvin pienet luvut ovat usein virheen merkki.</p>
-        <div class="formula-box">Jos vastaus tuntuu oudolta, laske uudelleen.</div>
-    </div>
-    <div id="mnemonic-percent-shortcut" class="mnemonic-card theme-accent">
-        <div class="icon"><i class="fas fa-bolt"></i></div>
-        <h4>Prosenttien pikalasku</h4>
-        <p class="subtitle">% &rarr; mg/ml</p>
-        <p>Saat muutettua prosenttiluvun vahvuudeksi (mg/ml) nopeasti kertomalla sen kymmenellä.</p>
-        <div class="formula-box">0,9 % &times; 10 = 9 mg/ml</div>
-    </div>
+    {% include '_mnemonics.html' %}
 </div>
 
 {% endblock %}
@@ -728,35 +682,5 @@
         helperBody.innerHTML = helperContent;
         helperModal.show();
     }
-
-    function closeDistractor() {
-        if (distractorModalInstance) {
-            distractorModalInstance.hide();
-        }
-    }
 </script>
-
-{% endblock %}
-
-{% block styles %}
-<style>
-    .option-item { transition: all 0.3s ease; }
-    .option-item:hover { background-color: #f8f9fa; transform: translateX(5px); }
-    .progress { border-radius: 10px; }
-    .progress-bar { transition: width 0.5s ease; }
-    #question-progress-info { border-left: 4px solid; transition: all 0.3s ease; }
-    #question-progress-info.alert-success { border-left-color: #28a745; }
-    #question-progress-info.alert-warning { border-left-color: #ffc107; }
-    #question-progress-info.alert-danger { border-left-color: #dc3545; }
-    #floating-calculator-btn { transition: all 0.3s ease; }
-    #floating-calculator-btn:hover { transform: scale(1.1); box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important; }
-    #calculator-modal .btn { padding: 12px; font-size: 1.1rem; font-weight: bold; }
-    #calc-header { user-select: none; }
-    #calc-header:active { cursor: grabbing !important; }
-    .distractor-option { transition: all 0.2s ease; }
-    .distractor-option:hover { 
-        background-color: #e9ecef; /* Vaaleanharmaa korostus */
-        color: #212529 !important; /* Pakotetaan teksti tummaksi hover-tilassa */
-    }
-</style>
 {% endblock %}
