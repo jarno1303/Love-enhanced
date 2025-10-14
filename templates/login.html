@@ -29,8 +29,8 @@
                             </label>
                             <input type="password" class="form-control form-control-lg" id="password" name="password" required placeholder="Syötä salasanasi">
                             <div class="text-end mt-2">
-                                <a href="{{ url_for('forgot_password_route') }}" class="small text-decoration-none">
-                                <i class="fas fa-key me-1"></i>Unohtuiko salasana?
+                                <a href="{{ url_for('_password_route') }}" class="small text-decoration-none">
+                                    <i class="fas fa-key me-1"></i>Unohtuiko salasana?
                                 </a>
                             </div>
                         </div>
@@ -53,6 +53,7 @@
                 </div>
             </div>
             
+            <!-- Info Box -->
             <div class="alert alert-info mt-4" role="alert">
                 <i class="fas fa-info-circle me-2"></i>
                 <strong>Huomio:</strong> Ensimmäinen rekisteröityvä käyttäjä saa automaattisesti ylläpitäjän oikeudet.
@@ -79,7 +80,7 @@
     }
     
     .btn-primary:hover {
-        transform: translateY(-px);
+        transform: translateY(-2px);
         box-shadow: 0 5px 15px rgba(90, 103, 216, 0.4);
     }
 </style>
