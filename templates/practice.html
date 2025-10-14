@@ -123,7 +123,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" id="submit-distractor" class="btn btn-warning" onclick="submitDistractor()">Vastaa</button>
-                <button type="button" id="continue-quiz" class="btn btn-primary d-none" data-bs-dismiss="modal">Jatka harjoitusta</button>
+                <button type="button" id="continue-quiz" class="btn btn-primary d-none" onclick="closeDistractor()">Jatka harjoitusta</button>
             </div>
         </div>
     </div>
@@ -396,7 +396,7 @@
         document.getElementById('nextBtn').style.display = 'none';
         
         // Näytetään häiriötekijä VASTA kun kysymys on ladattu taustalle
-        if (userDistractorsEnabled && Math.random() < userDistractorProbability) {
+        if (currentQuestionIndex > 0 && userDistractorsEnabled && Math.random() < userDistractorProbability) {
             showDistractor();
         }
     }
@@ -726,7 +726,13 @@
         }
         helperBody.innerHTML = helperContent;
         helperModal.show();
+
+        function closeDistractor() {
+    if (distractorModalInstance) {
+        distractorModalInstance.hide();
     }
+}
+
 </script>
 
 <style>

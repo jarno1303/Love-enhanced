@@ -98,7 +98,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" id="submit-distractor" class="btn btn-warning" onclick="submitDistractor()">Vastaa</button>
-                <button type="button" id="continue-quiz" class="btn btn-primary d-none" data-bs-dismiss="modal">Jatka koetta</button>
+                <button type="button" id="continue-quiz" class="btn btn-primary d-none" onclick="closeDistractor()">Jatka koetta</button>
             </div>
         </div>
     </div>
@@ -194,7 +194,7 @@
         updateQuestionGrid();
 
         // Näytetään häiriötekijä VASTA kun kysymys on ladattu taustalle
-        if (userDistractorsEnabled && Math.random() < userDistractorProbability) {
+        if (currentQuestionIndex > 0 && userDistractorsEnabled && Math.random() < userDistractorProbability) {
             showDistractor();
         }
     }
@@ -396,7 +396,11 @@
     function dragEnd() {
         isDragging = false;
     }
-    // --- KORJAUKSEN LOPPU ---
+    function closeDistractor() {
+    if (distractorModalInstance) {
+        distractorModalInstance.hide();
+    }
+}
 </script>
 {% endblock %}
 
