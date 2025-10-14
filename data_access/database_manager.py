@@ -302,79 +302,79 @@ class DatabaseManager:
         return [row['category'] for row in rows] if rows else []
 
     def get_questions(self, user_id, categories=None, difficulties=None, limit=None):
-    try:
-        logger.info(f"Fetching questions for user_id={user_id}, categories={categories}, difficulties={difficulties}, limit={limit}")
-        query = """
-            SELECT q.*, 
-                   COALESCE(p.times_shown, 0) as times_shown, 
-                   COALESCE(p.times_correct, 0) as times_correct, 
-                   COALESCE(p.ease_factor, 2.5) as ease_factor, 
-                   COALESCE(p.interval, 1) as interval
-            FROM questions q 
-            LEFT JOIN user_question_progress p ON q.id = p.question_id AND p.user_id = ?
-        """
-        params = [user_id]
-        where_clauses = []
+        try:
+            logger.info(f"Fetching questions for user_id={user_id}, categories={categories}, difficulties={difficulties}, limit={limit}")
+            query = """
+                SELECT q.*, 
+                       COALESCE(p.times_shown, 0) as times_shown, 
+                       COALESCE(p.times_correct, 0) as times_correct, 
+                       COALESCE(p.ease_factor, 2.5) as ease_factor, 
+                       COALESCE(p.interval, 1) as interval
+                FROM questions q 
+                LEFT JOIN user_question_progress p ON q.id = p.question_id AND p.user_id = ?
+            """
+            params = [user_id]
+            where_clauses = []
 
-        # Suojaa tyhjät listat ja täytä oletusarvot
-        if categories and isinstance(categories, list) and categories and 'Kaikki kategoriat' not in categories:
-            placeholders = ', '.join([self.param_style] * len(categories))
-            where_clauses.append(f"q.category IN ({placeholders})")
-            params.extend(categories)
-        else:
-            logger.info("No valid categories filter - using all categories")
-            categories = [cat['category'] for cat in self._execute("SELECT DISTINCT category FROM questions", fetch='all')]
-            if categories:
+            # Suojaa tyhjät listat ja täytä oletusarvot
+            if categories and isinstance(categories, list) and categories and 'Kaikki kategoriat' not in categories:
                 placeholders = ', '.join([self.param_style] * len(categories))
                 where_clauses.append(f"q.category IN ({placeholders})")
                 params.extend(categories)
+            else:
+                logger.info("No valid categories filter - using all categories")
+                categories = [cat['category'] for cat in self._execute("SELECT DISTINCT category FROM questions", fetch='all')]
+                if categories:
+                    placeholders = ', '.join([self.param_style] * len(categories))
+                    where_clauses.append(f"q.category IN ({placeholders})")
+                    params.extend(categories)
 
-        if difficulties and isinstance(difficulties, list) and difficulties:
-            placeholders = ', '.join([self.param_style] * len(difficulties))
-            where_clauses.append(f"q.difficulty IN ({placeholders})")
-            params.extend(difficulties)
-        else:
-            logger.info("No valid difficulties filter - using all difficulties")
-            difficulties = [diff['difficulty'] for diff in self._execute("SELECT DISTINCT difficulty FROM questions", fetch='all')]
-            if difficulties:
+            if difficulties and isinstance(difficulties, list) and difficulties:
                 placeholders = ', '.join([self.param_style] * len(difficulties))
                 where_clauses.append(f"q.difficulty IN ({placeholders})")
                 params.extend(difficulties)
+            else:
+                logger.info("No valid difficulties filter - using all difficulties")
+                difficulties = [diff['difficulty'] for diff in self._execute("SELECT DISTINCT difficulty FROM questions", fetch='all')]
+                if difficulties:
+                    placeholders = ', '.join([self.param_style] * len(difficulties))
+                    where_clauses.append(f"q.difficulty IN ({placeholders})")
+                    params.extend(difficulties)
 
-        if where_clauses:
-            query += " WHERE " + " AND ".join(where_clauses)
+            if where_clauses:
+                query += " WHERE " + " AND ".join(where_clauses)
 
-        if self.is_postgres:
-            query += " ORDER BY random()"
-        else:
-            query += " ORDER BY RANDOM()"
+            if self.is_postgres:
+                query += " ORDER BY random()"
+            else:
+                query += " ORDER BY RANDOM()"
 
-        if limit:
-            query += f" LIMIT {self.param_style}"
-            params.append(limit)
+            if limit:
+                query += f" LIMIT {self.param_style}"
+                params.append(limit)
 
-        logger.info(f"Executing query: {query} with params: {params}")
-        rows = self._execute(query, tuple(params), fetch='all')
-        logger.info(f"Raw rows fetched: {len(rows)}")
+            logger.info(f"Executing query: {query} with params: {params}")
+            rows = self._execute(query, tuple(params), fetch='all')
+            logger.info(f"Raw rows fetched: {len(rows)}")
 
-        questions = []
-        for row in rows or []:
-            try:
-                row_dict = dict(row)
-                row_dict['options'] = json.loads(row_dict.get('options', '[]'))
-                for key, default in [('times_shown', 0), ('times_correct', 0), ('ease_factor', 2.5), ('interval', 1)]:
-                    if row_dict.get(key) is None:
-                        row_dict[key] = default
-                questions.append(Question(**row_dict))
-            except json.JSONDecodeError as e:
-                logger.error(f"JSON parse error for question ID {row.get('id', 'N/A')}: {e}")
-            except TypeError as e:
-                logger.error(f"Type error for question ID {row.get('id', 'N/A')}: {e}")
-        logger.info(f"Processed questions count: {len(questions)}")
-        return questions
-    except Exception as e:
-        logger.error(f"Critical error in get_questions: {e}")
-        return []
+            questions = []
+            for row in rows or []:
+                try:
+                    row_dict = dict(row)
+                    row_dict['options'] = json.loads(row_dict.get('options', '[]'))
+                    for key, default in [('times_shown', 0), ('times_correct', 0), ('ease_factor', 2.5), ('interval', 1)]:
+                        if row_dict.get(key) is None:
+                            row_dict[key] = default
+                    questions.append(Question(**row_dict))
+                except json.JSONDecodeError as e:
+                    logger.error(f"JSON parse error for question ID {row.get('id', 'N/A')}: {e}")
+                except TypeError as e:
+                    logger.error(f"Type error for question ID {row.get('id', 'N/A')}: {e}")
+            logger.info(f"Processed questions count: {len(questions)}")
+            return questions
+        except Exception as e:
+            logger.error(f"Critical error in get_questions: {e}")
+            return []
 
     def get_question_by_id(self, question_id, user_id):
         """Hakee yksittäisen kysymyksen ID:n perusteella."""
@@ -632,19 +632,19 @@ class DatabaseManager:
         )
 
     def unlock_achievement(self, user_id, achievement_id):
-    """Avaa saavutuksen käyttäjälle."""
-    try:
-        if self.is_postgres:
-            self._execute(
-                "INSERT INTO user_achievements (user_id, achievement_id) VALUES (?, ?) ON CONFLICT DO NOTHING", 
-                (user_id, achievement_id)
-            )
-        else:
-            self._execute(
-                "INSERT OR IGNORE INTO user_achievements (user_id, achievement_id) VALUES (?, ?)", 
-                (user_id, achievement_id)
-            )
-        return True
-    except Exception as e:
-        logger.error(f"Virhe saavutuksen avaamisessa: {e}")
-        return False
+        """Avaa saavutuksen käyttäjälle."""
+        try:
+            if self.is_postgres:
+                self._execute(
+                    "INSERT INTO user_achievements (user_id, achievement_id) VALUES (?, ?) ON CONFLICT DO NOTHING", 
+                    (user_id, achievement_id)
+                )
+            else:
+                self._execute(
+                    "INSERT OR IGNORE INTO user_achievements (user_id, achievement_id) VALUES (?, ?)", 
+                    (user_id, achievement_id)
+                )
+            return True
+        except Exception as e:
+            logger.error(f"Virhe saavutuksen avaamisessa: {e}")
+            return False
