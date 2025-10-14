@@ -368,12 +368,7 @@
         }
     }
 
-    async function displayCurrentQuestion() {
-        // Tarkista häiriötekijän mahdollisuus
-        if (userDistractorsEnabled && Math.random() < userDistractorProbability) {
-            await showDistractor();
-        }
-
+    function displayCurrentQuestion() {
         if (currentQuestionIndex >= questions.length) {
             showResults();
             return;
@@ -399,42 +394,40 @@
         });
         document.getElementById('submitBtn').style.display = 'inline-block';
         document.getElementById('nextBtn').style.display = 'none';
+        
+        // Näytetään häiriötekijä VASTA kun kysymys on ladattu taustalle
+        if (userDistractorsEnabled && Math.random() < userDistractorProbability) {
+            showDistractor();
+        }
     }
     
     function showDistractor() {
-        return new Promise(resolve => {
-            distractorStartTime = Date.now(); // Aloita ajan mittaus
-            currentDistractor = DISTRACTORS[Math.floor(Math.random() * DISTRACTORS.length)];
-            
-            document.getElementById('distractor-scenario').textContent = currentDistractor.scenario;
-            const optionsContainer = document.getElementById('distractor-options');
-            optionsContainer.innerHTML = '';
-            
-            currentDistractor.options.forEach((opt, index) => {
-                const button = document.createElement('button');
-                button.className = 'btn btn-outline-secondary distractor-option';
-                button.textContent = opt;
-                button.onclick = () => {
-                    selectedDistractorOption = index;
-                    document.querySelectorAll('#distractor-options button').forEach((btn, i) => {
-                        btn.classList.toggle('active', i === index);
-                    });
-                };
-                optionsContainer.appendChild(button);
-            });
-
-            document.getElementById('submit-distractor').style.display = 'block';
-            document.getElementById('continue-quiz').style.display = 'none';
-            document.getElementById('distractor-feedback').classList.add('d-none');
-            
-            distractorModalInstance.show();
-            
-            // Resoluoi Promise, kun modaali suljetaan
-            document.getElementById('distractorModal').addEventListener('hidden.bs.modal', function onModalClose() {
-                document.getElementById('distractorModal').removeEventListener('hidden.bs.modal', onModalClose);
-                resolve();
-            }, { once: true });
+        distractorStartTime = Date.now();
+        currentDistractor = DISTRACTORS[Math.floor(Math.random() * DISTRACTORS.length)];
+        selectedDistractorOption = null;
+        
+        document.getElementById('distractor-scenario').textContent = currentDistractor.scenario;
+        const optionsContainer = document.getElementById('distractor-options');
+        optionsContainer.innerHTML = '';
+        
+        currentDistractor.options.forEach((opt, index) => {
+            const button = document.createElement('button');
+            button.className = 'btn btn-outline-secondary distractor-option';
+            button.textContent = opt;
+            button.onclick = () => {
+                selectedDistractorOption = index;
+                document.querySelectorAll('#distractor-options button').forEach((btn, i) => {
+                    btn.classList.toggle('active', i === index);
+                });
+            };
+            optionsContainer.appendChild(button);
         });
+
+        document.getElementById('submit-distractor').style.display = 'block';
+        document.getElementById('continue-quiz').style.display = 'none';
+        document.getElementById('distractor-feedback').classList.add('d-none');
+        
+        distractorModalInstance.show();
     }
 
     async function submitDistractor() {

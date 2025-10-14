@@ -165,13 +165,7 @@
         document.getElementById('save-quit-btn').addEventListener('click', saveAndQuit);
     }
     
-    async function showQuestion(index) {
-        // --- LISÄTTY HÄIRIÖTEKIJÄN TARKISTUS ---
-        if (userDistractorsEnabled && Math.random() < userDistractorProbability) {
-            await showDistractor();
-        }
-        // --- LOPPU ---
-
+    function showQuestion(index) {
         currentQuestionIndex = index;
         const question = questionsData[index];
         document.getElementById('question-title').textContent = `Kysymys ${index + 1}`;
@@ -198,42 +192,39 @@
         });
         
         updateQuestionGrid();
+
+        // Näytetään häiriötekijä VASTA kun kysymys on ladattu taustalle
+        if (userDistractorsEnabled && Math.random() < userDistractorProbability) {
+            showDistractor();
+        }
     }
 
-    // --- UUDET FUNKTIOT HÄIRIÖTEKIJÖILLE ---
     function showDistractor() {
-        return new Promise(resolve => {
-            currentDistractor = DISTRACTORS[Math.floor(Math.random() * DISTRACTORS.length)];
-            selectedDistractorOption = null;
-            
-            document.getElementById('distractor-scenario').textContent = currentDistractor.scenario;
-            const optionsContainer = document.getElementById('distractor-options');
-            optionsContainer.innerHTML = '';
-            
-            currentDistractor.options.forEach((opt, index) => {
-                const button = document.createElement('button');
-                button.className = 'btn btn-outline-secondary distractor-option';
-                button.textContent = opt;
-                button.onclick = () => {
-                    selectedDistractorOption = index;
-                    document.querySelectorAll('#distractor-options button').forEach((btn, i) => {
-                        btn.classList.toggle('active', i === index);
-                    });
-                };
-                optionsContainer.appendChild(button);
-            });
-
-            document.getElementById('submit-distractor').style.display = 'block';
-            document.getElementById('continue-quiz').style.display = 'none';
-            document.getElementById('distractor-feedback').classList.add('d-none');
-            
-            distractorModalInstance.show();
-            
-            document.getElementById('distractorModal').addEventListener('hidden.bs.modal', function onModalClose() {
-                document.getElementById('distractorModal').removeEventListener('hidden.bs.modal', onModalClose);
-                resolve();
-            }, { once: true });
+        currentDistractor = DISTRACTORS[Math.floor(Math.random() * DISTRACTORS.length)];
+        selectedDistractorOption = null;
+        
+        document.getElementById('distractor-scenario').textContent = currentDistractor.scenario;
+        const optionsContainer = document.getElementById('distractor-options');
+        optionsContainer.innerHTML = '';
+        
+        currentDistractor.options.forEach((opt, index) => {
+            const button = document.createElement('button');
+            button.className = 'btn btn-outline-secondary distractor-option';
+            button.textContent = opt;
+            button.onclick = () => {
+                selectedDistractorOption = index;
+                document.querySelectorAll('#distractor-options button').forEach((btn, i) => {
+                    btn.classList.toggle('active', i === index);
+                });
+            };
+            optionsContainer.appendChild(button);
         });
+
+        document.getElementById('submit-distractor').style.display = 'block';
+        document.getElementById('continue-quiz').style.display = 'none';
+        document.getElementById('distractor-feedback').classList.add('d-none');
+        
+        distractorModalInstance.show();
     }
 
     async function submitDistractor() {
