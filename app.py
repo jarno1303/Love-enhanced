@@ -811,8 +811,11 @@ def get_stats_api():
 @limiter.limit("60 per minute")
 def get_achievements_api():
     try:
-        unlocked = achievement_manager.get_unlocked_achievements(current_user.id)
-        unlocked_ids = {ach['achievement_id'] for ach in unlocked}
+        # Hae käyttäjän avaamat saavutus-OLIOT
+        unlocked_objects = achievement_manager.get_unlocked_achievements(current_user.id)
+        
+        # Käytä olioviittausta (.id) hakasulkeiden sijaan
+        unlocked_ids = {ach.id for ach in unlocked_objects}
         
         all_achievements = []
         for ach_id, ach_obj in ENHANCED_ACHIEVEMENTS.items():
@@ -820,19 +823,21 @@ def get_achievements_api():
                 ach_data = asdict(ach_obj)
                 ach_data['unlocked'] = ach_id in unlocked_ids
                 if ach_data['unlocked']:
-                    # Find the specific unlocked achievement to get the timestamp
-                    unlocked_data = next((item for item in unlocked if item["achievement_id"] == ach_id), None)
+                    # Etsi oikea avattu olio listalta
+                    unlocked_data = next((item for item in unlocked_objects if item.id == ach_id), None)
                     if unlocked_data:
-                        ach_data['unlocked_at'] = unlocked_data.get('unlocked_at')
+                        # Käytä olioviittausta (.unlocked_at) .get()-metodin sijaan
+                        ach_data['unlocked_at'] = unlocked_data.unlocked_at
                 all_achievements.append(ach_data)
 
             except Exception as e:
-                app.logger.error(f"Virhe saavutuksen {ach_id} käsittelyssä: {e}")
+                logger.error(f"Virhe saavutuksen {ach_id} käsittelyssä: {e}")
                 continue
         
         return jsonify(all_achievements)
     except Exception as e:
-        app.logger.error(f"Virhe saavutusten haussa: {e}")
+        # Lisätään tarkempi lokitus koko funktion virheelle
+        logger.error(f"Koko /api/achievements-reitin suoritus epäonnistui: {e}", exc_info=True)
         return jsonify([])
 
 @app.route("/api/review-questions")
