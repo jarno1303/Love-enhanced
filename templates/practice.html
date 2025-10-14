@@ -276,7 +276,7 @@
     let correctAnswers = 0;
     let selectedOption = null;
     let startTime = null;
-    let distractorStartTime = null; // Lisätty distractor-vasteajan mittaukseen
+    let distractorStartTime = null;
     let explanationModal = null;
     let helperModal = null;
     let selectedDistractorOption = null;
@@ -285,10 +285,8 @@
     let calcCurrentValue = '0', calcOperator = '', calcPreviousValue = '';
     let isDragging = false, xOffset = 0, yOffset = 0;
 
-    // Hae CSRF-token meta-tagista
     const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
-    // --- DISTRACTOR-VAKIOT ---
     const DISTRACTORS = {{ constants.DISTRACTORS|tojson|safe }};
     const userDistractorsEnabled = {{ current_user.distractors_enabled|tojson|safe }};
     const userDistractorProbability = {{ current_user.distractor_probability|tojson|safe }} / 100.0;
@@ -395,7 +393,6 @@
         document.getElementById('submitBtn').style.display = 'inline-block';
         document.getElementById('nextBtn').style.display = 'none';
         
-        // Näytetään häiriötekijä VASTA kun kysymys on ladattu taustalle
         if (currentQuestionIndex > 0 && userDistractorsEnabled && Math.random() < userDistractorProbability) {
             showDistractor();
         }
@@ -436,7 +433,7 @@
             return;
         }
         
-        const responseTime = Math.floor((Date.now() - distractorStartTime) / 1000); // Laske vasteaika
+        const responseTime = Math.floor((Date.now() - distractorStartTime) / 1000);
         
         try {
             const response = await fetch('/api/submit_distractor', {
@@ -504,7 +501,6 @@
             }
         } catch (error) {
             console.error('Virhe edistymisen lataamisessa:', error);
-            alert(`Virhe edistymisen lataamisessa: ${error.message}`);
             progressInfo.style.display = 'none';
         }
     }
@@ -556,7 +552,7 @@
     function showAnswerFeedback(isCorrect, correctIndex) {
         document.querySelectorAll('.option-item').forEach((item, index) => {
             item.classList.remove('border-primary', 'bg-light');
-            item.onclick = null; // Estä klikkaukset vastauksen jälkeen
+            item.onclick = null;
             if (index === correctIndex) item.classList.add('border-success', 'bg-success', 'bg-opacity-10');
             else if (index === selectedOption && !isCorrect) item.classList.add('border-danger', 'bg-danger', 'bg-opacity-10');
         });
@@ -726,13 +722,13 @@
         }
         helperBody.innerHTML = helperContent;
         helperModal.show();
-
-        function closeDistractor() {
-    if (distractorModalInstance) {
-        distractorModalInstance.hide();
     }
-}
 
+    function closeDistractor() {
+        if (distractorModalInstance) {
+            distractorModalInstance.hide();
+        }
+    }
 </script>
 
 <style>
