@@ -632,19 +632,19 @@ class DatabaseManager:
         )
 
     def unlock_achievement(self, user_id, achievement_id):
-        """Avaa saavutuksen käyttäjälle."""
-        try:
-            if self.is_postgres:
-                self._execute(
-                    "INSERT INTO user_achievements (user_id, achievement_id) VALUES (?, ?) ON CONFLICT DO NOTHING", 
-                    (user_id, achievement_id)
-                )
-            else:
-                self._execute(
-                    "INSERT OR IGNORE INTO user_achievements (user_id, achievement_id) VALUES (?, ?)", 
-                    (user_id, achievement_id)
-                )
-            return True
-        except Exception as e:
-            logger.error(f"Virhe saavutuksen avaamisessa: {e}")
-            return False
+    """Avaa saavutuksen käyttäjälle."""
+    try:
+        if self.is_postgres:
+            self._execute(
+                "INSERT INTO user_achievements (user_id, achievement_id) VALUES (?, ?) ON CONFLICT DO NOTHING", 
+                (user_id, achievement_id)
+            )
+        else:
+            self._execute(
+                "INSERT OR IGNORE INTO user_achievements (user_id, achievement_id) VALUES (?, ?)", 
+                (user_id, achievement_id)
+            )
+        return True
+    except Exception as e:
+        logger.error(f"Virhe saavutuksen avaamisessa: {e}")
+        return False
