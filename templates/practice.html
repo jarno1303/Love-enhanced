@@ -119,11 +119,10 @@
                 <p class="fw-bold" id="distractor-scenario"></p>
                 <p><strong>Miten toimit?</strong></p>
                 <div id="distractor-options" class="d-grid gap-2"></div>
-                <div id="distractor-feedback" class="alert d-none"></div>
+                <div id="distractor-feedback" class="d-none mt-3"></div>
             </div>
             <div class="modal-footer">
-                <button type="button" id="submit-distractor" class="btn btn-warning" onclick="submitDistractor()">Vastaa</button>
-                <button type="button" id="continue-quiz" class="btn btn-primary d-none" onclick="closeDistractor()">Jatka harjoitusta</button>
+                <button type="button" id="distractor-action-btn" class="btn btn-warning">Vastaa</button>
             </div>
         </div>
     </div>
@@ -141,7 +140,7 @@
         <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center" 
              id="calc-header" 
              style="cursor: move;">
-            <span><i class="fas fa-calculator me-2"></i>Laskin <small class="text-white-50">(vedä siirtääksesi)</small></span>
+            <span><i class="fas fa-calculator me-2"></i>Laskin</span>
             <button class="btn btn-sm btn-outline-light" onclick="toggleCalculator()">
                 <i class="fas fa-times"></i>
             </button>
@@ -279,14 +278,12 @@
     let distractorStartTime = null;
     let explanationModal = null;
     let helperModal = null;
-    let selectedDistractorOption = null;
     let currentDistractor = null;
     let distractorModalInstance = null;
     let calcCurrentValue = '0', calcOperator = '', calcPreviousValue = '';
     let isDragging = false, xOffset = 0, yOffset = 0;
 
     const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-
     const DISTRACTORS = {{ constants.DISTRACTORS|tojson|safe }};
     const userDistractorsEnabled = {{ current_user.distractors_enabled|tojson|safe }};
     const userDistractorProbability = {{ current_user.distractor_probability|tojson|safe }} / 100.0;
@@ -401,37 +398,33 @@
     function showDistractor() {
         distractorStartTime = Date.now();
         currentDistractor = DISTRACTORS[Math.floor(Math.random() * DISTRACTORS.length)];
-        selectedDistractorOption = null;
         
         document.getElementById('distractor-scenario').textContent = currentDistractor.scenario;
         const optionsContainer = document.getElementById('distractor-options');
         optionsContainer.innerHTML = '';
         
+        const actionBtn = document.getElementById('distractor-action-btn');
+        actionBtn.style.display = 'none';
+
         currentDistractor.options.forEach((opt, index) => {
             const button = document.createElement('button');
             button.className = 'btn btn-outline-secondary distractor-option';
             button.textContent = opt;
-            button.onclick = () => {
-                selectedDistractorOption = index;
-                document.querySelectorAll('#distractor-options button').forEach((btn, i) => {
-                    btn.classList.toggle('active', i === index);
-                });
-            };
+            button.onclick = () => submitDistractor(index);
             optionsContainer.appendChild(button);
         });
 
-        document.getElementById('submit-distractor').style.display = 'block';
-        document.getElementById('continue-quiz').style.display = 'none';
         document.getElementById('distractor-feedback').classList.add('d-none');
-        
         distractorModalInstance.show();
     }
 
-    async function submitDistractor() {
-        if (selectedDistractorOption === null) {
-            alert('Valitse vastaus ensin!');
-            return;
-        }
+    async function submitDistractor(selectedOptionIndex) {
+        document.querySelectorAll('.distractor-option').forEach(btn => {
+            btn.disabled = true;
+            if (btn.textContent === currentDistractor.options[selectedOptionIndex]) {
+                btn.classList.add('active');
+            }
+        });
         
         const responseTime = Math.floor((Date.now() - distractorStartTime) / 1000);
         
@@ -444,41 +437,48 @@
                 },
                 body: JSON.stringify({
                     scenario: currentDistractor.scenario,
-                    user_choice: selectedDistractorOption,
+                    user_choice: selectedOptionIndex,
                     response_time: responseTime
                 })
             });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                alert(`Virhe: ${errorData.error || 'Häiriötekijän tallennus epäonnistui'}`);
-                return;
-            }
-
             const data = await response.json();
             const isCorrect = data.is_correct;
             const feedback = document.getElementById('distractor-feedback');
+            
             feedback.classList.remove('d-none');
-            feedback.className = `alert ${isCorrect ? 'alert-success' : 'alert-warning'}`;
+            feedback.className = `alert mt-3 ${isCorrect ? 'alert-success' : 'alert-warning'}`;
             feedback.innerHTML = isCorrect ? 
                 '<strong>Oikein!</strong> Hyvä päätös paineen alla.' : 
                 `<strong>Huomio!</strong> Oikea toimintatapa olisi ollut: <i>"${currentDistractor.options[currentDistractor.correct]}"</i>`;
                 
-            document.getElementById('submit-distractor').style.display = 'none';
-            document.getElementById('continue-quiz').style.display = 'block';
+            const actionBtn = document.getElementById('distractor-action-btn');
+            actionBtn.textContent = 'Jatka harjoitusta';
+            actionBtn.className = 'btn btn-primary';
+            actionBtn.onclick = closeDistractor;
+            actionBtn.style.display = 'block';
+
         } catch(e) {
             console.error("Häiriötekijän tallennus epäonnistui", e);
-            alert('Häiriötekijän tallennus epäonnistui. Yritä uudelleen.');
+            const actionBtn = document.getElementById('distractor-action-btn');
+            actionBtn.textContent = 'Sulje';
+            actionBtn.className = 'btn btn-secondary';
+            actionBtn.onclick = closeDistractor;
+            actionBtn.style.display = 'block';
         }
     }
     
+    function closeDistractor() {
+        if (distractorModalInstance) {
+            distractorModalInstance.hide();
+        }
+    }
+
     async function loadQuestionProgress(questionId) {
         const progressInfo = document.getElementById('question-progress-info');
         try {
             const response = await fetch(`/api/question_progress/${questionId}`);
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Edistymisen haku epäonnistui');
+                throw new Error('Edistymisen haku epäonnistui');
             }
             const data = await response.json();
             if (data.times_shown > 0) {
@@ -643,6 +643,7 @@
     function initCalculatorDrag() {
         const calcHeader = document.getElementById('calc-header');
         const calcModal = document.getElementById('calculator-modal');
+        if (!calcHeader || !calcModal) return;
 
         calcHeader.addEventListener('mousedown', dragStart);
         document.addEventListener('mouseup', dragEnd);

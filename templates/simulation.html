@@ -10,7 +10,6 @@
             <h1 class="display-4 mb-4">Koesimulaatio</h1>
             
             {% if has_existing_session %}
-            <!-- Näytetään kun on kesken oleva sessio -->
             <div class="alert alert-warning mx-auto mb-4" style="max-width: 700px;">
                 <h5 class="alert-heading mb-3">
                     <i class="fas fa-exclamation-triangle"></i> Sinulla on kesken oleva koesimulaatio
@@ -31,7 +30,6 @@
                 </div>
             </div>
             {% else %}
-            <!-- Näytetään kun ei ole kesken olevaa sessiota -->
             <div class="alert alert-info mx-auto mb-4" style="max-width: 700px;">
                 <h5 class="alert-heading">Kokeen säännöt</h5>
                 <ul class="text-start mb-0">
@@ -80,8 +78,7 @@
     </div>
     
     <div id="results-screen" class="d-none">
-        <!-- Tulokset näytetään täällä -->
-    </div>
+        </div>
 </div>
 
 <div class="modal fade" id="distractorModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
@@ -97,8 +94,7 @@
                 <div id="distractor-feedback" class="d-none mt-3"></div>
             </div>
             <div class="modal-footer">
-                <button type="button" id="submit-distractor" class="btn btn-warning" onclick="submitDistractor()">Vastaa</button>
-                <button type="button" id="continue-quiz" class="btn btn-primary d-none" onclick="closeDistractor()">Jatka koetta</button>
+                <button type="button" id="distractor-action-btn" class="btn btn-warning">Vastaa</button>
             </div>
         </div>
     </div>
@@ -124,19 +120,20 @@
     const hasExistingSession = {{ has_existing_session | tojson }};
     const csrfToken = "{{ csrf_token() }}";
 
-    // --- UUDET MUUTTUJAT HÄIRIÖTEKIJÖILLE ---
     const DISTRACTORS = {{ constants.DISTRACTORS|tojson|safe }};
     const userDistractorsEnabled = {{ current_user.distractors_enabled|tojson|safe }};
     const userDistractorProbability = {{ current_user.distractor_probability or 25 }} / 100.0;
-    let currentDistractor = null;
-    let selectedDistractorOption = null;
-    // --- LOPPU ---
     
+    let currentDistractor = null;
     let currentQuestionIndex = 0;
     let answers = [];
     let timerInterval;
     let timeRemaining;
     let distractorModalInstance;
+    let distractorStartTime;
+
+    let calcCurrentValue = '0', calcOperator = '', calcPreviousValue = '';
+    let isDragging = false, xOffset = 0, yOffset = 0;
 
     document.addEventListener('DOMContentLoaded', () => {
         distractorModalInstance = new bootstrap.Modal(document.getElementById('distractorModal'));
@@ -192,67 +189,86 @@
         });
         
         updateQuestionGrid();
-
-        // Näytetään häiriötekijä VASTA kun kysymys on ladattu taustalle
+        
         if (currentQuestionIndex > 0 && userDistractorsEnabled && Math.random() < userDistractorProbability) {
             showDistractor();
         }
     }
 
     function showDistractor() {
+        distractorStartTime = Date.now();
         currentDistractor = DISTRACTORS[Math.floor(Math.random() * DISTRACTORS.length)];
-        selectedDistractorOption = null;
         
         document.getElementById('distractor-scenario').textContent = currentDistractor.scenario;
         const optionsContainer = document.getElementById('distractor-options');
         optionsContainer.innerHTML = '';
         
+        const actionBtn = document.getElementById('distractor-action-btn');
+        actionBtn.style.display = 'none';
+
         currentDistractor.options.forEach((opt, index) => {
             const button = document.createElement('button');
             button.className = 'btn btn-outline-secondary distractor-option';
             button.textContent = opt;
-            button.onclick = () => {
-                selectedDistractorOption = index;
-                document.querySelectorAll('#distractor-options button').forEach((btn, i) => {
-                    btn.classList.toggle('active', i === index);
-                });
-            };
+            button.onclick = () => submitDistractor(index);
             optionsContainer.appendChild(button);
         });
 
-        document.getElementById('submit-distractor').style.display = 'block';
-        document.getElementById('continue-quiz').style.display = 'none';
         document.getElementById('distractor-feedback').classList.add('d-none');
-        
         distractorModalInstance.show();
     }
 
-    async function submitDistractor() {
-        if (selectedDistractorOption === null) return;
+    async function submitDistractor(selectedOptionIndex) {
+        document.querySelectorAll('.distractor-option').forEach(btn => {
+            btn.disabled = true;
+            if (btn.textContent === currentDistractor.options[selectedOptionIndex]) {
+                btn.classList.add('active');
+            }
+        });
+        
+        const responseTime = Math.floor((Date.now() - distractorStartTime) / 1000);
         
         try {
-            await fetch('/api/submit_distractor', {
+            const response = await fetch('/api/submit_distractor', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
                 body: JSON.stringify({
                     scenario: currentDistractor.scenario,
-                    user_choice: selectedDistractorOption
+                    user_choice: selectedOptionIndex,
+                    response_time: responseTime
                 })
             });
-        } catch(e) { console.error("Häiriötekijän tallennus epäonnistui", e); }
-
-        const isCorrect = selectedDistractorOption === currentDistractor.correct;
-        const feedback = document.getElementById('distractor-feedback');
-        feedback.classList.remove('d-none');
-        feedback.className = `alert ${isCorrect ? 'alert-success' : 'alert-warning'}`;
-        feedback.innerHTML = isCorrect ? 
-            '<strong>Oikein!</strong> Hyvä päätös paineen alla.' : 
-            `<strong>Huomio!</strong> Oikea toimintatapa olisi ollut: <i>"${currentDistractor.options[currentDistractor.correct]}"</i>`;
+            const data = await response.json();
+            const isCorrect = data.is_correct;
+            const feedback = document.getElementById('distractor-feedback');
             
-        document.getElementById('submit-distractor').style.display = 'none';
-        document.getElementById('continue-quiz').style.display = 'block';
+            feedback.classList.remove('d-none');
+            feedback.className = `alert mt-3 ${isCorrect ? 'alert-success' : 'alert-warning'}`;
+            feedback.innerHTML = isCorrect ? 
+                '<strong>Oikein!</strong> Hyvä päätös paineen alla.' : 
+                `<strong>Huomio!</strong> Oikea toimintatapa olisi ollut: <i>"${currentDistractor.options[currentDistractor.correct]}"</i>`;
+                
+            const actionBtn = document.getElementById('distractor-action-btn');
+            actionBtn.textContent = 'Jatka koetta';
+            actionBtn.className = 'btn btn-primary';
+            actionBtn.onclick = closeDistractor;
+            actionBtn.style.display = 'block';
+
+        } catch(e) {
+            console.error("Häiriötekijän tallennus epäonnistui", e);
+            const actionBtn = document.getElementById('distractor-action-btn');
+            actionBtn.textContent = 'Sulje';
+            actionBtn.className = 'btn btn-secondary';
+            actionBtn.onclick = closeDistractor;
+            actionBtn.style.display = 'block';
+        }
     }
-    // --- LOPPU ---
+    
+    function closeDistractor() {
+        if (distractorModalInstance) {
+            distractorModalInstance.hide();
+        }
+    }
     
     function buildQuestionGrid() {
         const grid = document.getElementById('question-grid');
@@ -326,15 +342,15 @@
     }
 
     async function saveProgressToBackend() {
-        // ... (tämä funktio voi jäädä ennalleen, mutta varmista CSRF-token)
+        // Tämä funktio pitää toteuttaa
     }
 
     async function finishSimulation() {
-        // ... (tämä funktio voi jäädä ennalleen, mutta varmista CSRF-token)
+        // Tämä funktio pitää toteuttaa
     }
     
     function showResults(result) {
-        // ... (tämä funktio voi jäädä ennalleen)
+        // Tämä funktio pitää toteuttaa
     }
 
     function toggleCalculator() {
@@ -342,15 +358,46 @@
         modal.style.display = modal.style.display === 'none' ? 'block' : 'none';
     }
 
-    // LASKIMEN FUNKTIOT (säilyvät ennallaan)
-    // ... calcInput, calcEqual, calcClear ...
+    function calcInput(value) {
+        const display = document.getElementById('calc-display');
+        if (['+', '-', '*', '/'].includes(value)) {
+            calcOperator = value;
+            calcPreviousValue = calcCurrentValue;
+            calcCurrentValue = '0';
+        } else if (value === '.') {
+            if (!calcCurrentValue.includes('.')) calcCurrentValue += '.';
+        } else {
+            calcCurrentValue = calcCurrentValue === '0' ? value : calcCurrentValue + value;
+        }
+        display.value = calcCurrentValue;
+    }
 
-    // --- KORJATTU LASKIMEN SIIRTO ---
-    let isDragging = false, xOffset = 0, yOffset = 0;
-    
+    function calcEqual() {
+        const display = document.getElementById('calc-display');
+        let result = 0;
+        const prev = parseFloat(calcPreviousValue), curr = parseFloat(calcCurrentValue);
+        switch(calcOperator) {
+            case '+': result = prev + curr; break;
+            case '-': result = prev - curr; break;
+            case '*': result = prev * curr; break;
+            case '/': result = prev / curr; break;
+            default: return;
+        }
+        calcCurrentValue = result.toString();
+        calcOperator = ''; calcPreviousValue = '';
+        display.value = calcCurrentValue;
+    }
+
+    function calcClear() {
+        calcCurrentValue = '0'; calcOperator = ''; calcPreviousValue = '';
+        document.getElementById('calc-display').value = '0';
+    }
+
     function initCalculatorDrag() {
         const calcHeader = document.getElementById('calc-header');
         const calcModal = document.getElementById('calculator-modal');
+
+        if (!calcHeader || !calcModal) return;
 
         calcHeader.addEventListener('mousedown', dragStart);
         document.addEventListener('mouseup', dragEnd);
@@ -396,11 +443,5 @@
     function dragEnd() {
         isDragging = false;
     }
-    function closeDistractor() {
-    if (distractorModalInstance) {
-        distractorModalInstance.hide();
-    }
-}
 </script>
 {% endblock %}
-
