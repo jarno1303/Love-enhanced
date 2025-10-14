@@ -1,3 +1,4 @@
+# TARKISTUSKOMMENTTI 14.10. KLO 10:00
 # -*- coding: utf-8 -*-
 # data_access/database_manager.py
 import sqlite3
