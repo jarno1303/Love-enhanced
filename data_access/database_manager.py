@@ -305,51 +305,60 @@ class DatabaseManager:
     # =========================================================================
     # TÄMÄ FUNKTIO ON KORJATTU ✅
     # =========================================================================
-    def get_questions(self, user_id, categories=None, difficulties=None, limit=None):
-        """Hakee kysymyksiä annettujen suodattimien perusteella."""
+    def get_questions(self, user_id, categories=None, difficulties=None, limit=10):
+        """Hakee satunnaisia kysymyksiä tehokkaasti annettujen suodattimien perusteella."""
         try:
-            logger.info(f"Fetching questions for user_id={user_id}, categories={categories}, difficulties={difficulties}, limit={limit}")
+            limit = int(limit) # Varmista, että limit on kokonaisluku
+            logger.info(f"Fetching {limit} questions for user_id={user_id}, categories={categories}, difficulties={difficulties}")
+            
+            # --- Vaihe 1: Hae vain suodatusta vastaavien kysymysten ID:t ---
+            query_ids = "SELECT id FROM questions"
+            params = []
+            where_clauses = []
 
-            query = """
+            if categories and isinstance(categories, list) and 'Kaikki kategoriat' not in categories and len(categories) > 0:
+                placeholders = ', '.join([self.param_style] * len(categories))
+                where_clauses.append(f"category IN ({placeholders})")
+                params.extend(categories)
+
+            if difficulties and isinstance(difficulties, list) and len(difficulties) > 0:
+                placeholders = ', '.join([self.param_style] * len(difficulties))
+                where_clauses.append(f"difficulty IN ({placeholders})")
+                params.extend(difficulties)
+
+            if where_clauses:
+                query_ids += " WHERE " + " AND ".join(where_clauses)
+
+            id_rows = self._execute(query_ids, tuple(params), fetch='all')
+            
+            if not id_rows:
+                logger.warning("No question IDs found for the given filters.")
+                return []
+
+            question_ids = [row['id'] for row in id_rows]
+            
+            # --- Vaihe 2: Sekoita ID:t ja valitse haluttu määrä ---
+            random.shuffle(question_ids)
+            selected_ids = question_ids[:limit]
+
+            if not selected_ids:
+                return []
+
+            # --- Vaihe 3: Hae valittujen ID:iden täydet tiedot ---
+            final_query_placeholders = ', '.join([self.param_style] * len(selected_ids))
+            final_query = f"""
                 SELECT q.*, 
                        COALESCE(p.times_shown, 0) as times_shown, 
                        COALESCE(p.times_correct, 0) as times_correct, 
                        COALESCE(p.ease_factor, 2.5) as ease_factor, 
                        COALESCE(p.interval, 1) as interval
                 FROM questions q 
-                LEFT JOIN user_question_progress p ON q.id = p.question_id AND p.user_id = ?
+                LEFT JOIN user_question_progress p ON q.id = p.question_id AND p.user_id = {self.param_style}
+                WHERE q.id IN ({final_query_placeholders})
             """
-            params = [user_id]
-            where_clauses = []
-
-            # Lisää kategoria-suodatin vain jos kategorioita on annettu
-            if categories and isinstance(categories, list) and 'Kaikki kategoriat' not in categories and len(categories) > 0:
-                placeholders = ', '.join([self.param_style] * len(categories))
-                where_clauses.append(f"q.category IN ({placeholders})")
-                params.extend(categories)
-
-            # Lisää vaikeustaso-suodatin vain jos tasoja on annettu
-            if difficulties and isinstance(difficulties, list) and len(difficulties) > 0:
-                placeholders = ', '.join([self.param_style] * len(difficulties))
-                where_clauses.append(f"q.difficulty IN ({placeholders})")
-                params.extend(difficulties)
-
-            if where_clauses:
-                query += " WHERE " + " AND ".join(where_clauses)
-
-            # Käytä oikeaa satunnaistamiskomentoa tietokannan mukaan
-            if self.is_postgres:
-                query += " ORDER BY random()"
-            else:
-                query += " ORDER BY RANDOM()"
-
-            if limit:
-                # Varmista että limit on numero ennen sen lisäämistä kyselyyn
-                query += f" LIMIT {self.param_style}"
-                params.append(int(limit))
-
-            logger.info(f"Executing query: {query} with params: {params}")
-            rows = self._execute(query, tuple(params), fetch='all')
+            
+            final_params = [user_id] + selected_ids
+            rows = self._execute(final_query, tuple(final_params), fetch='all')
 
             questions = []
             if rows:
@@ -357,15 +366,13 @@ class DatabaseManager:
                     try:
                         row_dict = dict(row)
                         row_dict['options'] = json.loads(row_dict.get('options', '[]'))
-                        # Varmista oletusarvot, jos niitä ei löydy kannasta
-                        for key, default in [('times_shown', 0), ('times_correct', 0), ('ease_factor', 2.5), ('interval', 1)]:
-                            if row_dict.get(key) is None:
-                                row_dict[key] = default
                         questions.append(Question(**row_dict))
                     except (json.JSONDecodeError, TypeError) as e:
-                        logger.error(f"JSON parse error for question ID {row.get('id', 'N/A')}: {e}")
-
-            logger.info(f"Processed questions count: {len(questions)}")
+                        logger.error(f"Error processing question data for ID {row.get('id', 'N/A')}: {e}")
+            
+            # Sekoita lopullinen lista vielä kerran, koska IN-lauseke ei takaa järjestystä
+            random.shuffle(questions)
+            logger.info(f"Successfully fetched and processed {len(questions)} questions.")
             return questions
 
         except Exception as e:
