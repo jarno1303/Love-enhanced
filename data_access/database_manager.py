@@ -302,7 +302,8 @@ class DatabaseManager:
         return [row['category'] for row in rows] if rows else []
 
     def get_questions(self, user_id, categories=None, difficulties=None, limit=None):
-        """Hakee kysymykset suodattimilla."""
+    try:
+        logger.info(f"Fetching questions for user_id={user_id}, categories={categories}, difficulties={difficulties}, limit={limit}")
         query = """
             SELECT q.*, 
                    COALESCE(p.times_shown, 0) as times_shown, 
@@ -315,49 +316,65 @@ class DatabaseManager:
         params = [user_id]
         where_clauses = []
 
-        if categories and 'Kaikki kategoriat' not in categories:
-            cat_list = categories if isinstance(categories, list) else [categories]
-            if cat_list:
-                placeholders = ', '.join(['?'] * len(cat_list))
+        # Suojaa tyhjät listat ja täytä oletusarvot
+        if categories and isinstance(categories, list) and categories and 'Kaikki kategoriat' not in categories:
+            placeholders = ', '.join([self.param_style] * len(categories))
+            where_clauses.append(f"q.category IN ({placeholders})")
+            params.extend(categories)
+        else:
+            logger.info("No valid categories filter - using all categories")
+            categories = [cat['category'] for cat in self._execute("SELECT DISTINCT category FROM questions", fetch='all')]
+            if categories:
+                placeholders = ', '.join([self.param_style] * len(categories))
                 where_clauses.append(f"q.category IN ({placeholders})")
-                params.extend(cat_list)
-        
-        if difficulties:
-            diff_list = difficulties if isinstance(difficulties, list) else [difficulties]
-            if diff_list:
-                placeholders = ', '.join(['?'] * len(diff_list))
+                params.extend(categories)
+
+        if difficulties and isinstance(difficulties, list) and difficulties:
+            placeholders = ', '.join([self.param_style] * len(difficulties))
+            where_clauses.append(f"q.difficulty IN ({placeholders})")
+            params.extend(difficulties)
+        else:
+            logger.info("No valid difficulties filter - using all difficulties")
+            difficulties = [diff['difficulty'] for diff in self._execute("SELECT DISTINCT difficulty FROM questions", fetch='all')]
+            if difficulties:
+                placeholders = ', '.join([self.param_style] * len(difficulties))
                 where_clauses.append(f"q.difficulty IN ({placeholders})")
-                params.extend(diff_list)
+                params.extend(difficulties)
 
         if where_clauses:
             query += " WHERE " + " AND ".join(where_clauses)
-        
-        # Satunnaistus ja rajoitus
+
         if self.is_postgres:
             query += " ORDER BY random()"
         else:
             query += " ORDER BY RANDOM()"
-            
+
         if limit:
-            query += " LIMIT ?"
+            query += f" LIMIT {self.param_style}"
             params.append(limit)
-        
+
+        logger.info(f"Executing query: {query} with params: {params}")
         rows = self._execute(query, tuple(params), fetch='all')
-        
+        logger.info(f"Raw rows fetched: {len(rows)}")
+
         questions = []
-        for row in rows if rows else []:
+        for row in rows or []:
             try:
                 row_dict = dict(row)
                 row_dict['options'] = json.loads(row_dict.get('options', '[]'))
                 for key, default in [('times_shown', 0), ('times_correct', 0), ('ease_factor', 2.5), ('interval', 1)]:
-                    if row_dict.get(key) is None: 
+                    if row_dict.get(key) is None:
                         row_dict[key] = default
                 questions.append(Question(**row_dict))
-            except (json.JSONDecodeError, TypeError) as e:
-                logger.error(f"Virheellinen data kysymykselle ID {row.get('id')}: {e}")
-                continue
-                
+            except json.JSONDecodeError as e:
+                logger.error(f"JSON parse error for question ID {row.get('id', 'N/A')}: {e}")
+            except TypeError as e:
+                logger.error(f"Type error for question ID {row.get('id', 'N/A')}: {e}")
+        logger.info(f"Processed questions count: {len(questions)}")
         return questions
+    except Exception as e:
+        logger.error(f"Critical error in get_questions: {e}")
+        return []
 
     def get_question_by_id(self, question_id, user_id):
         """Hakee yksittäisen kysymyksen ID:n perusteella."""

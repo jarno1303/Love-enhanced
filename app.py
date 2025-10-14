@@ -431,6 +431,7 @@ def get_question_progress_api(question_id):
         app.logger.error(f"Virhe kysymyksen edistymisen haussa: {e}")
         return jsonify({'error': str(e)}), 500
 
+
 @app.route("/api/settings/toggle_distractors", methods=['POST'])
 @login_required
 @limiter.limit("30 per minute")
@@ -510,55 +511,7 @@ def get_question_counts_api():
         app.logger.error(f"Virhe kysymysmäärien haussa: {e}")
         return jsonify({'error': str(e)}), 500
 
-@app.route("/api/questions")
-@login_required
-@limiter.limit("60 per minute")
-def get_questions_api():
-    """Hakee harjoituskysymyksiä valintojen mukaan."""
-    try:
-        # Käytä getlist() hakemaan kaikki valinnat listoina
-        categories = request.args.getlist('categories')
-        difficulties = request.args.getlist('difficulties')
-        # Varmista, että tämä vastaa frontendin parametria (count)
-        limit = int(request.args.get('count', 10))
 
-        # Varmista, että tyhjät listat käsitellään oikein (tulkitaan "kaikki")
-        if not categories:
-            categories = None
-        if not difficulties:
-            difficulties = None
-
-        questions = db_manager.get_questions(
-            user_id=current_user.id,
-            categories=categories,
-            difficulties=difficulties,
-            limit=limit
-        )
-
-        questions_list = []
-        for q in questions:
-            # Sekoitetaan vastausvaihtoehtojen järjestys joka kerta
-            if q.options and q.correct < len(q.options):
-                # Tallenna alkuperäinen oikea vastaus
-                original_correct_text = q.options[q.correct]
-                # Sekoita vaihtoehdot
-                random.shuffle(q.options)
-                # Etsi uusi indeksi sekoitetusta listasta
-                q.correct = q.options.index(original_correct_text)
-
-            # Muunna dataclass-objekti sanakirjaksi
-            q_dict = asdict(q)
-            questions_list.append(q_dict)
-
-        return jsonify({'questions': questions_list})
-
-    except Exception as e:
-        app.logger.error(f"Virhe /api/questions haussa: {e}")
-        # Lisää traceback lokiin debug-tilassa
-        if app.config['DEBUG']:
-            import traceback
-            traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
 
 # KORJATTU OSA: Lisätään uusi API-reitti häiriötekijöille
 @app.route("/api/distractors")
@@ -741,6 +694,70 @@ def submit_simulation_api():
         'detailed_results': detailed_results
     })
 
+@app.route("/api/questions")
+@login_required
+@limiter.limit("60 per minute")
+def get_questions_api():
+    """Hakee harjoituskysymyksiä valintojen mukaan, tukee myös simulaatiota."""
+    try:
+        # Käytä getlist() hakemaan kaikki valinnat listoina
+        categories = request.args.getlist('categories')
+        difficulties = request.args.getlist('difficulties')
+        limit = int(request.args.get('count', 10))
+        simulation = request.args.get('simulation') == 'true'
+
+        app.logger.info(f"API call: user={current_user.id}, simulation={simulation}, categories={categories}, difficulties={difficulties}, limit={limit}")
+
+        # Varmista, että tyhjät listat käsitellään oikein
+        if not categories:
+            categories = None
+            app.logger.info("No categories provided - using all categories")
+        if not difficulties:
+            difficulties = None
+            app.logger.info("No difficulties provided - using all difficulties")
+
+        # Hae kysymykset
+        if simulation:
+            app.logger.info("Simulation mode: Fetching 50 random questions")
+            questions = db_manager.get_questions(current_user.id, limit=50)  # Ei suodatus
+        else:
+            app.logger.info("Normal mode: Fetching with filters")
+            questions = db_manager.get_questions(
+                user_id=current_user.id,
+                categories=categories,
+                difficulties=difficulties,
+                limit=limit
+            )
+
+        app.logger.info(f"Raw questions fetched: {len(questions)}")
+
+        # Prosessoi kysymykset
+        questions_list = []
+        for q in questions:
+            if q.options and 0 <= q.correct < len(q.options):
+                original_correct_text = q.options[q.correct]
+                random.shuffle(q.options)
+                q.correct = q.options.index(original_correct_text)
+            q_dict = asdict(q)
+            questions_list.append(q_dict)
+
+        if not questions_list:
+            app.logger.warning("No questions returned - returning empty list")
+            return jsonify({'questions': [], 'message': 'Ei kysymyksiä valituilla kriteereillä.'}), 200
+
+        app.logger.info(f"Returning {len(questions_list)} processed questions")
+        return jsonify({'questions': questions_list})
+
+    except ValueError as ve:
+        app.logger.error(f"Invalid parameter: {str(ve)}")
+        return jsonify({'error': 'Virheellinen parametri (esim. count).', 'details': str(ve)}), 400
+    except Exception as e:
+        app.logger.error(f"Virhe /api/questions haussa: {str(e)}")
+        if app.config['DEBUG']:
+            import traceback
+            traceback.print_exc()
+        return jsonify({'error': 'Palvelinvirhe.', 'details': str(e)}), 500
+
 @app.route("/api/simulation/update", methods=['POST'])
 @login_required
 @limiter.limit("60 per minute")
@@ -853,6 +870,8 @@ def get_review_questions_api():
 @limiter.limit("30 per minute")
 def get_recommendations_api():
     return jsonify(stats_manager.get_recommendations(current_user.id))
+
+
 
 #==============================================================================
 # --- SIVUJEN REITIT ---
