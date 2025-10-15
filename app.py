@@ -52,7 +52,7 @@ from docx.shared import Inches, Pt, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 
 # ============================================================================
-# OMAT MODUULIT
+# OMAT MODUULIT - TÄMÄ ON KORJATTU JA TÄRKEÄ OSA
 # ============================================================================
 from data_access.database_manager import DatabaseManager
 from logic.stats_manager import EnhancedStatsManager
@@ -1029,7 +1029,7 @@ def simulation_route():
         if has_existing_session:
             session.pop('simulation', None)
         
-        # Oletan että 'db_manager' on globaali ja alustettu
+        # KORJATTU KOHTA: Käytetään db_manageria, ei logic.question_manageria
         question_ids = db_manager.get_random_question_ids(50)
         
         if not question_ids or len(question_ids) < 50:
