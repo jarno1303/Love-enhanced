@@ -104,12 +104,11 @@ app.logger.info('LOVe Enhanced startup')
 # ============================================================================
 # RATE LIMITING
 # ============================================================================
-REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379')
 limiter = Limiter(
     get_remote_address,
     app=app,
     default_limits=["500 per day", "100 per hour"],
-    storage_uri=REDIS_URL if os.environ.get('FLASK_ENV') != 'development' else "memory://"
+    storage_uri="memory://"
 )
 
 # ============================================================================
@@ -149,29 +148,8 @@ def api_csrf_protect(f):
         return f(*args, **kwargs)
     return decorated_function
 
-@login_manager.user_loader
-def load_user(user_id):
-    try:
-        user_data = db_manager._execute(
-            "SELECT id, username, email, role, distractors_enabled, distractor_probability, expires_at FROM users WHERE id = ?",
-            (user_id,),
-            fetch='one'
-        )
-        if user_data:
-            return User(
-                id=user_data['id'],
-                username=user_data['username'],
-                email=user_data['email'],
-                role=user_data['role'],
-                distractors_enabled=bool(user_data.get('distractors_enabled', False)),
-                distractor_probability=user_data.get('distractor_probability', 25),
-                expires_at=user_data.get('expires_at')
-            )
-    except Exception as e:
-        app.logger.error(f"Error loading user {user_id}: {e}")
-    return None
-
 def admin_required(f):
+    """Dekoraattori joka vaatii admin-oikeudet."""
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated or current_user.role != 'admin':
@@ -181,15 +159,24 @@ def admin_required(f):
     return decorated_function
 
 def generate_secure_password(length=10):
+    """Luo turvallisen satunnaisen salasanan."""
     if length < 8:
         length = 8
+    
     pienet = string.ascii_lowercase
     isot = string.ascii_uppercase
     numerot = string.digits
-    salasana = [random.choice(pienet), random.choice(isot), random.choice(numerot)]
+    
+    salasana = [
+        random.choice(pienet),
+        random.choice(isot),
+        random.choice(numerot),
+    ]
+    
     kaikki_merkit = pienet + isot + numerot
     for _ in range(length - len(salasana)):
         salasana.append(random.choice(kaikki_merkit))
+    
     random.shuffle(salasana)
     return "".join(salasana)
 
@@ -206,19 +193,35 @@ def verify_reset_token(token, expiration=3600):
         return None
 
 def send_reset_email(user_email, reset_url):
+    """Lähettää salasanan palautusviestin Brevo:n kautta."""
     BREVO_API_KEY = os.environ.get('BREVO_API_KEY')
     FROM_EMAIL = os.environ.get('FROM_EMAIL', 'noreply@example.com')
+    
     if not BREVO_API_KEY:
-        app.logger.warning(f"Brevo not configured. Reset link: {reset_url}")
+        app.logger.warning(f"Brevo ei konfiguroitu. Palautuslinkki: {reset_url}")
         print(f"\n{'='*80}\nSALASANAN PALAUTUSLINKKI:\n{reset_url}\n{'='*80}\n")
         return True
     
     import requests
+    
     url = "https://api.brevo.com/v3/smtp/email"
-    headers = {"accept": "application/json", "api-key": BREVO_API_KEY, "content-type": "application/json"}
+    headers = {
+        "accept": "application/json",
+        "api-key": BREVO_API_KEY,
+        "content-type": "application/json"
+    }
+    
     payload = {
-        "sender": {"name": "LOVe Enhanced", "email": FROM_EMAIL},
-        "to": [{"email": user_email, "name": user_email.split('@')[0]}],
+        "sender": {
+            "name": "LOVe Enhanced",
+            "email": FROM_EMAIL
+        },
+        "to": [
+            {
+                "email": user_email,
+                "name": user_email.split('@')[0]
+            }
+        ],
         "subject": "LOVe Enhanced - Salasanan palautus",
         "htmlContent": f"""
         <html>
@@ -249,6 +252,7 @@ def send_reset_email(user_email, reset_url):
         </html>
         """
     }
+    
     try:
         response = requests.post(url, json=payload, headers=headers)
         response.raise_for_status()
@@ -259,49 +263,6 @@ def send_reset_email(user_email, reset_url):
         return False
 
 # ============================================================================
-# TIETOKANNAN ALUSTUSTOIMINNOT
-# ============================================================================
-
-def init_distractor_table():
-    try:
-        conn = db_manager.get_connection()
-        with conn:
-            cursor = conn.cursor()
-            if db_manager.is_postgres:
-                cursor.execute('''
-                    CREATE TABLE IF NOT EXISTS distractor_attempts (
-                        id SERIAL PRIMARY KEY,
-                        user_id INTEGER NOT NULL,
-                        distractor_scenario TEXT NOT NULL,
-                        user_choice INTEGER NOT NULL,
-                        correct_choice INTEGER NOT NULL,
-                        is_correct BOOLEAN NOT NULL,
-                        response_time INTEGER,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        FOREIGN KEY (user_id) REFERENCES users(id)
-                    )
-                ''')
-            else:
-                cursor.execute('''
-                    CREATE TABLE IF NOT EXISTS distractor_attempts (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        user_id INTEGER NOT NULL,
-                        distractor_scenario TEXT NOT NULL,
-                        user_choice INTEGER NOT NULL,
-                        correct_choice INTEGER NOT NULL,
-                        is_correct BOOLEAN NOT NULL,
-                        response_time INTEGER,
-                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                        FOREIGN KEY (user_id) REFERENCES users(id)
-                    )
-                ''')
-            conn.commit()
-    except Exception as e:
-        app.logger.error(f"Error creating distractor table: {e}")
-
-init_distractor_table()
-
-# ============================================================================
 # FLASK-LOGIN SETUP
 # ============================================================================
 login_manager = LoginManager()
@@ -309,6 +270,30 @@ login_manager.init_app(app)
 login_manager.login_view = 'login_route'
 login_manager.login_message = "Kirjaudu sisään nähdäksesi tämän sivun."
 login_manager.login_message_category = "info"
+
+@login_manager.user_loader
+def load_user(user_id):
+    """Lataa käyttäjän tiedot tietokannasta."""
+    try:
+        user_data = db_manager._execute(
+            "SELECT id, username, email, role, distractors_enabled, distractor_probability, expires_at FROM users WHERE id = ?",
+            (user_id,),
+            fetch='one'
+        )
+        
+        if user_data:
+            return User(
+                id=user_data['id'],
+                username=user_data['username'],
+                email=user_data['email'],
+                role=user_data['role'],
+                distractors_enabled=bool(user_data.get('distractors_enabled', False)),
+                distractor_probability=user_data.get('distractor_probability', 25),
+                expires_at=user_data.get('expires_at')
+            )
+    except Exception as e:
+        app.logger.error(f"Error loading user {user_id}: {e}")
+    return None
 
 # ============================================================================
 # API-REITIT
@@ -322,6 +307,7 @@ def get_csrf_token():
 @login_required
 @limiter.limit("60 per minute")
 def get_incorrect_questions_api():
+    """Hakee kysymykset joihin käyttäjä on vastannut väärin."""
     try:
         incorrect_questions = db_manager._execute("""
             SELECT 
@@ -340,6 +326,7 @@ def get_incorrect_questions_api():
                 AND p.times_correct < p.times_shown
             ORDER BY success_rate ASC NULLS FIRST, p.times_shown DESC
         """, (current_user.id,), fetch='all')
+        
         return json_response({'questions': [dict(q) for q in incorrect_questions] if incorrect_questions else []})
     except Exception as e:
         app.logger.error(f"Error fetching incorrect questions: {e}")
@@ -349,6 +336,7 @@ def get_incorrect_questions_api():
 @login_required
 @limiter.limit("60 per minute")
 def get_question_progress_api(question_id):
+    """Hakee käyttäjän edistymisen tietyssä kysymyksessä."""
     try:
         progress = db_manager._execute("""
             SELECT 
@@ -362,6 +350,7 @@ def get_question_progress_api(question_id):
             FROM user_question_progress
             WHERE user_id = ? AND question_id = ?
         """, (current_user.id, question_id), fetch='one')
+        
         if progress:
             return json_response(dict(progress))
         return json_response({
@@ -381,6 +370,7 @@ def get_question_progress_api(question_id):
 def toggle_distractors_api():
     data = request.get_json()
     is_enabled = data.get('enabled', False)
+    
     try:
         db_manager._execute("UPDATE users SET distractors_enabled = ? WHERE id = ?", (is_enabled, current_user.id), fetch='none')
         app.logger.info(f"User {current_user.username} toggled distractors: {is_enabled}")
@@ -397,6 +387,7 @@ def update_distractor_probability_api():
     data = request.get_json()
     probability = data.get('probability', 25)
     probability = max(0, min(100, int(probability)))
+    
     try:
         db_manager._execute("UPDATE users SET distractor_probability = ? WHERE id = ?", (probability, current_user.id), fetch='none')
         app.logger.info(f"User {current_user.username} updated distractor probability: {probability}%")
@@ -409,6 +400,7 @@ def update_distractor_probability_api():
 @login_required
 @limiter.limit("60 per minute")
 def get_question_counts_api():
+    """Hakee kysymysmäärät kategorioittain ja vaikeustasoittain."""
     try:
         category_counts = db_manager._execute("""
             SELECT category, COUNT(*) as count
@@ -416,18 +408,22 @@ def get_question_counts_api():
             GROUP BY category
             ORDER BY category
         """, fetch='all')
+        
         difficulty_counts = db_manager._execute("""
             SELECT difficulty, COUNT(*) as count
             FROM questions
             GROUP BY difficulty
         """, fetch='all')
+        
         category_difficulty_counts = db_manager._execute("""
             SELECT category, difficulty, COUNT(*) as count
             FROM questions
             GROUP BY category, difficulty
         """, fetch='all')
+        
         total_result = db_manager._execute("SELECT COUNT(*) as count FROM questions", fetch='one')
         total_count = total_result['count'] if total_result else 0
+        
         cat_diff_map = {}
         if category_difficulty_counts:
             for row in category_difficulty_counts:
@@ -437,6 +433,7 @@ def get_question_counts_api():
                 if cat not in cat_diff_map:
                     cat_diff_map[cat] = {}
                 cat_diff_map[cat][diff] = count
+        
         return json_response({
             'categories': {row['category']: row['count'] for row in category_counts} if category_counts else {},
             'difficulties': {row['difficulty']: row['count'] for row in difficulty_counts} if difficulty_counts else {},
@@ -450,6 +447,7 @@ def get_question_counts_api():
 @app.route("/api/distractors")
 @login_required
 def get_distractors_api():
+    """Palauttaa listan kaikista häiriötekijöistä."""
     return json_response(DISTRACTORS)
 
 @app.route("/api/submit_distractor", methods=['POST'])
@@ -704,7 +702,7 @@ def get_achievements_api():
         return json_response(all_achievements)
     except Exception as e:
         app.logger.error(f"Error in /api/achievements: {e}", exc_info=True)
-        return json_response({'error': 'Server error'}, 500)
+        return json_response([])
 
 @app.route("/api/review-questions")
 @login_required
@@ -729,7 +727,7 @@ def get_review_questions_api():
         if random.random() < probability:
             distractor = random.choice(DISTRACTORS)
             app.logger.info(f"Showing distractor for user {current_user.id} with probability {probability*100}%")
-    
+
     return json_response({'question': question_data, 'distractor': distractor})
 
 @app.route("/api/recommendations")
@@ -1434,149 +1432,825 @@ def admin_add_question_route():
     return render_template("admin_add_question.html", categories=categories)
 
 # ============================================================================
-# DOKUMENTTIEN LUONTIFUNKTIOT - OSA 1: PDF
+# DOKUMENTTIEN LUONTIFUNKTIOT
 # ============================================================================
 
 def create_pdf_document(questions, include_answers, duplicate_info=None):
-    # Jatka tästä: story.append(Spacer(1, 0.3*inch))
+    """Luo ammattimaisen PDF-dokumentin kysymyksistä."""
     buffer = BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4, 
                             topMargin=0.75*inch, 
                             bottomMargin=0.75*inch,
                             leftMargin=0.75*inch,
                             rightMargin=0.75*inch)
+    
+    # Tyylit
     styles = getSampleStyleSheet()
-    styles.add(ParagraphStyle(name='Question', fontSize=12, leading=14, spaceAfter=8))
-    styles.add(ParagraphStyle(name='Option', fontSize=10, leading=12, leftIndent=20, spaceAfter=4))
-    styles.add(ParagraphStyle(name='Answer', fontSize=10, leading=12, textColor=colors.green, spaceBefore=8, spaceAfter=8))
-    styles.add(ParagraphStyle(name='Explanation', fontSize=10, leading=12, textColor=colors.blue, spaceBefore=8, spaceAfter=12))
+    
+    # Otsikkotyyli
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=24,
+        textColor=colors.HexColor('#5A67D8'),
+        spaceAfter=30,
+        alignment=TA_CENTER,
+        fontName='Helvetica-Bold'
+    )
+    
+    # Alaotsikkotyyli
+    subtitle_style = ParagraphStyle(
+        'Subtitle',
+        parent=styles['Normal'],
+        fontSize=12,
+        textColor=colors.HexColor('#718096'),
+        spaceAfter=20,
+        alignment=TA_CENTER
+    )
+    
+    # Kysymystyyli
+    question_style = ParagraphStyle(
+        'Question',
+        parent=styles['Normal'],
+        fontSize=11,
+        fontName='Helvetica-Bold',
+        spaceAfter=8,
+        textColor=colors.HexColor('#2D3748')
+    )
+    
+    # Vastausvaihtoehtotyyli
+    option_style = ParagraphStyle(
+        'Option',
+        parent=styles['Normal'],
+        fontSize=10,
+        leftIndent=20,
+        spaceAfter=4
+    )
+    
+    # Selitystyyli
+    explanation_style = ParagraphStyle(
+        'Explanation',
+        parent=styles['Normal'],
+        fontSize=9,
+        textColor=colors.HexColor('#4A5568'),
+        leftIndent=10,
+        rightIndent=10,
+        spaceAfter=6,
+        borderWidth=1,
+        borderColor=colors.HexColor('#E2E8F0'),
+        borderPadding=8,
+        backColor=colors.HexColor('#F7FAFC')
+    )
+    
+    # Metatietotyyli
+    meta_style = ParagraphStyle(
+        'Meta',
+        parent=styles['Normal'],
+        fontSize=8,
+        textColor=colors.HexColor('#A0AEC0'),
+        spaceAfter=12
+    )
+    
+    # Rakenna dokumentti
     story = []
-
+    
     # Otsikko
-    story.append(Paragraph("LOVe Enhanced - Kysymykset", styles['Title']))
-    story.append(Spacer(1, 0.5*inch))
-
-    # Duplikaattitiedot, jos annettu
+    story.append(Paragraph("LOVe Enhanced", title_style))
+    story.append(Paragraph("Kysymyspankki", subtitle_style))
+    story.append(Paragraph(f"Luotu: {datetime.now().strftime('%d.%m.%Y %H:%M')}", meta_style))
+    story.append(Paragraph(f"Kysymyksiä yhteensä: {len(questions)}", meta_style))
+    
     if duplicate_info:
-        story.append(Paragraph(duplicate_info, styles['Normal']))
-        story.append(Spacer(1, 0.3*inch))
-
-    # Sisällysluettelo
+        warning_style = ParagraphStyle('Warning', parent=styles['Normal'], fontSize=10, 
+                                       textColor=colors.HexColor('#F59E0B'))
+        story.append(Paragraph(duplicate_info, warning_style))
+    
     story.append(Spacer(1, 0.3*inch))
+    
+    # Sisällysluettelo
     story.append(Paragraph("Sisällysluettelo", styles['Heading2']))
+    
     category_counts = {}
     for q in questions:
         cat = q['category']
         category_counts[cat] = category_counts.get(cat, 0) + 1
-
-    toc_data = [[Paragraph(f"{cat}: {count} kysymystä", styles['Normal'])] for cat, count in sorted(category_counts.items())]
-    toc_table = Table(toc_data, colWidths=[6.5*inch])
+    
+    toc_data = [['Kategoria', 'Kysymyksiä']]
+    for cat, count in sorted(category_counts.items()):
+        toc_data.append([cat.title(), str(count)])
+    
+    toc_table = Table(toc_data, colWidths=[4*inch, 1.5*inch])
     toc_table.setStyle(TableStyle([
-        ('VALIGN', (0,0), (-1,-1), 'TOP'),
-        ('TOPPADDING', (0,0), (-1,-1), 2),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 2),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#5A67D8')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 11),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#F7FAFC')),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#E2E8F0')),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F7FAFC')])
     ]))
+    
     story.append(toc_table)
-    story.append(Spacer(1, 0.5*inch))
     story.append(PageBreak())
-
-    # Kysymykset kategorioittain
+    
+    # Kysymykset
     current_category = None
-    for i, q in enumerate(questions, 1):
+    
+    for idx, q in enumerate(questions, 1):
+        # Kategorian otsikko
         if q['category'] != current_category:
             current_category = q['category']
-            story.append(Paragraph(f"Kategoria: {current_category}", styles['Heading2']))
             story.append(Spacer(1, 0.2*inch))
+            story.append(Paragraph(f"Kategoria: {current_category.title()}", styles['Heading2']))
+            story.append(Spacer(1, 0.1*inch))
         
-        # Kysymys
-        story.append(Paragraph(f"{i}. {q['question']}", styles['Question']))
+        # Kysymyksen numero ja teksti
+        question_text = f"<b>{idx}.</b> {q['question']}"
+        story.append(Paragraph(question_text, question_style))
         
-        # Vaihtoehdot
-        for j, opt in enumerate(q['options'], 1):
-            story.append(Paragraph(f"{j}. {opt}", styles['Option']))
+        # Metatiedot
+        difficulty_map = {'helppo': 'Helppo', 'keskivaikea': 'Keskivaikea', 'vaikea': 'Vaikea'}
+        meta_text = f"Vaikeustaso: {difficulty_map.get(q['difficulty'], q['difficulty'])} | ID: {q['id']}"
+        story.append(Paragraph(meta_text, meta_style))
         
-        # Oikea vastaus ja selitys, jos include_answers on True
+        # Vastausvaihtoehdot
+        letters = ['A', 'B', 'C', 'D']
+        for i, option in enumerate(q['options']):
+            if include_answers and i == q['correct']:
+                option_text = f"<b>{letters[i]}. {option} ✓</b>"
+                option_para = Paragraph(option_text, option_style)
+            else:
+                option_text = f"{letters[i]}. {option}"
+                option_para = Paragraph(option_text, option_style)
+            story.append(option_para)
+        
+        story.append(Spacer(1, 0.1*inch))
+        
+        # Selitys (jos vastaukset sisällytetään)
         if include_answers:
-            correct_answer = q['options'][q['correct']]
-            story.append(Paragraph(f"Oikea vastaus: {correct_answer}", styles['Answer']))
-            story.append(Paragraph(f"Selitys: {q['explanation']}", styles['Explanation']))
+            correct_answer = letters[q['correct']]
+            explanation_text = f"<b>Oikea vastaus: {correct_answer}</b><br/>{q['explanation']}"
+            story.append(Paragraph(explanation_text, explanation_style))
         
-        story.append(Spacer(1, 0.3*inch))
+        story.append(Spacer(1, 0.15*inch))
+        
+        # Sivunvaihto joka 5. kysymyksen jälkeen (vain jos ei ole viimeinen)
+        if idx % 5 == 0 and idx < len(questions):
+            story.append(PageBreak())
     
-    # Footer jokaiselle sivulle
-    def add_page_number(canvas, doc):
-        page_num = canvas.getPageNumber()
-        text = f"Sivu {page_num}"
-        canvas.setFont('Helvetica', 9)
-        canvas.drawRightString(7.5*inch, 0.5*inch, text)
-    
-    doc.build(story, onFirstPage=add_page_number, onLaterPages=add_page_number)
+    # Rakenna PDF
+    doc.build(story)
     buffer.seek(0)
     return buffer
 
-# ============================================================================
-# DOKUMENTTIEN LUONTIFUNKTIOT - OSA 2: WORD
-# ============================================================================
-
 def create_word_document(questions, include_answers, duplicate_info=None):
-    buffer = BytesIO()
+    """Luo ammattimaisen Word-dokumentin kysymyksistä."""
     doc = Document()
     
-    # Otsikko
-    heading = doc.add_heading('LOVe Enhanced - Kysymykset', level=1)
-    heading.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    # Aseta marginaalit
+    sections = doc.sections
+    for section in sections:
+        section.top_margin = Inches(0.75)
+        section.bottom_margin = Inches(0.75)
+        section.left_margin = Inches(0.75)
+        section.right_margin = Inches(0.75)
     
-    # Duplikaattitiedot, jos annettu
+    # Otsikko
+    title = doc.add_heading('LOVe Enhanced', 0)
+    title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    title_run = title.runs[0]
+    title_run.font.color.rgb = RGBColor(90, 103, 216)
+    
+    subtitle = doc.add_heading('Kysymyspankki', level=2)
+    subtitle.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    
+    # Metatiedot
+    meta = doc.add_paragraph()
+    meta.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    meta_run = meta.add_run(f'Luotu: {datetime.now().strftime("%d.%m.%Y %H:%M")}\n')
+    meta_run.font.size = Pt(10)
+    meta_run.font.color.rgb = RGBColor(160, 174, 192)
+    
+    meta_run2 = meta.add_run(f'Kysymyksiä yhteensä: {len(questions)}')
+    meta_run2.font.size = Pt(10)
+    meta_run2.font.color.rgb = RGBColor(160, 174, 192)
+    
     if duplicate_info:
-        p = doc.add_paragraph(duplicate_info)
-        p.runs[0].font.color.rgb = RGBColor(255, 0, 0)  # Punainen väri varoitukselle
-        doc.add_paragraph()  # Väli
+        warning = doc.add_paragraph(duplicate_info)
+        warning_run = warning.runs[0]
+        warning_run.font.color.rgb = RGBColor(245, 158, 11)
+        warning_run.font.bold = True
+    
+    doc.add_paragraph()  # Tyhjä rivi
     
     # Sisällysluettelo
-    doc.add_heading('Sisällysluettelo', level=2)
+    doc.add_heading('Sisällysluettelo', level=1)
+    
     category_counts = {}
     for q in questions:
         cat = q['category']
         category_counts[cat] = category_counts.get(cat, 0) + 1
     
+    # Luo taulukko sisällysluettelosta
+    table = doc.add_table(rows=1, cols=2)
+    table.style = 'Light Grid Accent 1'
+    
+    hdr_cells = table.rows[0].cells
+    hdr_cells[0].text = 'Kategoria'
+    hdr_cells[1].text = 'Kysymyksiä'
+    
     for cat, count in sorted(category_counts.items()):
-        doc.add_paragraph(f"{cat}: {count} kysymystä", style='ListBullet')
+        row_cells = table.add_row().cells
+        row_cells[0].text = cat.title()
+        row_cells[1].text = str(count)
     
     doc.add_page_break()
     
-    # Kysymykset kategorioittain
+    # Kysymykset
     current_category = None
-    for i, q in enumerate(questions, 1):
+    letters = ['A', 'B', 'C', 'D']
+    
+    for idx, q in enumerate(questions, 1):
+        # Kategorian otsikko
         if q['category'] != current_category:
             current_category = q['category']
-            heading = doc.add_heading(f"Kategoria: {current_category}", level=2)
+            doc.add_paragraph()  # Tyhjä rivi
+            cat_heading = doc.add_heading(f'Kategoria: {current_category.title()}', level=1)
+            cat_heading.runs[0].font.color.rgb = RGBColor(90, 103, 216)
         
         # Kysymys
-        p = doc.add_paragraph(f"{i}. {q['question']}", style='Normal')
-        p.runs[0].font.bold = True
+        question_para = doc.add_paragraph()
+        q_run = question_para.add_run(f'{idx}. ')
+        q_run.bold = True
+        q_run.font.size = Pt(11)
         
-        # Vaihtoehdot
-        for j, opt in enumerate(q['options'], 1):
-            doc.add_paragraph(f"{j}. {opt}", style='ListNumber')
+        q_text_run = question_para.add_run(q['question'])
+        q_text_run.font.size = Pt(11)
         
-        # Oikea vastaus ja selitys
+        # Metatiedot
+        difficulty_map = {'helppo': 'Helppo', 'keskivaikea': 'Keskivaikea', 'vaikea': 'Vaikea'}
+        meta_para = doc.add_paragraph()
+        meta_para_run = meta_para.add_run(
+            f'Vaikeustaso: {difficulty_map.get(q["difficulty"], q["difficulty"])} | ID: {q["id"]}'
+        )
+        meta_para_run.font.size = Pt(8)
+        meta_para_run.font.color.rgb = RGBColor(160, 174, 192)
+        
+        # Vastausvaihtoehdot
+        for i, option in enumerate(q['options']):
+            option_para = doc.add_paragraph(style='List Bullet')
+            option_para.paragraph_format.left_indent = Inches(0.25)
+            
+            if include_answers and i == q['correct']:
+                opt_run = option_para.add_run(f'{letters[i]}. {option} ✓')
+                opt_run.bold = True
+                opt_run.font.color.rgb = RGBColor(72, 187, 120)
+            else:
+                opt_run = option_para.add_run(f'{letters[i]}. {option}')
+            opt_run.font.size = Pt(10)
+        
+        # Selitys
         if include_answers:
-            correct_answer = q['options'][q['correct']]
-            p = doc.add_paragraph(f"Oikea vastaus: {correct_answer}")
-            p.runs[0].font.color.rgb = RGBColor(0, 128, 0)  # Vihreä väri
-            p = doc.add_paragraph(f"Selitys: {q['explanation']}")
-            p.runs[0].font.color.rgb = RGBColor(0, 0, 255)  # Sininen väri
+            explanation_para = doc.add_paragraph()
+            explanation_para.paragraph_format.left_indent = Inches(0.15)
+            explanation_para.paragraph_format.right_indent = Inches(0.15)
+            
+            exp_header = explanation_para.add_run(f'Oikea vastaus: {letters[q["correct"]]}\n')
+            exp_header.bold = True
+            exp_header.font.size = Pt(9)
+            
+            exp_text = explanation_para.add_run(q['explanation'])
+            exp_text.font.size = Pt(9)
+            exp_text.font.color.rgb = RGBColor(74, 85, 104)
         
-        doc.add_paragraph()  # Väli seuraavaan kysymykseen
+        # Erotin
+        doc.add_paragraph('_' * 80)
+        
+        # Sivunvaihto joka 5. kysymyksen jälkeen
+        if idx % 5 == 0 and idx < len(questions):
+            doc.add_page_break()
     
-    # Tallenna dokumentti bufferiin
+    # Tallenna muistiin
+    buffer = BytesIO()
     doc.save(buffer)
     buffer.seek(0)
     return buffer
 
+@app.route("/admin/export_questions_document", methods=['GET', 'POST'])
+@admin_required
+def admin_export_questions_document_route():
+    """Vie kysymykset PDF- tai Word-dokumenttiin ammattimaisessa muodossa."""
+    
+    if request.method == 'POST':
+        export_format = request.form.get('format', 'pdf')
+        include_answers = request.form.get('include_answers') == 'on'
+        sort_by = request.form.get('sort_by', 'id')
+        check_duplicates = request.form.get('check_duplicates') == 'on'
+        selected_categories = request.form.getlist('categories')
+        selected_difficulties = request.form.getlist('difficulties')
+        
+        try:
+            # Rakenna kysely suodattimilla
+            query = "SELECT * FROM questions WHERE 1=1"
+            params = []
+            
+            if selected_categories:
+                placeholders = ','.join('?' * len(selected_categories))
+                query += f" AND category IN ({placeholders})"
+                params.extend(selected_categories)
+            
+            if selected_difficulties:
+                placeholders = ','.join('?' * len(selected_difficulties))
+                query += f" AND difficulty IN ({placeholders})"
+                params.extend(selected_difficulties)
+            
+            # Järjestys
+            sort_mapping = {
+                'id': 'id ASC',
+                'id_desc': 'id DESC',
+                'category': 'category ASC, id ASC',
+                'difficulty': 'CASE difficulty WHEN "helppo" THEN 1 WHEN "keskivaikea" THEN 2 WHEN "vaikea" THEN 3 END, id ASC',
+                'alphabetical': 'question ASC'
+            }
+            query += f" ORDER BY {sort_mapping.get(sort_by, 'id ASC')}"
+            
+            questions = db_manager._execute(query, tuple(params), fetch='all')
+                    
+            if not questions:
+                flash('Ei kysymyksiä vietäväksi valituilla suodattimilla.', 'warning')
+                return redirect(url_for('admin_export_questions_document_route'))
+            
+            # Tarkista duplikaatit jos pyydetty
+            duplicate_info = None
+            if check_duplicates:
+                similar = db_manager.find_similar_questions(0.95)
+                if similar:
+                    duplicate_info = f"⚠️ Löydettiin {len(similar)} mahdollista duplikaattia!"
+            
+            # Muunna kysymykset listaksi
+            questions_list = []
+            for q in questions:
+                questions_list.append({
+                    'id': q['id'],
+                    'question': q['question'],
+                    'options': json.loads(q['options']),
+                    'correct': q['correct'],
+                    'explanation': q['explanation'],
+                    'category': q['category'],
+                    'difficulty': q['difficulty']
+                })
+            
+            # Luo dokumentti
+            if export_format == 'pdf':
+                pdf_buffer = create_pdf_document(questions_list, include_answers, duplicate_info)
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                filename = f'LOVe_Kysymykset_{timestamp}.pdf'
+                
+                response = make_response(pdf_buffer.getvalue())
+                response.headers['Content-Type'] = 'application/pdf'
+                response.headers['Content-Disposition'] = f'attachment; filename={filename}'
+                
+                app.logger.info(f"Admin {current_user.username} exported {len(questions_list)} questions to PDF")
+                return response
+            
+            else:  # Word
+                doc_buffer = create_word_document(questions_list, include_answers, duplicate_info)
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                filename = f'LOVe_Kysymykset_{timestamp}.docx'
+                
+                response = make_response(doc_buffer.getvalue())
+                response.headers['Content-Type'] = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+                response.headers['Content-Disposition'] = f'attachment; filename={filename}'
+                
+                app.logger.info(f"Admin {current_user.username} exported {len(questions_list)} questions to Word")
+                return response
+            
+        except Exception as e:
+            flash(f'Virhe dokumentin luomisessa: {str(e)}', 'danger')
+            app.logger.error(f"Document export error: {e}")
+            import traceback
+            traceback.print_exc()
+            return redirect(url_for('admin_export_questions_document_route'))
+    
+    # GET - Näytä lomake
+    try:
+        categories = db_manager.get_categories()
+        
+        total_result = db_manager._execute("SELECT COUNT(*) as count FROM questions", fetch='one')
+        total_questions = total_result['count'] if total_result else 0
+        
+        return render_template('admin_export_document.html', 
+                               categories=categories,
+                               total_questions=total_questions)
+    except Exception as e:
+        flash(f'Virhe sivun lataamisessa: {str(e)}', 'danger')
+        app.logger.error(f"Export page load error: {e}")
+        return redirect(url_for('admin_route'))
+
+@app.route("/admin/find_duplicates", methods=['GET', 'POST'])
+@admin_required
+def admin_find_duplicates_route():
+    """Etsii duplikaatit ja samankaltaiset kysymykset."""
+    
+    if request.method == 'POST':
+        # Hae threshold lomakkeesta (oletuksena 95%)
+        similarity_threshold = float(request.form.get('threshold', 95)) / 100
+        
+        try:
+            similar_questions = db_manager.find_similar_questions(similarity_threshold)
+            
+            if not similar_questions:
+                flash(f'✅ Ei löytynyt duplikaatteja tai samankaltaisuus {similarity_threshold*100:.0f}% kysymyksiä!', 'success')
+            else:
+                flash(f'🔍 Löydettiin {len(similar_questions)} samankaltaista kysymysparia (kynnys: {similarity_threshold*100:.0f}%)', 'info')
+            
+            return render_template('admin_duplicates.html', 
+                                   similar_questions=similar_questions, 
+                                   threshold=similarity_threshold*100)
+        
+        except Exception as e:
+            flash(f'Virhe duplikaattien etsinnässä: {str(e)}', 'danger')
+            app.logger.error(f"Duplicate search error: {e}")
+            return redirect(url_for('admin_route'))
+    
+    # GET-pyyntö: näytä lomake
+    return render_template('admin_duplicates.html', similar_questions=None, threshold=95)
+
+@app.route("/admin/merge_categories", methods=['POST'])
+@admin_required
+def admin_merge_categories_route():
+    """Yhdistää kategoriat kuuteen pääkategoriaan."""
+    try:
+        success, result = db_manager.merge_categories_to_standard()
+        
+        if success:
+            stats = result
+            flash(f"✅ Kategoriat yhdistetty onnistuneesti! Päivitettiin {stats['updated']} kysymystä.", 'success')
+            
+            category_summary = ", ".join([f"{cat}: {count}" for cat, count in stats['categories'].items()])
+            flash(f"📊 Lopulliset kategoriat: {category_summary}", 'info')
+            
+            app.logger.info(f"Admin {current_user.username} merged categories")
+        else:
+            flash(f'Virhe kategorioiden yhdistämisessä: {result}', 'danger')
+            app.logger.error(f"Category merge error: {result}")
+    
+    except Exception as e:
+        flash(f'Odottamaton virhe: {str(e)}', 'danger')
+        app.logger.error(f"Unexpected error in category merge: {e}")
+    
+    return redirect(url_for('admin_route'))
+
+@app.route("/admin/export_questions")
+@admin_required
+def admin_export_questions_route():
+    """Vie kaikki kysymykset JSON-tiedostoon."""
+    try:
+        questions = db_manager._execute("""
+            SELECT id, question, explanation, options, correct, category, difficulty, created_at
+            FROM questions
+            ORDER BY category, id
+        """, fetch='all')
+        
+        questions_list = []
+        for q in questions:
+            questions_list.append({
+                'id': q['id'],
+                'question': q['question'],
+                'explanation': q['explanation'],
+                'options': json.loads(q['options']),
+                'correct': q['correct'],
+                'category': q['category'],
+                'difficulty': q['difficulty'],
+                'created_at': q['created_at']
+            })
+        
+        json_data = json.dumps(questions_list, ensure_ascii=False, indent=2)
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f'love_questions_backup_{timestamp}.json'
+        
+        app.logger.info(f"Admin {current_user.username} exported {len(questions_list)} questions")
+        
+        response = make_response(json_data)
+        response.headers['Content-Type'] = 'application/json; charset=utf-8'
+        response.headers['Content-Disposition'] = f'attachment; filename={filename}'
+        
+        return response
+        
+    except Exception as e:
+        flash(f'Virhe kysymysten viennissä: {str(e)}', 'danger')
+        app.logger.error(f"Export error: {e}")
+        return redirect(url_for('admin_route'))
+
+@app.route('/admin/edit_user_settings/<int:user_id>', methods=['POST'])
+@login_required
+@admin_required
+def edit_user_settings(user_id):
+    if request.form.get('confirm') == 'true':
+        data = {
+            'distractors_enabled': bool(int(request.form.get('distractors_enabled'))),
+            'distractor_probability': int(request.form.get('distractor_probability'))
+        }
+        success, error = db_manager.update_user(user_id, data)
+        if success:
+            flash('Asetukset päivitetty onnistuneesti!', 'success')
+            return redirect(url_for('admin_users_route'))
+        flash(f'Virhe päivitettäessä asetuksia: {error}', 'error')
+    return redirect(url_for('admin_users_route'))
+
+@app.route('/admin/create-test-users', methods=['POST'])
+@admin_required
+def admin_create_test_users_route():
+    """Luo määritetyn määrän testikäyttäjiä ja näyttää niiden tunnukset."""
+    try:
+        user_count = int(request.form.get('user_count', 0))
+        expiration_days = int(request.form.get('expiration_days', 30))
+
+        if not 1 <= user_count <= 200:
+            flash('Käyttäjien määrän tulee olla 1-200 välillä.', 'danger')
+            return redirect(url_for('admin_users_route'))
+        if not 1 <= expiration_days <= 365:
+            flash('Voimassaoloajan tulee olla 1-365 päivän välillä.', 'danger')
+            return redirect(url_for('admin_users_route'))
+
+    except (ValueError, TypeError):
+        flash('Virheellinen syöte. Anna numerot.', 'danger')
+        return redirect(url_for('admin_users_route'))
+
+    created_users = []
+    failed_users = []
+    expires_at = datetime.now() + timedelta(days=expiration_days)
+
+    start_index = db_manager.get_next_test_user_number()
+
+    for i in range(start_index, start_index + user_count):
+        username = f'testuser{i}'
+        email = f'test{i}@example.com'
+        password = generate_secure_password()
+        hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
+
+        success, error = db_manager.create_user(username, email, hashed_password, expires_at=expires_at)
+        
+        if success:
+            created_users.append({'username': username, 'password': password})
+        else:
+            failed_users.append(username)
+            app.logger.error(f"Testikäyttäjän {username} luonti epäonnistui: {error}")
+
+    if created_users:
+        flash(f'✅ Luotiin {len(created_users)} uutta testikäyttäjää!', 'success')
+        app.logger.info(f"Admin {current_user.username} created {len(created_users)} test users.")
+    
+    if failed_users:
+        flash(f"⚠️ {len(failed_users)} käyttäjän luonti epäonnistui (nimet olivat ehkä jo varattuja).", "warning")
+
+    return render_template('admin_show_created_users.html', created_users=created_users, expiration_days=expiration_days, expires_at=expires_at)
+
+# ============================================================================
+# VIRHEKÄSITTELY
+# ============================================================================
+
+@app.errorhandler(404)
+def not_found_error(error):
+    return render_template('404.html'), 404
+
+@app.errorhandler(500)
+def internal_error(error):
+    app.logger.error(f"Internal server error: {error}")
+    return render_template('500.html'), 500
+
+@app.errorhandler(403)
+def forbidden_error(error):
+    app.logger.warning(f"Forbidden access attempt: {error}")
+    return render_template('403.html'), 403
+
+@app.errorhandler(429)
+def ratelimit_error(error):
+    app.logger.warning(f"Rate limit exceeded: {request.remote_addr}")
+    return jsonify({
+        'error': 'Liikaa pyyntöjä. Odota hetki ja yritä uudelleen.',
+        'retry_after': error.description
+    }), 429
+
 # ============================================================================
 # SOVELLUKSEN KÄYNNISTYS
 # ============================================================================
+
+@app.route('/init-database-now')
+def init_database_now():
+    """
+    LUO KAIKKI TAULUT PostgreSQL:iin tai SQLite:en.
+    KÄYTÄ VAIN KERRAN ENSIMMÄISELLÄ KERRALLA!
+    """
+    try:
+        # Kutsu DatabaseManager:in omaa init_database metodia
+        db_manager.init_database()
+        
+        app.logger.info("Tietokanta alustettu onnistuneesti")
+        return "✅ Tietokannan taulut luotu onnistuneesti!<br><br><a href='/emergency-reset-admin'>Seuraavaksi: Luo admin-käyttäjä</a>"
+        
+    except Exception as e:
+        app.logger.error(f"Virhe tietokannan alustuksessa: {e}")
+        return f"❌ Virhe taulujen luomisessa: {str(e)}"
+
+@app.route('/emergency-reset-admin')
+def emergency_reset_admin():
+    """
+    VÄLIAIKAINEN: Luo taulut JA resetoi admin-salasana.
+    ⚠️ POISTA TÄMÄ ROUTE KUN ADMIN ON LUOTU!
+    """
+    admin_username = "Jarno"
+    admin_email = "tehostettuaoppimista@gmail.com"
+    new_password = "TempPass123!"
+    
+    try:
+        # VAIHE 1: Luo kaikki taulut DatabaseManager:in kautta
+        app.logger.info("Luodaan tietokantataulut...")
+        db_manager.init_database()
+        app.logger.info("Taulut luotu onnistuneesti!")
+        
+        # VAIHE 2: Tarkista onko admin-käyttäjä jo olemassa
+        user = db_manager._execute(
+            "SELECT * FROM users WHERE username = ?",
+            (admin_username,),
+            fetch='one'
+        )
+        
+        # Hashaa salasana
+        hashed_pw = bcrypt.generate_password_hash(new_password).decode('utf-8')
+        
+        if user:
+            # Admin löytyi - päivitä salasana
+            db_manager._execute(
+                "UPDATE users SET password = ? WHERE username = ?",
+                (hashed_pw, admin_username),
+                fetch='none'
+            )
+            
+            return f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Admin Päivitetty</title>
+                <meta charset="UTF-8">
+                <style>
+                    body {{ font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; }}
+                    .success {{ background: #D4EDDA; border: 1px solid #C3E6CB; padding: 20px; border-radius: 5px; }}
+                    .credential {{ background: #F8F9FA; padding: 10px; margin: 10px 0; border-left: 4px solid #5A67D8; }}
+                    .btn {{ background: #5A67D8; color: white; padding: 12px 24px; text-decoration: none; 
+                            border-radius: 5px; display: inline-block; margin-top: 20px; }}
+                </style>
+            </head>
+            <body>
+                <div class="success">
+                    <h2>✅ TIETOKANTA ALUSTETTU!</h2>
+                    <p>✅ Admin-käyttäjän '{admin_username}' salasana päivitetty!</p>
+                    
+                    <h3>📊 Luodut taulut:</h3>
+                    <ul>
+                        <li>users</li>
+                        <li>questions</li>
+                        <li>distractor_attempts</li>
+                        <li>user_question_progress</li>
+                        <li>question_attempts</li>
+                        <li>user_achievements</li>
+                        <li>active_sessions</li>
+                        <li>study_sessions</li>
+                    </ul>
+                    
+                    <h3>🔐 Kirjautumistiedot:</h3>
+                    <div class="credential">
+                        <strong>Käyttäjänimi:</strong> {admin_username}<br>
+                        <strong>Salasana:</strong> {new_password}
+                    </div>
+                    
+                    <a href='/login' class="btn">Kirjaudu sisään</a>
+                    
+                    <hr style="margin: 30px 0;">
+                    <p style="color: #856404; background: #FFF3CD; padding: 10px; border-radius: 5px;">
+                        ⚠️ <strong>TÄRKEÄÄ:</strong> Poista /emergency-reset-admin route 
+                        app.py:stä välittömästi kun olet kirjautunut sisään!
+                    </p>
+                </div>
+            </body>
+            </html>
+            """
+        else:
+            # Admin ei löytynyt - luo uusi
+            success, error = db_manager.create_user(
+                username=admin_username,
+                email=admin_email,
+                hashed_password=hashed_pw,
+                expires_at=None  # Admin ei vanhene
+            )
+            
+            if success:
+                # Aseta rooli admin:ksi
+                db_manager._execute(
+                    "UPDATE users SET role = ? WHERE username = ?",
+                    ('admin', admin_username),
+                    fetch='none'
+                )
+                
+                return f"""
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Admin Luotu</title>
+                    <meta charset="UTF-8">
+                    <style>
+                        body {{ font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; }}
+                        .success {{ background: #D4EDDA; border: 1px solid #C3E6CB; padding: 20px; border-radius: 5px; }}
+                        .credential {{ background: #F8F9FA; padding: 10px; margin: 10px 0; border-left: 4px solid #5A67D8; }}
+                        .btn {{ background: #5A67D8; color: white; padding: 12px 24px; text-decoration: none; 
+                                border-radius: 5px; display: inline-block; margin-top: 20px; }}
+                    </style>
+                </head>
+                <body>
+                    <div class="success">
+                        <h2>✅ TIETOKANTA ALUSTETTU!</h2>
+                        <p>✅ Uusi admin-käyttäjä '{admin_username}' luotu!</p>
+                        
+                        <h3>📊 Luodut taulut:</h3>
+                        <ul>
+                            <li>users</li>
+                            <li>questions</li>
+                            <li>distractor_attempts</li>
+                            <li>user_question_progress</li>
+                            <li>question_attempts</li>
+                            <li>user_achievements</li>
+                            <li>active_sessions</li>
+                            <li>study_sessions</li>
+                        </ul>
+                        
+                        <h3>🔐 Kirjautumistiedot:</h3>
+                        <div class="credential">
+                            <strong>Käyttäjänimi:</strong> {admin_username}<br>
+                            <strong>Sähköposti:</strong> {admin_email}<br>
+                            <strong>Salasana:</strong> {new_password}
+                        </div>
+                        
+                        <a href='/login' class="btn">Kirjaudu sisään</a>
+                        
+                        <hr style="margin: 30px 0;">
+                        <p style="color: #856404; background: #FFF3CD; padding: 10px; border-radius: 5px;">
+                            ⚠️ <strong>TÄRKEÄÄ:</strong> Poista /emergency-reset-admin route 
+                            app.py:stä välittömästi kun olet kirjautunut sisään!
+                        </p>
+                    </div>
+                </body>
+                </html>
+                """
+            else:
+                return f"""
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Virhe</title>
+                    <meta charset="UTF-8">
+                    <style>
+                        body {{ font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; }}
+                        .error {{ background: #F8D7DA; border: 1px solid #F5C6CB; padding: 20px; border-radius: 5px; }}
+                    </style>
+                </head>
+                <body>
+                    <div class="error">
+                        <h2>❌ Virhe käyttäjän luomisessa</h2>
+                        <p>{error}</p>
+                    </div>
+                </body>
+                </html>
+                """
+                
+    except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
+        app.logger.error(f"Emergency reset error: {error_details}")
+        
+        return f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Kriittinen Virhe</title>
+            <meta charset="UTF-8">
+            <style>
+                body {{ font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }}
+                .error {{ background: #F8D7DA; border: 1px solid #F5C6CB; padding: 20px; border-radius: 5px; }}
+                pre {{ background: #F8F9FA; padding: 15px; overflow-x: auto; border-radius: 3px; }}
+            </style>
+        </head>
+        <body>
+            <div class="error">
+                <h2>❌ Kriittinen virhe</h2>
+                <p><strong>Virheviesti:</strong> {str(e)}</p>
+                <h3>Tekninen virheraportti:</h3>
+                <pre>{error_details}</pre>
+            </div>
+        </body>
+        </html>
+        """
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
