@@ -120,7 +120,7 @@
     async function showQuestion(index) {
         currentQuestionIndex = index;
         const wrapper = document.getElementById('question-content-wrapper');
-        wrapper.innerHTML = `<div class="text-center p-5"><div class="spinner-border"></div></div>`;
+        wrapper.innerHTML = \`<div class="text-center p-5"><div class="spinner-border"></div></div>\`;
         updateQuestionGrid();
 
         let question = questionsCache[index];

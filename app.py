@@ -1022,16 +1022,18 @@ def calculator_route():
 @app.route('/simulation')
 @login_required
 def simulation_route():
+    """Renderöi koesimulaatiosivun uudella, kestävällä mallilla."""
     has_existing_session = 'simulation' in session and session['simulation'].get('user_id') == current_user.id
-
+    
     if request.args.get('new') == 'true':
         if has_existing_session:
             session.pop('simulation', None)
-
+        
+        # Oletan että 'db_manager' on globaali ja alustettu
         question_ids = db_manager.get_random_question_ids(50)
-
+        
         if not question_ids or len(question_ids) < 50:
-            flash("Simulaation luonti epäonnistui: tietokannassa ei ole tarpeeksi kysymyksiä (50).", "danger")
+            flash(f"Simulaation luonti epäonnistui: tietokannassa ei ole tarpeeksi kysymyksiä (vaaditaan 50, löytyi {len(question_ids)}).", "danger")
             return redirect(url_for('dashboard_route'))
 
         session['simulation'] = {
@@ -1043,9 +1045,11 @@ def simulation_route():
             'time_remaining': 3600
         }
         session.modified = True
+        app.logger.info(f"Uusi simulaatio luotu: {len(question_ids)} kysymystä.")
         return redirect(url_for('simulation_route', resume='true'))
 
     if request.args.get('resume') == 'true' and has_existing_session:
+         app.logger.info(f"Jatketaan simulaatiota.")
          return render_template('simulation.html', 
                                 session_data=session['simulation'], 
                                 has_existing_session=True,
@@ -1066,6 +1070,29 @@ def simulation_route():
                            session_data=session.get('simulation', {}), 
                            has_existing_session=has_existing_session,
                            session_info=session_info)
+
+# TÄMÄ ON KOKONAAN UUSI FUNKTIO (lisää tämä edellisen alle)
+@app.route('/api/simulation/question/<int:index>')
+@login_required
+def get_simulation_question_api(index):
+    """Hakee yhden kysymyksen simulaatiota varten indeksin perusteella."""
+    if 'simulation' not in session or session['simulation'].get('user_id') != current_user.id:
+        return jsonify({'error': 'Aktiivista simulaatiota ei löytynyt'}), 404
+
+    sim_session = session['simulation']
+    question_ids = sim_session.get('question_ids', [])
+
+    if 0 <= index < len(question_ids):
+        question_id = question_ids[index]
+        question = db_manager.get_question_by_id(question_id)
+        if question:
+            session['simulation']['current_index'] = index
+            session.modified = True
+            return jsonify(asdict(question))
+        else:
+            return jsonify({'error': f'Kysymystä ID:llä {question_id} ei löytynyt'}), 404
+    else:
+        return jsonify({'error': 'Virheellinen kysymysindeksi'}), 400
 
 @app.route('/api/simulation/question/<int:index>')
 @login_required
