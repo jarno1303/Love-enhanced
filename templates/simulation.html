@@ -33,8 +33,6 @@
                 <ul class="text-start mb-0">
                     <li>Kokeessa on <strong>50 kysymystä</strong>.</li>
                     <li>Aikaa on <strong>60 minuuttia</strong>.</li>
-                    <li>Voit selata kysymyksiä ja palata aiempiin.</li>
-                    <li>Lopuksi saat tulokset ja palautteen.</li>
                 </ul>
             </div>
             <a href="{{ url_for('simulation_route', new='true') }}" class="btn btn-primary btn-lg"><i class="fas fa-play me-2"></i>Aloita koe</a>
@@ -42,20 +40,12 @@
         </div>
     </div>
 
-    <div id="simulation-container" class="d-none">
-        </div>
+    <div id="simulation-container" class="d-none"></div>
 
-    <div id="results-screen" class="d-none">
-        </div>
+    <div id="results-screen" class="d-none"></div>
 </div>
 
-<button id="floating-calculator-btn" class="btn btn-primary rounded-circle shadow-lg d-none" 
-        onclick="toggleCalculator()" 
-        title="Avaa laskin"
-        style="position: fixed; bottom: 20px; right: 20px; width: 60px; height: 60px; z-index: 1000;">
-    <i class="fas fa-calculator fa-lg"></i>
-</button>
-
+<button id="floating-calculator-btn" class="btn btn-primary rounded-circle shadow-lg d-none" onclick="toggleCalculator()" title="Avaa laskin" style="position: fixed; bottom: 20px; right: 20px; width: 60px; height: 60px; z-index: 1000;"><i class="fas fa-calculator fa-lg"></i></button>
 <div id="calculator-modal" style="display: none; position: fixed; bottom: 90px; right: 20px; z-index: 1001; width: 300px;">
     {% include '_calculator_modal.html' %}
 </div>
@@ -64,23 +54,19 @@
 
 {% block scripts %}
 <script>
-    // --- Alustetaan data Flaskilta ---
     const initialSessionData = {{ session_data | tojson }};
-    const hasExistingSession = {{ has_existing_session | tojson }};
     const csrfToken = "{{ csrf_token() }}";
     
-    // --- Globaalit muuttujat ---
-    let questionsCache = {}; // Välimuisti ladatuille kysymyksille
+    let questionsCache = {};
     let answers = [];
     let questionIds = [];
     let currentQuestionIndex = 0;
     let timerInterval;
     let timeRemaining;
 
-    // --- PÄÄLOGIIKKA ---
     document.addEventListener('DOMContentLoaded', () => {
         const urlParams = new URLSearchParams(window.location.search);
-        if ((urlParams.has('new') || urlParams.has('resume')) && initialSessionData.question_ids) {
+        if (urlParams.has('resume') && initialSessionData && initialSessionData.question_ids) {
             initializeSimulation();
         } else {
             document.getElementById('start-screen').style.display = 'block';
@@ -112,9 +98,7 @@
             </div>
             <div class="progress mb-4" style="height: 8px;"><div id="progress-bar" class="progress-bar"></div></div>
             <div class="row">
-                <div class="col-lg-8">
-                    <div class="card shadow-sm"><div class="card-body p-4" id="question-content-wrapper"></div></div>
-                </div>
+                <div class="col-lg-8"><div class="card shadow-sm"><div class="card-body p-4" id="question-content-wrapper"></div></div></div>
                 <div class="col-lg-4 mt-4 mt-lg-0">
                     <div class="card shadow-sm">
                         <div class="card-header">Kysymysnavigaatio</div>
@@ -142,26 +126,19 @@
         let question = questionsCache[index];
         if (!question) {
             try {
-                const response = await fetch(`/api/simulation/question/${index}`);
+                const response = await fetch(\`/api/simulation/question/\${index}\`);
                 if (!response.ok) throw new Error('Kysymyksen haku epäonnistui');
                 question = await response.json();
                 questionsCache[index] = question;
             } catch (error) {
-                wrapper.innerHTML = `<div class="alert alert-danger">${error.message}</div>`;
+                wrapper.innerHTML = \`<div class="alert alert-danger">\${error.message}</div>\`;
                 return;
             }
         }
         
-        let optionsHtml = question.options.map((option, i) => `
-            <div class="form-check">
-                <input class="form-check-input" type="radio" name="answer" id="option${i}" value="${i}" ${answers[index] === i ? 'checked' : ''}>
-                <label class="form-check-label p-2 border rounded" for="option${i}" style="cursor:pointer; width: 100%;">${String.fromCharCode(65 + i)}. ${option}</label>
-            </div>`).join('');
+        let optionsHtml = question.options.map((option, i) => \`<div class="form-check"><input class="form-check-input" type="radio" name="answer" id="option\${i}" value="\${i}" \${answers[index] === i ? 'checked' : ''}><label class="form-check-label p-2 border rounded" for="option\${i}" style="cursor:pointer; width: 100%;">\${String.fromCharCode(65 + i)}. \${option}</label></div>\`).join('');
             
-        wrapper.innerHTML = `
-            <h5 class="card-title">Kysymys ${index + 1} / ${questionIds.length}</h5>
-            <p class="fs-5">${question.question}</p>
-            <div class="d-grid gap-3 mt-4">${optionsHtml}</div>`;
+        wrapper.innerHTML = \`<h5 class="card-title">Kysymys \${index + 1} / \${questionIds.length}</h5><p class="fs-5">\${question.question}</p><div class="d-grid gap-3 mt-4">\${optionsHtml}</div>\`;
         
         wrapper.querySelectorAll('input[name="answer"]').forEach(radio => {
             radio.addEventListener('change', (e) => {
@@ -189,21 +166,27 @@
         const gridButtons = document.getElementById('question-grid').children;
         for (let i = 0; i < gridButtons.length; i++) {
             gridButtons[i].className = 'btn';
-            if (i === currentQuestionIndex) gridButtons[i].classList.add('btn-primary');
-            else if (answers[i] != null) gridButtons[i].classList.add('btn-success');
-            else gridButtons[i].classList.add('btn-outline-secondary');
+            if (i === currentQuestionIndex) {
+                gridButtons[i].classList.add('btn-primary');
+            } else if (answers[i] != null) {
+                gridButtons[i].classList.add('btn-success');
+            } else {
+                gridButtons[i].classList.add('btn-outline-secondary');
+            }
         }
     }
-    
+
     function updateProgress() {
+        if (questionIds.length === 0) return;
         const answeredCount = answers.filter(a => a !== null).length;
         const progress = (answeredCount / questionIds.length) * 100;
         const bar = document.getElementById('progress-bar');
-        if(bar) bar.style.width = `${progress}%`;
+        if (bar) bar.style.width = \`\${progress}%\`;
     }
 
     function startTimer() {
         clearInterval(timerInterval);
+        updateTimerDisplay(); // Aseta aika heti näkyviin
         timerInterval = setInterval(() => {
             timeRemaining--;
             updateTimerDisplay();
@@ -213,16 +196,17 @@
                 finishSimulation();
             }
         }, 1000);
-        updateTimerDisplay();
     }
-    
+
     function updateTimerDisplay() {
         const minutes = Math.floor(timeRemaining / 60);
         const seconds = timeRemaining % 60;
         const timerEl = document.getElementById('timer');
         if (timerEl) {
-            timerEl.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-            if(timeRemaining <= 300) timerEl.classList.add('text-danger');
+            timerEl.textContent = \`\${minutes}:\${seconds.toString().padStart(2, '0')}\`;
+            if (timeRemaining <= 300) {
+                timerEl.classList.add('text-danger');
+            }
         }
     }
 
@@ -230,13 +214,13 @@
         const unanswered = answers.filter(a => a === null).length;
         let message = 'Haluatko varmasti palauttaa kokeen?';
         if (unanswered > 0) {
-            message += ` Sinulla on ${unanswered} vastaamatonta kysymystä.`;
+            message += \` Sinulla on \${unanswered} vastaamatonta kysymystä.\`;
         }
         if (confirm(message)) {
             finishSimulation();
         }
     }
-    
+
     async function saveAndQuit() {
         if (confirm('Haluatko tallentaa edistymisesi ja poistua? Voit jatkaa myöhemmin.')) {
             await saveProgressToBackend();
@@ -251,8 +235,7 @@
                 current_index: currentQuestionIndex,
                 time_remaining: timeRemaining
             };
-            if(isFinishing) payload.is_finishing = true;
-
+            if (isFinishing) payload.is_finishing = true;
             await fetch('/api/simulation/update', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
@@ -266,8 +249,7 @@
 
     async function finishSimulation() {
         clearInterval(timerInterval);
-        await saveProgressToBackend(true); 
-        
+        await saveProgressToBackend(true);
         try {
             const response = await fetch('/api/submit_simulation', {
                 method: 'POST',
@@ -280,47 +262,42 @@
             alert('Virhe kokeen palautuksessa.');
         }
     }
-    
+
     function showResults(result) {
         document.getElementById('simulation-container').classList.add('d-none');
         document.getElementById('floating-calculator-btn').classList.add('d-none');
         const resultsScreen = document.getElementById('results-screen');
         resultsScreen.classList.remove('d-none');
-
-        let detailedResultsHtml = result.detailed_results.map((res, index) => `
+        let detailedResultsHtml = result.detailed_results.map((res, index) => \`
             <div class="card mb-3">
                 <div class="card-body">
-                    <p><strong>${index + 1}. ${res.question}</strong></p>
-                    <p class="${res.is_correct ? 'text-success' : 'text-danger'}">
-                        <i class="fas ${res.is_correct ? 'fa-check-circle' : 'fa-times-circle'}"></i>
-                        Vastasit: ${res.user_answer_text || 'Ei vastattu'}
+                    <p><strong>\${index + 1}. \${res.question}</strong></p>
+                    <p class="\${res.is_correct ? 'text-success' : 'text-danger'}">
+                        <i class="fas \${res.is_correct ? 'fa-check-circle' : 'fa-times-circle'}"></i>
+                        Vastasit: \${res.user_answer_text || 'Ei vastattu'}
                     </p>
-                    ${!res.is_correct ? `<p class="text-success">Oikea vastaus: ${res.correct_answer_text}</p>` : ''}
-                    <p class="text-muted small">${res.explanation}</p>
+                    \${!res.is_correct ? \`<p class="text-success">Oikea vastaus: \${res.correct_answer_text}</p>\` : ''}
+                    <p class="text-muted small">\${res.explanation}</p>
                 </div>
             </div>
-        `).join('');
-
-        resultsScreen.innerHTML = `
+        \`).join('');
+        resultsScreen.innerHTML = \`
             <div class="card shadow-lg border-0 text-center p-4">
                 <h1 class="display-4">Koe suoritettu!</h1>
-                <p class="lead">Tuloksesi: <strong>${result.score} / ${result.total} (${result.percentage.toFixed(1)}%)</strong></p>
+                <p class="lead">Tuloksesi: <strong>\${result.score} / \${result.total} (\${result.percentage.toFixed(1)}%)</strong></p>
                 <div class="d-flex justify-content-center gap-2 mt-3 mb-4">
-                       <a href="{{ url_for('dashboard_route') }}" class="btn btn-primary">Palaa etusivulle</a>
-                       <a href="{{ url_for('simulation_route', new='true') }}" class="btn btn-outline-secondary">Yritä uudelleen</a>
+                    <a href="{{ url_for('dashboard_route') }}" class="btn btn-primary">Palaa etusivulle</a>
+                    <a href="{{ url_for('simulation_route', new='true') }}" class="btn btn-outline-secondary">Yritä uudelleen</a>
                 </div>
                 <hr>
                 <h3 class="mt-4">Vastausten erittely</h3>
-                <div class="text-start mt-3" style="max-height: 400px; overflow-y: auto;">
-                    ${detailedResultsHtml}
-                </div>
+                <div class="text-start mt-3" style="max-height: 400px; overflow-y: auto;">\${detailedResultsHtml}</div>
             </div>
-        `;
+        \`;
     }
-
-    // --- LASKIN-FUNKTIOT ---
+    
     let isDragging = false, xOffset = 0, yOffset = 0, calcCurrentValue = '0', calcOperator = '', calcPreviousValue = '';
-
+    
     function toggleCalculator() {
         const modal = document.getElementById('calculator-modal');
         modal.style.display = modal.style.display === 'none' ? 'block' : 'none';
@@ -365,7 +342,6 @@
         const calcHeader = document.getElementById('calc-header');
         const calcModal = document.getElementById('calculator-modal');
         if (!calcHeader || !calcModal) return;
-
         calcHeader.addEventListener('mousedown', dragStart);
         document.addEventListener('mouseup', dragEnd);
         document.addEventListener('mousemove', drag);
@@ -377,18 +353,15 @@
     function dragStart(e) {
         const calcModal = document.getElementById('calculator-modal');
         isDragging = true;
-        
         const clientX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
         const clientY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY;
         const rect = calcModal.getBoundingClientRect();
-        
         if (calcModal.style.right || calcModal.style.bottom) {
             calcModal.style.right = 'auto';
             calcModal.style.bottom = 'auto';
             calcModal.style.top = rect.top + 'px';
             calcModal.style.left = rect.left + 'px';
         }
-
         xOffset = clientX - calcModal.offsetLeft;
         yOffset = clientY - calcModal.offsetTop;
     }
@@ -399,12 +372,11 @@
             const calcModal = document.getElementById('calculator-modal');
             const clientX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
             const clientY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY;
-            
             calcModal.style.left = (clientX - xOffset) + 'px';
             calcModal.style.top = (clientY - yOffset) + 'px';
         }
     }
-
+    
     function dragEnd() {
         isDragging = false;
     }

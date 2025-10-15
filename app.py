@@ -26,6 +26,8 @@ from io import BytesIO
 from logging.handlers import RotatingFileHandler
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from logic import simulation_manager
+from dataclasses import asdict
 
 # ============================================================================
 # THIRD-PARTY KIRJASTOT
@@ -1018,19 +1020,19 @@ def mistakes_route():
 def calculator_route():
     return render_template("calculator.html")
 
+# TÄMÄ KORVAA VANHAN simulation_routen
 @app.route('/simulation')
 @login_required
 def simulation_route():
     """Renderöi koesimulaatiosivun uudella, kestävällä mallilla."""
     has_existing_session = 'simulation' in session and session['simulation'].get('user_id') == current_user.id
-    
-    # UUDEN KOKEEN ALOITUS
+
     if request.args.get('new') == 'true':
-        if has_existing_session: # Varmuuden vuoksi poistetaan vanha
+        if has_existing_session:
             session.pop('simulation', None)
-        
-        question_ids = logic.question_manager.get_random_question_ids(50)
-        
+
+        question_ids = db_manager.get_random_question_ids(50)
+
         session['simulation'] = {
             'user_id': current_user.id,
             'question_ids': question_ids,
@@ -1040,36 +1042,54 @@ def simulation_route():
             'time_remaining': 3600
         }
         session.modified = True
-        app.logger.info(f"Uusi simulaatio luotu käyttäjälle {current_user.id}.")
-        # TÄRKEÄ: Uudelleenohjataan, jotta JS osaa käynnistää simulaation
+        app.logger.info(f"Uusi simulaatio luotu: {len(question_ids)} kysymystä.")
         return redirect(url_for('simulation_route', resume='true'))
 
-    # KOKEEN JATKAMINEN
     if request.args.get('resume') == 'true' and has_existing_session:
-         app.logger.info(f"Jatketaan simulaatiota käyttäjälle {current_user.id}.")
+         app.logger.info(f"Jatketaan simulaatiota.")
          return render_template('simulation.html', 
                                 session_data=session['simulation'], 
                                 has_existing_session=True,
-                                session_info={}) # session_infoa ei tarvita tässä
+                                session_info={})
 
-    # NORMAALI ALOITUSSIVU
     session_info = {}
     if has_existing_session:
         sim = session['simulation']
-        # Varmistetaan, että manager-luokka on olemassa ennen kutsua
-        if 'simulation_manager' in logic.__dict__:
-             time_left = logic.simulation_manager.calculate_remaining_time(sim.get('start_time'), sim.get('time_remaining'))
-             session_info = {
-                'current_index': sim.get('current_index', 0) + 1,
-                'total': len(sim.get('question_ids', [])),
-                'answered': len([a for a in sim.get('answers', []) if a is not None]),
-                'time_remaining_minutes': time_left // 60
-            }
+        time_left = simulation_manager.calculate_remaining_time(sim.get('start_time'), sim.get('time_remaining'))
+        session_info = {
+            'current_index': sim.get('current_index', 0) + 1,
+            'total': len(sim.get('question_ids', [])),
+            'answered': len([a for a in sim.get('answers', []) if a is not None]),
+            'time_remaining_minutes': time_left // 60
+        }
 
     return render_template('simulation.html', 
                            session_data=session.get('simulation', {}), 
                            has_existing_session=has_existing_session,
                            session_info=session_info)
+
+# TÄMÄ ON KOKONAAN UUSI FUNKTIO (lisää tämä edellisen alle)
+@app.route('/api/simulation/question/<int:index>')
+@login_required
+def get_simulation_question_api(index):
+    """Hakee yhden kysymyksen simulaatiota varten indeksin perusteella."""
+    if 'simulation' not in session or session['simulation'].get('user_id') != current_user.id:
+        return jsonify({'error': 'Aktiivista simulaatiota ei löytynyt'}), 404
+
+    sim_session = session['simulation']
+    question_ids = sim_session.get('question_ids', [])
+
+    if 0 <= index < len(question_ids):
+        question_id = question_ids[index]
+        question = db_manager.get_question_by_id(question_id)
+        if question:
+            session['simulation']['current_index'] = index
+            session.modified = True
+            return jsonify(asdict(question))
+        else:
+            return jsonify({'error': f'Kysymystä ID:llä {question_id} ei löytynyt'}), 404
+    else:
+        return jsonify({'error': 'Virheellinen kysymysindeksi'}), 400
 
 @app.route("/profile")
 @login_required

@@ -296,7 +296,45 @@ class DatabaseManager:
         except Exception as e:
             logger.error(f"Virhe käyttäjän poistossa: {e}")
             return False, str(e)
+        
+    def get_all_question_ids(self):
+        """Hakee kaikkien kysymysten ID:t listana."""
+        query = "SELECT id FROM questions"
+        rows = self._execute(query, fetch='all')
+        return [row['id'] for row in rows] if rows else []
 
+    def get_random_question_ids(self, limit=50):
+        """Hakee satunnaisen listan kysymysten ID:itä."""
+        all_ids = self.get_all_question_ids()
+        if not all_ids:
+            return []
+        
+        actual_limit = min(len(all_ids), limit)
+        return random.sample(all_ids, actual_limit)
+
+    def get_question_by_id(self, question_id):
+        """Hakee yhden kysymyksen sen ID:n perusteella ja palauttaa Question-objektin."""
+        query = "SELECT * FROM questions WHERE id = ?"
+        row = self._execute(query, (question_id,), fetch='one')
+        if not row:
+            return None
+        
+        try:
+            options = json.loads(row['options'])
+        except (json.JSONDecodeError, TypeError):
+            options = []
+
+        correct_answer_key = 'correct_answer' if 'correct_answer' in row else 'correct'
+
+        return Question(
+            id=row['id'],
+            question=row['question'],
+            options=options,
+            correct=row[correct_answer_key],
+            explanation=row['explanation'],
+            category=row['category'],
+            difficulty=row['difficulty']
+    
     def get_categories(self):
         """Hakee kaikki kategoriat tietokannasta."""
         rows = self._execute("SELECT DISTINCT category FROM questions ORDER BY category", fetch='all')
