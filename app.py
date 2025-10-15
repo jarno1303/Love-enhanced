@@ -1045,6 +1045,11 @@ def simulation_route():
                     q_dict[key] = value.isoformat()
         # --------------------------------
 
+        # --- UUSI KORJAUS: Muunna myös session datan päivämäärä ---
+        if 'last_updated' in active_session and isinstance(active_session.get('last_updated'), datetime):
+            active_session['last_updated'] = active_session['last_updated'].isoformat()
+        # ---------------------------------------------------------
+
         return render_template("simulation.html", 
                                session_data=active_session, 
                                questions_data=questions_data,
