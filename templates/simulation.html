@@ -1,5 +1,3 @@
-<!-- Sivusto luotu tänään: 15. lokakuuta 2025 klo 22:38 -->
-
 {% extends "base.html" %}
 
 {% block title %}Koesimulaatio - LOVe Enhanced{% endblock %}
@@ -13,10 +11,8 @@
             
             {% if has_existing_session %}
             <div class="alert alert-warning mx-auto mb-4" style="max-width: 700px;">
-                <h5 class="alert-heading mb-3">
-                    <i class="fas fa-exclamation-triangle"></i> Sinulla on kesken oleva koesimulaatio
-                </h5>
-                <div class="row text-start">
+                <h5 class="alert-heading mb-3"><i class="fas fa-exclamation-triangle"></i> Sinulla on kesken oleva koe</h5>
+                 <div class="row text-start">
                     <div class="col-md-6">
                         <p class="mb-2"><i class="fas fa-question-circle text-primary"></i> <strong>Kysymys {{ session_info.current_index }}/{{ session_info.total }}</strong></p>
                         <p class="mb-0"><i class="fas fa-check-circle text-success"></i> Vastattu: <strong>{{ session_info.answered }}</strong></p>
@@ -47,63 +43,13 @@
     </div>
 
     <div id="simulation-container" class="d-none">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h2 class="mb-0">Koesimulaatio</h2>
-            <div id="timer" class="fs-4 fw-bold badge bg-danger-subtle text-danger-emphasis p-2">60:00</div>
         </div>
-        <div class="progress mb-4" style="height: 8px;">
-            <div id="progress-bar" class="progress-bar" role="progressbar" style="width: 0%;"></div>
-        </div>
-        <div class="row">
-            <div class="col-lg-8">
-                <div class="card shadow-sm">
-                    <div class="card-body p-4">
-                        <h5 class="card-title" id="question-title"></h5>
-                        <p id="question-text" class="fs-5"></p>
-                        <div id="options-container" class="d-grid gap-3 mt-4"></div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-4 mt-4 mt-lg-0">
-                <div class="card shadow-sm">
-                    <div class="card-header">Kysymysnavigaatio</div>
-                    <div class="card-body">
-                        <div id="question-grid" class="d-grid gap-2" style="grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));"></div>
-                    </div>
-                </div>
-                <div class="d-grid gap-2 mt-3">
-                    <button id="finish-btn" class="btn btn-success"><i class="fas fa-check-double me-2"></i>Tarkista ja palauta koe</button>
-                    <button id="save-quit-btn" class="btn btn-outline-secondary"><i class="fas fa-save me-2"></i>Tallenna ja poistu</button>
-                </div>
-            </div>
-        </div>
-    </div>
-    
+
     <div id="results-screen" class="d-none">
-        <!-- Sisältö luodaan dynaamisesti showResults()-funktiossa -->
-    </div>
-</div>
-
-<div class="modal fade" id="distractorModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-warning">
-            <div class="modal-header bg-warning text-dark">
-                <h5 class="modal-title"><i class="fas fa-exclamation-triangle me-2"></i>Häiriötilanne!</h5>
-            </div>
-            <div class="modal-body">
-                <p class="fw-bold" id="distractor-scenario"></p>
-                <p><strong>Miten toimit?</strong></p>
-                <div id="distractor-options" class="d-grid gap-2"></div>
-                <div id="distractor-feedback" class="d-none mt-3"></div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" id="distractor-action-btn" class="btn btn-warning">Vastaa</button>
-            </div>
         </div>
-    </div>
 </div>
 
-<button id="floating-calculator-btn" class="btn btn-primary rounded-circle shadow-lg" 
+<button id="floating-calculator-btn" class="btn btn-primary rounded-circle shadow-lg d-none" 
         onclick="toggleCalculator()" 
         title="Avaa laskin"
         style="position: fixed; bottom: 20px; right: 20px; width: 60px; height: 60px; z-index: 1000;">
@@ -113,160 +59,151 @@
 <div id="calculator-modal" style="display: none; position: fixed; bottom: 90px; right: 20px; z-index: 1001; width: 300px;">
     {% include '_calculator_modal.html' %}
 </div>
-
 {% endblock %}
+
 
 {% block scripts %}
 <script>
-    // --- Alkuperäiset muuttujat Flaskilta ---
-    const sessionData = {{ session_data | tojson }};
-    const questionsData = {{ questions_data | tojson }};
+    // --- Alustetaan data Flaskilta ---
+    const initialSessionData = {{ session_data | tojson }};
     const hasExistingSession = {{ has_existing_session | tojson }};
     const csrfToken = "{{ csrf_token() }}";
-    const DISTRACTORS = {{ constants.DISTRACTORS|tojson|safe }};
-    const userDistractorsEnabled = {{ current_user.distractors_enabled|tojson|safe }};
-    const userDistractorProbability = {{ current_user.distractor_probability or 25 }} / 100.0;
     
-    // --- Globaalit muuttujat simulaatiolle ---
-    let currentDistractor = null;
-    let currentQuestionIndex = 0;
+    // --- Globaalit muuttujat ---
+    let questionsCache = {}; // Välimuisti ladatuille kysymyksille
     let answers = [];
+    let questionIds = [];
+    let currentQuestionIndex = 0;
     let timerInterval;
     let timeRemaining;
-    let distractorModalInstance;
-    let distractorStartTime;
-    let calcCurrentValue = '0', calcOperator = '', calcPreviousValue = '';
-    let isDragging = false, xOffset = 0, yOffset = 0;
 
-    // --- PÄÄLOGIIKKA SIVUN LATAUTUESSA ---
+    // --- PÄÄLOGIIKKA ---
     document.addEventListener('DOMContentLoaded', () => {
-        // TÄRKEÄ Vianetsintä: Tulostetaan konsoliin data, jonka sivu sai.
-        console.log("--- DEBUG DATA ---");
-        console.log("Saapuva data:", { 
-            hasExistingSession: hasExistingSession, 
-            sessionData: sessionData, 
-            questionsDataLength: questionsData ? questionsData.length : 'questionsData puuttuu' 
-        });
-        console.log("--- END DEBUG ---");
-
-        const startScreen = document.getElementById('start-screen');
-        const simulationContainer = document.getElementById('simulation-container');
-
-        if (!startScreen || !simulationContainer) {
-            console.error("KRIITTINEN VIRHE: Tarvittavia elementtejä (start-screen tai simulation-container) ei löydy sivulta!");
-            return;
-        }
-
-        // Päätetään, näytetäänkö simulaatio vai aloitussivu
-        if (questionsData && questionsData.length > 0) {
-            console.log("Päätös: Dataa on, aloitetaan simulaatio.");
-            startSimulation();
+        const urlParams = new URLSearchParams(window.location.search);
+        if ((urlParams.has('new') || urlParams.has('resume')) && initialSessionData.question_ids) {
+            initializeSimulation();
         } else {
-            console.log("Päätös: Ei dataa, näytetään aloitussivu.");
-            startScreen.style.display = 'block';
-            simulationContainer.classList.add('d-none'); // Varmistetaan että simulaatio on piilossa
+            document.getElementById('start-screen').style.display = 'block';
         }
-
-        // Alustetaan modaalit ja muut toiminnallisuudet
-        distractorModalInstance = new bootstrap.Modal(document.getElementById('distractorModal'));
         initCalculatorDrag();
     });
 
-    // --- KAIKKI MUUT FUNKTIOT (startSimulation, showQuestion, jne.) OVAT TÄSMÄLLEEN SAMAT KUIN ENNEN ---
-
-    function startSimulation() {
-        document.getElementById('simulation-container').classList.remove('d-none');
+    async function initializeSimulation() {
         document.getElementById('start-screen').style.display = 'none';
-        currentQuestionIndex = sessionData.current_index || 0;
-        answers = sessionData.answers || new Array(questionsData.length).fill(null);
-        timeRemaining = sessionData.time_remaining || 3600;
+        document.getElementById('floating-calculator-btn').classList.remove('d-none');
         
-        buildQuestionGrid();
-        showQuestion(currentQuestionIndex);
+        answers = initialSessionData.answers || [];
+        questionIds = initialSessionData.question_ids || [];
+        currentQuestionIndex = initialSessionData.current_index || 0;
+        timeRemaining = initialSessionData.time_remaining || 3600;
+        
+        buildSimulationView();
+        await showQuestion(currentQuestionIndex);
         startTimer();
-        
+    }
+
+    function buildSimulationView() {
+        const container = document.getElementById('simulation-container');
+        container.classList.remove('d-none');
+        container.innerHTML = `
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2 class="mb-0">Koesimulaatio</h2>
+                <div id="timer" class="fs-4 fw-bold badge bg-danger-subtle text-danger-emphasis p-2"></div>
+            </div>
+            <div class="progress mb-4" style="height: 8px;"><div id="progress-bar" class="progress-bar"></div></div>
+            <div class="row">
+                <div class="col-lg-8">
+                    <div class="card shadow-sm"><div class="card-body p-4" id="question-content-wrapper"></div></div>
+                </div>
+                <div class="col-lg-4 mt-4 mt-lg-0">
+                    <div class="card shadow-sm">
+                        <div class="card-header">Kysymysnavigaatio</div>
+                        <div class="card-body"><div id="question-grid" class="d-grid gap-2" style="grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));"></div></div>
+                    </div>
+                    <div class="d-grid gap-2 mt-3">
+                        <button id="finish-btn" class="btn btn-success"><i class="fas fa-check-double me-2"></i>Tarkista ja palauta koe</button>
+                        <button id="save-quit-btn" class="btn btn-outline-secondary"><i class="fas fa-save me-2"></i>Tallenna ja poistu</button>
+                    </div>
+                </div>
+            </div>`;
+            
+        buildQuestionGrid();
+        updateProgress();
         document.getElementById('finish-btn').addEventListener('click', confirmFinish);
         document.getElementById('save-quit-btn').addEventListener('click', saveAndQuit);
     }
     
-    function showQuestion(index) {
+    async function showQuestion(index) {
         currentQuestionIndex = index;
-        const question = questionsData[index];
-        document.getElementById('question-title').textContent = `Kysymys ${index + 1}`;
-        document.getElementById('question-text').textContent = question.question;
+        const wrapper = document.getElementById('question-content-wrapper');
+        wrapper.innerHTML = `<div class="text-center p-5"><div class="spinner-border"></div></div>`;
+        updateQuestionGrid();
+
+        let question = questionsCache[index];
+        if (!question) {
+            try {
+                const response = await fetch(`/api/simulation/question/${index}`);
+                if (!response.ok) throw new Error('Kysymyksen haku epäonnistui');
+                question = await response.json();
+                questionsCache[index] = question;
+            } catch (error) {
+                wrapper.innerHTML = `<div class="alert alert-danger">${error.message}</div>`;
+                return;
+            }
+        }
         
-        const optionsContainer = document.getElementById('options-container');
-        optionsContainer.innerHTML = '';
-        question.options.forEach((option, i) => {
-            const div = document.createElement('div');
-            div.className = 'form-check';
-            div.innerHTML = `
+        let optionsHtml = question.options.map((option, i) => `
+            <div class="form-check">
                 <input class="form-check-input" type="radio" name="answer" id="option${i}" value="${i}" ${answers[index] === i ? 'checked' : ''}>
                 <label class="form-check-label p-2 border rounded" for="option${i}" style="cursor:pointer; width: 100%;">${String.fromCharCode(65 + i)}. ${option}</label>
-            `;
-            optionsContainer.appendChild(div);
-        });
-
-        optionsContainer.querySelectorAll('input[name="answer"]').forEach(radio => {
+            </div>`).join('');
+            
+        wrapper.innerHTML = `
+            <h5 class="card-title">Kysymys ${index + 1} / ${questionIds.length}</h5>
+            <p class="fs-5">${question.question}</p>
+            <div class="d-grid gap-3 mt-4">${optionsHtml}</div>`;
+        
+        wrapper.querySelectorAll('input[name="answer"]').forEach(radio => {
             radio.addEventListener('change', (e) => {
                 answers[currentQuestionIndex] = parseInt(e.target.value);
                 updateQuestionGrid();
                 updateProgress();
             });
         });
-        
-        updateQuestionGrid();
-        
-        if (currentQuestionIndex > 0 && userDistractorsEnabled && Math.random() < userDistractorProbability) {
-            showDistractor();
-        }
     }
 
-    function showDistractor() {
-        // ... (distractor logic remains the same)
-    }
-
-    async function submitDistractor(selectedOptionIndex) {
-        // ... (distractor logic remains the same)
-    }
-    
-    function closeDistractor() {
-        // ... (distractor logic remains the same)
-    }
-    
     function buildQuestionGrid() {
         const grid = document.getElementById('question-grid');
         grid.innerHTML = '';
-        for (let i = 0; i < questionsData.length; i++) {
+        for (let i = 0; i < questionIds.length; i++) {
             const btn = document.createElement('button');
             btn.className = 'btn btn-outline-secondary';
             btn.textContent = i + 1;
             btn.onclick = () => showQuestion(i);
             grid.appendChild(btn);
         }
+        updateQuestionGrid();
     }
 
     function updateQuestionGrid() {
         const gridButtons = document.getElementById('question-grid').children;
         for (let i = 0; i < gridButtons.length; i++) {
             gridButtons[i].className = 'btn';
-            if (i === currentQuestionIndex) {
-                gridButtons[i].classList.add('btn-primary');
-            } else if (answers[i] !== null) {
-                gridButtons[i].classList.add('btn-success');
-            } else {
-                gridButtons[i].classList.add('btn-outline-secondary');
-            }
+            if (i === currentQuestionIndex) gridButtons[i].classList.add('btn-primary');
+            else if (answers[i] != null) gridButtons[i].classList.add('btn-success');
+            else gridButtons[i].classList.add('btn-outline-secondary');
         }
     }
     
     function updateProgress() {
         const answeredCount = answers.filter(a => a !== null).length;
-        const progress = (answeredCount / questionsData.length) * 100;
-        document.getElementById('progress-bar').style.width = `${progress}%`;
+        const progress = (answeredCount / questionIds.length) * 100;
+        const bar = document.getElementById('progress-bar');
+        if(bar) bar.style.width = `${progress}%`;
     }
 
     function startTimer() {
+        clearInterval(timerInterval);
         timerInterval = setInterval(() => {
             timeRemaining--;
             updateTimerDisplay();
@@ -276,14 +213,16 @@
                 finishSimulation();
             }
         }, 1000);
+        updateTimerDisplay();
     }
     
     function updateTimerDisplay() {
         const minutes = Math.floor(timeRemaining / 60);
         const seconds = timeRemaining % 60;
-        document.getElementById('timer').textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-        if (timeRemaining <= 300) {
-            document.getElementById('timer').classList.add('text-danger');
+        const timerEl = document.getElementById('timer');
+        if (timerEl) {
+            timerEl.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            if(timeRemaining <= 300) timerEl.classList.add('text-danger');
         }
     }
 
@@ -305,35 +244,36 @@
         }
     }
 
-    async function saveProgressToBackend() {
+    async function saveProgressToBackend(isFinishing = false) {
         try {
+            const payload = {
+                answers: answers,
+                current_index: currentQuestionIndex,
+                time_remaining: timeRemaining
+            };
+            if(isFinishing) payload.is_finishing = true;
+
             await fetch('/api/simulation/update', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
-                body: JSON.stringify({
-                    answers: answers,
-                    current_index: currentQuestionIndex,
-                    time_remaining: timeRemaining
-                })
+                body: JSON.stringify(payload)
             });
         } catch (e) {
             console.error('Failed to save progress:', e);
+            alert("Tallennus epäonnistui. Tarkista verkkoyhteys.");
         }
     }
 
     async function finishSimulation() {
         clearInterval(timerInterval);
+        await saveProgressToBackend(true); 
+        
         try {
             const response = await fetch('/api/submit_simulation', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
-                body: JSON.stringify({
-                    answers: answers,
-                    questions: questionsData.map(q => q.id)
-                })
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken }
             });
             const result = await response.json();
-            await fetch('/api/simulation/delete', { method: 'POST', headers: {'X-CSRFToken': csrfToken }});
             showResults(result);
         } catch (error) {
             console.error('Error finishing simulation:', error);
@@ -343,26 +283,23 @@
     
     function showResults(result) {
         document.getElementById('simulation-container').classList.add('d-none');
+        document.getElementById('floating-calculator-btn').classList.add('d-none');
         const resultsScreen = document.getElementById('results-screen');
         resultsScreen.classList.remove('d-none');
 
-        let detailedResultsHtml = result.detailed_results.map((res, index) => {
-            const userAnswerText = res.user_answer !== null ? res.options[res.user_answer] : 'Ei vastattu';
-            const correctAnswerText = res.options[res.correct_answer];
-            return `
-                <div class="card mb-3">
-                    <div class="card-body">
-                        <p><strong>${index + 1}. ${res.question}</strong></p>
-                        <p class="${res.is_correct ? 'text-success' : 'text-danger'}">
-                            <i class="fas ${res.is_correct ? 'fa-check-circle' : 'fa-times-circle'}"></i>
-                            Vastasit: ${userAnswerText}
-                        </p>
-                        ${!res.is_correct ? `<p class="text-success">Oikea vastaus: ${correctAnswerText}</p>` : ''}
-                        <p class="text-muted small">${res.explanation}</p>
-                    </div>
+        let detailedResultsHtml = result.detailed_results.map((res, index) => `
+            <div class="card mb-3">
+                <div class="card-body">
+                    <p><strong>${index + 1}. ${res.question}</strong></p>
+                    <p class="${res.is_correct ? 'text-success' : 'text-danger'}">
+                        <i class="fas ${res.is_correct ? 'fa-check-circle' : 'fa-times-circle'}"></i>
+                        Vastasit: ${res.user_answer_text || 'Ei vastattu'}
+                    </p>
+                    ${!res.is_correct ? `<p class="text-success">Oikea vastaus: ${res.correct_answer_text}</p>` : ''}
+                    <p class="text-muted small">${res.explanation}</p>
                 </div>
-            `;
-        }).join('');
+            </div>
+        `).join('');
 
         resultsScreen.innerHTML = `
             <div class="card shadow-lg border-0 text-center p-4">
@@ -380,6 +317,9 @@
             </div>
         `;
     }
+
+    // --- LASKIN-FUNKTIOT ---
+    let isDragging = false, xOffset = 0, yOffset = 0, calcCurrentValue = '0', calcOperator = '', calcPreviousValue = '';
 
     function toggleCalculator() {
         const modal = document.getElementById('calculator-modal');
@@ -402,8 +342,8 @@
 
     function calcEqual() {
         const display = document.getElementById('calc-display');
-        let result = 0;
         const prev = parseFloat(calcPreviousValue), curr = parseFloat(calcCurrentValue);
+        let result = 0;
         switch(calcOperator) {
             case '+': result = prev + curr; break;
             case '-': result = prev - curr; break;
