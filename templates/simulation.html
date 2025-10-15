@@ -2,16 +2,6 @@
 
 {% block title %}Koesimulaatio - LOVe Enhanced{% endblock %}
 
-{% block extra_head %}
-<style>
-    /* Korjaus: Varmistaa, että häiriötekijän napin teksti näkyy aina */
-    .distractor-option:hover {
-        background-color: #e9ecef; /* Vaaleanharmaa korostus */
-        color: #212529 !important; /* Pakotetaan teksti tummaksi hover-tilassa */
-    }
-</style>
-{% endblock %}
-
 {% block content %}
 <div class="container mt-4">
     <div id="start-screen" class="card shadow-lg border-0" style="display: none;">
@@ -148,9 +138,10 @@
     document.addEventListener('DOMContentLoaded', () => {
         distractorModalInstance = new bootstrap.Modal(document.getElementById('distractorModal'));
         initCalculatorDrag();
-        
-        // KORJATTU LOGIIKKA: Jos on kysymyksiä, aloitetaan simulaatio. Muuten näytetään aina aloitussivu.
-        if (questionsData && questionsData.length > 0) {
+
+        if (hasExistingSession && !sessionData.user_id) {
+            document.getElementById('start-screen').style.display = 'block';
+        } else if (questionsData && questionsData.length > 0) {
             startSimulation();
         } else {
             document.getElementById('start-screen').style.display = 'block';
@@ -159,7 +150,6 @@
 
     function startSimulation() {
         document.getElementById('simulation-container').classList.remove('d-none');
-        document.getElementById('start-screen').style.display = 'none'; // Piilota aloitussivu
         currentQuestionIndex = sessionData.current_index || 0;
         answers = sessionData.answers || new Array(questionsData.length).fill(null);
         timeRemaining = sessionData.time_remaining || 3600;
