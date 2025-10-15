@@ -6,6 +6,8 @@
 from dotenv import load_dotenv
 load_dotenv()
 
+from flask_wtf.csrf import generate_csrf
+
 # ============================================================================
 # STANDARDIKIRJASTO-IMPORTIT
 # ============================================================================
@@ -367,6 +369,33 @@ def send_reset_email(user_email, reset_url):
 #==============================================================================
 # --- API-REITIT ---
 #==============================================================================
+
+@app.route('/api/simulation/question/<int:index>')
+@login_required
+def get_simulation_question_api(index):
+    """Hakee yhden kysymyksen simulaatiota varten indeksin perusteella."""
+    if 'simulation' not in session or session['simulation'].get('user_id') != current_user.id:
+        return jsonify({'error': 'No active simulation found'}), 404
+
+    sim_session = session['simulation']
+    question_ids = sim_session.get('question_ids', [])
+
+    if 0 <= index < len(question_ids):
+        question_id = question_ids[index]
+        question = logic.question_manager.get_question_by_id(question_id)
+        if question:
+            # Päivitä sessioon nykyinen indeksi
+            session['simulation']['current_index'] = index
+            session.modified = True
+            return jsonify(question.to_dict())
+        else:
+            return jsonify({'error': f'Question with id {question_id} not found'}), 404
+    else:
+        return jsonify({'error': 'Invalid question index'}), 400
+
+@app.route('/api/csrf-token')
+def get_csrf_token():
+    return jsonify({'csrf_token': generate_csrf()})
 
 @app.route("/api/incorrect_questions")
 @login_required
@@ -989,135 +1018,58 @@ def mistakes_route():
 def calculator_route():
     return render_template("calculator.html")
 
-@app.route("/simulation")
+@app.route('/simulation')
 @login_required
 def simulation_route():
-    force_new = request.args.get('new', 'false').lower() == 'true'
-    resume = request.args.get('resume', 'false').lower() == 'true'
+    """Renderöi koesimulaatiosivun uudella, kestävällä mallilla."""
+    has_existing_session = 'simulation' in session and session['simulation'].get('user_id') == current_user.id
     
-    # Tarkista onko aktiivista sessiota
-    active_session = db_manager.get_active_session(current_user.id)
-    has_active = active_session is not None and active_session.get('session_type') == 'simulation'
-    
-    # Jos pyydetään jatkamaan JA on aktiivinen sessio
-    if resume and has_active:
-        app.logger.info(f"Jatketaan simulaatiota käyttäjälle {current_user.username}")
+    # UUDEN KOKEEN ALOITUS
+    if request.args.get('new') == 'true':
+        if has_existing_session: # Varmuuden vuoksi poistetaan vanha
+            session.pop('simulation', None)
         
-        try:
-            question_ids = active_session['question_ids']
-            if isinstance(question_ids, str):
-                question_ids = json.loads(question_ids)
-            
-            answers = active_session['answers']
-            if isinstance(answers, str):
-                answers = json.loads(answers)
-            
-            active_session['question_ids'] = question_ids
-            active_session['answers'] = answers
-            
-            if len(answers) != len(question_ids):
-                answers = [None] * len(question_ids)
-                active_session['answers'] = answers
-            
-            app.logger.info(f"Session ladattu: index={active_session['current_index']}, "
-                              f"time={active_session['time_remaining']}s, "
-                              f"answered={len([a for a in answers if a is not None])}/{len(question_ids)}")
-            
-        except (json.JSONDecodeError, KeyError, TypeError) as e:
-            app.logger.error(f"Virhe session datan parsinnassa: {e}")
-            flash("Kesken eräisen simulaation lataus epäonnistui. Aloita uusi.", "warning")
-            return redirect(url_for('dashboard_route'))
+        question_ids = logic.question_manager.get_random_question_ids(50)
         
-        questions = [db_manager.get_question_by_id(qid, current_user.id) for qid in question_ids]
-        questions = [q for q in questions if q is not None]
-        
-        if len(questions) != len(question_ids):
-            app.logger.error(f"Kysymysten määrä ei täsmää: {len(questions)} vs {len(question_ids)}")
-            flash("Virhe kysymysten lataamisessa. Aloita uusi simulaatio.", "danger")
-            return redirect(url_for('dashboard_route'))
-        
-        questions_data = [asdict(q) for q in questions]
-        return render_template("simulation.html", 
-                               session_data=active_session, 
-                               questions_data=questions_data,
-                               has_existing_session=False,
-                               constants={'DISTRACTORS': DISTRACTORS})
-    
-    # Jos on aktiivinen sessio MUTTA ei pyydetty jatkamaan eikä pakoteta uutta
-    elif has_active and not force_new:
-        
-        try:
-            question_ids = active_session['question_ids']
-            if isinstance(question_ids, str):
-                question_ids = json.loads(question_ids)
-            
-            answers = active_session['answers']
-            if isinstance(answers, str):
-                answers = json.loads(answers)
-            
-            answered_count = len([a for a in answers if a is not None])
-            time_remaining = active_session.get('time_remaining', 3600)
-            minutes_left = time_remaining // 60
-            
-            session_info = {
-                'answered': answered_count,
-                'total': len(question_ids),
-                'time_remaining_minutes': minutes_left,
-                'current_index': active_session.get('current_index', 0) + 1
-            }
-            
-            return render_template("simulation.html",
-                                   session_data={},
-                                   questions_data=[],
-                                   has_existing_session=True,
-                                   session_info=session_info,
-                                   constants={'DISTRACTORS': DISTRACTORS})
-        except Exception as e:
-            app.logger.error(f"Virhe session infon parsinnassa: {e}")
-            # Jos virhe, poista viallinen sessio ja jatka normaalisti uuteen
-            db_manager.delete_active_session(current_user.id)
-    
-    # Aloita uusi simulaatio (force_new=True TAI ei aktiivista sessiota)
-    app.logger.info(f"Aloitetaan uusi simulaatio käyttäjälle {current_user.username}")
-    
-    if has_active:
-        db_manager.delete_active_session(current_user.id)
-        app.logger.info(f"Poistettiin vanha sessio ennen uuden aloittamista")
-    
-    questions = db_manager.get_questions(user_id=current_user.id, limit=50)
-    
-    if len(questions) < 50:
-        flash("Tietokannassa ei ole tarpeeksi kysymyksiä (50) koesimulaation suorittamiseen.", "warning")
-        return redirect(url_for('dashboard_route'))
-    
-    question_ids = [q.id for q in questions]
-    questions_data = [asdict(q) for q in questions]
+        session['simulation'] = {
+            'user_id': current_user.id,
+            'question_ids': question_ids,
+            'answers': [None] * len(question_ids),
+            'current_index': 0,
+            'start_time': datetime.now().isoformat(),
+            'time_remaining': 3600
+        }
+        session.modified = True
+        app.logger.info(f"Uusi simulaatio luotu käyttäjälle {current_user.id}.")
+        # TÄRKEÄ: Uudelleenohjataan, jotta JS osaa käynnistää simulaation
+        return redirect(url_for('simulation_route', resume='true'))
 
-    new_session = {
-        "user_id": current_user.id,
-        "session_type": "simulation",
-        "question_ids": question_ids,
-        "answers": [None] * len(questions),
-        "current_index": 0,
-        "time_remaining": 3600
-    }
-    
-    db_manager.save_or_update_session(
-        user_id=current_user.id,
-        session_type=new_session["session_type"],
-        question_ids=new_session["question_ids"],
-        answers=new_session["answers"],
-        current_index=new_session["current_index"],
-        time_remaining=new_session["time_remaining"]
-    )
-    
-    app.logger.info(f"Uusi simulaatio luotu: {len(questions)} kysymystä")
-    
-    return render_template("simulation.html", 
-                           session_data=new_session, 
-                           questions_data=questions_data,
-                           has_existing_session=False,
-                           constants={'DISTRACTORS': DISTRACTORS})
+    # KOKEEN JATKAMINEN
+    if request.args.get('resume') == 'true' and has_existing_session:
+         app.logger.info(f"Jatketaan simulaatiota käyttäjälle {current_user.id}.")
+         return render_template('simulation.html', 
+                                session_data=session['simulation'], 
+                                has_existing_session=True,
+                                session_info={}) # session_infoa ei tarvita tässä
+
+    # NORMAALI ALOITUSSIVU
+    session_info = {}
+    if has_existing_session:
+        sim = session['simulation']
+        # Varmistetaan, että manager-luokka on olemassa ennen kutsua
+        if 'simulation_manager' in logic.__dict__:
+             time_left = logic.simulation_manager.calculate_remaining_time(sim.get('start_time'), sim.get('time_remaining'))
+             session_info = {
+                'current_index': sim.get('current_index', 0) + 1,
+                'total': len(sim.get('question_ids', [])),
+                'answered': len([a for a in sim.get('answers', []) if a is not None]),
+                'time_remaining_minutes': time_left // 60
+            }
+
+    return render_template('simulation.html', 
+                           session_data=session.get('simulation', {}), 
+                           has_existing_session=has_existing_session,
+                           session_info=session_info)
 
 @app.route("/profile")
 @login_required
