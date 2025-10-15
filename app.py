@@ -1037,6 +1037,14 @@ def simulation_route():
             return redirect(url_for('dashboard_route'))
         
         questions_data = [asdict(q) for q in questions]
+
+        # --- KORJAUS 1 LISÄTTY TÄHÄN ---
+        for q_dict in questions_data:
+            for key, value in q_dict.items():
+                if isinstance(value, datetime):
+                    q_dict[key] = value.isoformat()
+        # --------------------------------
+
         return render_template("simulation.html", 
                                session_data=active_session, 
                                questions_data=questions_data,
@@ -1092,6 +1100,13 @@ def simulation_route():
     
     question_ids = [q.id for q in questions]
     questions_data = [asdict(q) for q in questions]
+
+    # --- KORJAUS 2 LISÄTTY TÄHÄN ---
+    for q_dict in questions_data:
+        for key, value in q_dict.items():
+            if isinstance(value, datetime):
+                q_dict[key] = value.isoformat()
+    # --------------------------------
 
     new_session = {
         "user_id": current_user.id,
