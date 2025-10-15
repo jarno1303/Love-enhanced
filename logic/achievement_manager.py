@@ -223,20 +223,36 @@ class EnhancedAchievementManager:
         return self._check_streak(user_id, 30)
 
     def _check_streak(self, user_id, days):
-    """Apufunktio putken tarkistamiseen."""
-    from datetime import date, timedelta
-    
-    # Hae viimeiset X päivää joina käyttäjä on harjoitellut
-    rows = self.db_manager._execute("""
-        SELECT DISTINCT date(timestamp) as practice_date 
-        FROM question_attempts 
-        WHERE user_id = ? 
-        ORDER BY practice_date DESC 
-        LIMIT ?
-    """, (user_id, days), fetch='all')
-    
-    if not rows or len(rows) < days:
-        return False
+        """Apufunktio putken tarkistamiseen."""
+        from datetime import date, timedelta
+        
+        # Hae viimeiset X päivää joina käyttäjä on harjoitellut
+        rows = self.db_manager._execute("""
+            SELECT DISTINCT date(timestamp) as practice_date 
+            FROM question_attempts 
+            WHERE user_id = ? 
+            ORDER BY practice_date DESC 
+            LIMIT ?
+        """, (user_id, days), fetch='all')
+        
+        if not rows or len(rows) < days:
+            return False
+        
+        # Muunnetaan päivämäärät oikein (korjaa aiemman virheen)
+        dates = []
+        for row in rows:
+            val = row['practice_date']
+            if isinstance(val, str):
+                dates.append(date.fromisoformat(val))
+            elif isinstance(val, date):
+                dates.append(val)
+
+        # Tarkista että päivät ovat peräkkäisiä
+        for i in range(len(dates) - 1):
+            if (dates[i] - dates[i + 1]).days != 1:
+                return False
+                
+        return True
     
     # --- TÄMÄ ON KORJATTU OSA ---
     # Muunnetaan päivämäärät suoraan, olettaen että ne voivat olla
