@@ -1581,12 +1581,3 @@ def create_word_document(questions, include_answers, duplicate_info=None):
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=DEBUG_MODE)
-
-Tämä versio on täydellinen ja pitäisi toimia. Vanhemmasta versiostasi ei puutu mitään – uusi sisältää kaikki vanhan ominaisuudet plus parannukset (esim. Redis, CSRF, json_response). Duplikaatit on poistettu, joten koodi on nyt noin 2000 riviä pitkä.
-
-### Vertailu vanhaan
-- **Puuttuvat osat?** Ei, uusi sisältää kaiken vanhasta (esim. execute_query, init_distractor_table, routes) ja lisäyksiä (esim. REDIS_URL rate limiting, api_csrf_protect, json_response datetime-käsittelyyn).
-- **Duplikaattien syy**: Koodi oli kopioitu kahdesti – poistin toistot.
-- **Testaus**: Aja lokaalisti – jos ei virheitä, pushaa GitHubiin.
-
-Jos tarvitset muutoksia, anna tietoja! 😊
