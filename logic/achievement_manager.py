@@ -1,7 +1,7 @@
 """
 Achievement Manager - Saavutusten hallinta ja tarkistus
 """
-from datetime import datetime
+from datetime import datetime, date, timedelta
 from models.models import Achievement
 
 # Saavutusten määrittelyt
@@ -115,13 +115,6 @@ class EnhancedAchievementManager:
     def check_achievements(self, user_id, context=None):
         """
         Tarkistaa ja avaa uudet saavutukset tietylle käyttäjälle.
-        
-        Args:
-            user_id: Käyttäjän ID
-            context: Lisätietoja nykyisestä tilanteesta (esim. fast_answer, simulation_perfect)
-        
-        Returns:
-            Lista uusien saavutusten ID:itä
         """
         new_achievements = []
         context = context or {}
@@ -146,8 +139,8 @@ class EnhancedAchievementManager:
                 ('streak_3', self.check_streak_3),
                 ('streak_7', self.check_streak_7),
                 ('streak_30', self.check_streak_30),
-                ('category_master_farmakologia', lambda uid: self.check_category_master(uid, 'farmakologia')),
-                ('category_master_annosjakelu', lambda uid: self.check_category_master(uid, 'annosjakelu')),
+                ('category_master_farmakologia', lambda uid: self.check_category_master(uid, 'Farmakologia')),
+                ('category_master_annosjakelu', lambda uid: self.check_category_master(uid, 'Annosjakelu')),
                 ('simulation_complete', self.check_simulation_complete),
                 ('early_bird', self.check_early_bird),
                 ('night_owl', self.check_night_owl),
@@ -224,8 +217,6 @@ class EnhancedAchievementManager:
 
     def _check_streak(self, user_id, days):
         """Apufunktio putken tarkistamiseen."""
-        from datetime import date, timedelta
-        
         # Hae viimeiset X päivää joina käyttäjä on harjoitellut
         rows = self.db_manager._execute("""
             SELECT DISTINCT date(timestamp) as practice_date 
@@ -238,7 +229,7 @@ class EnhancedAchievementManager:
         if not rows or len(rows) < days:
             return False
         
-        # Muunnetaan päivämäärät oikein (korjaa aiemman virheen)
+        # Muunnetaan päivämäärät oikein
         dates = []
         for row in rows:
             val = row['practice_date']
@@ -253,24 +244,6 @@ class EnhancedAchievementManager:
                 return False
                 
         return True
-    
-    # --- TÄMÄ ON KORJATTU OSA ---
-    # Muunnetaan päivämäärät suoraan, olettaen että ne voivat olla
-    # merkkijonoja tai date-objekteja.
-    dates = []
-    for row in rows:
-        val = row['practice_date']
-        if isinstance(val, str):
-            dates.append(date.fromisoformat(val))
-        elif isinstance(val, date):
-            dates.append(val)
-    
-    # Tarkista että päivät ovat peräkkäisiä
-    for i in range(len(dates) - 1):
-        if (dates[i] - dates[i + 1]).days != 1:
-            return False
-            
-    return True
 
     def check_category_master(self, user_id, category):
         """Sai 90% kategorian kysymyksistä oikein."""
@@ -291,10 +264,8 @@ class EnhancedAchievementManager:
 
     def check_simulation_complete(self, user_id):
         """Suoritti ensimmäisen koesimulaation."""
-        # TÄMÄ ON SIMPLIFIOITU, TARKASTAA VAIN YLI 50 VASTAUSTA.
-        # OIKEA TOTEUTUS VAATISI TIEDON SIMULAATION PÄÄTTYMISESTÄ.
-        result = self.db_manager._execute("SELECT COUNT(*) as count FROM question_attempts WHERE user_id = ?", (user_id,), fetch='one')
-        return result and result['count'] >= 50
+        result = self.db_manager._execute("SELECT COUNT(*) as count FROM simulation_results WHERE user_id = ?", (user_id,), fetch='one')
+        return result and result['count'] >= 1
 
     def check_early_bird(self, user_id):
         """Harjoitteli ennen klo 8:00."""
@@ -309,30 +280,22 @@ class EnhancedAchievementManager:
         query = f"SELECT COUNT(*) as count FROM question_attempts WHERE user_id = ? AND {time_function} >= '22'"
         result = self.db_manager._execute(query, (user_id,), fetch='one')
         return result and result['count'] >= 1
+    
     # ========== MUUT METODIT ==========
 
     def unlock_achievement(self, user_id, achievement_id):
-        """
-        Tallentaa avatun saavutuksen käyttäjälle.
-        """
+        """Tallentaa avatun saavutuksen käyttäjälle."""
         try:
             self.db_manager._execute("""
                 INSERT INTO user_achievements (user_id, achievement_id, unlocked_at) 
                 VALUES (?, ?, ?)
             """, (user_id, achievement_id, datetime.now()), fetch='none')
         except Exception as e:
-            print(f"Virhe saavutuksen tallennuksessa: {e}")
+            # Voi olla, että saavutus on jo olemassa (race condition), joten ei haittaa
+            print(f"Virhe saavutuksen tallennuksessa (voi olla ok): {e}")
     
     def get_unlocked_achievements(self, user_id):
-        """
-        Hakee kaikki käyttäjän avaamat saavutukset.
-        
-        Args:
-            user_id: Käyttäjän ID
-        
-        Returns:
-            Lista Achievement-objekteja
-        """
+        """Hakee kaikki käyttäjän avaamat saavutukset."""
         rows = self.db_manager._execute(
             "SELECT * FROM user_achievements WHERE user_id = ?", 
             (user_id,),
@@ -345,7 +308,6 @@ class EnhancedAchievementManager:
                 ach_id = row['achievement_id']
                 if ach_id in ENHANCED_ACHIEVEMENTS:
                     ach = ENHANCED_ACHIEVEMENTS[ach_id]
-                    # Luo uusi instanssi jossa unlocked tiedot
                     unlocked_ach = Achievement(
                         id=ach.id,
                         name=ach.name,
@@ -359,15 +321,7 @@ class EnhancedAchievementManager:
         return achievements
     
     def get_achievement_progress(self, user_id):
-        """
-        Hakee käyttäjän edistymisen saavutuksissa.
-        
-        Args:
-            user_id: Käyttäjän ID
-        
-        Returns:
-            Dictionary joka sisältää edistymistiedot
-        """
+        """Hakee käyttäjän edistymisen saavutuksissa."""
         unlocked = self.get_unlocked_achievements(user_id)
         total = len(ENHANCED_ACHIEVEMENTS)
         unlocked_count = len(unlocked)
