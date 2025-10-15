@@ -1,3 +1,5 @@
+# app.py
+
 # ============================================================================
 # YMPÄRISTÖMUUTTUJIEN LATAUS - TÄYTYY OLLA ENSIMMÄISENÄ!
 # ============================================================================
@@ -26,7 +28,7 @@ from email.mime.multipart import MIMEMultipart
 # ============================================================================
 # THIRD-PARTY KIRJASTOT
 # ============================================================================
-from flask import Flask, jsonify, render_template, request, redirect, url_for, flash, make_response
+from flask import Flask, jsonify, render_template, request, redirect, url_for, flash
 from flask_bcrypt import Bcrypt
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from flask_wtf.csrf import CSRFProtect, generate_csrf
@@ -114,6 +116,7 @@ limiter = Limiter(
 # ============================================================================
 # TIETOKANTA JA MANAGERIT
 # ============================================================================
+# DatabaseManager havaitsee automaattisesti PostgreSQL (Railway) vs SQLite (local)
 db_manager = DatabaseManager()
 stats_manager = EnhancedStatsManager(db_manager)
 achievement_manager = EnhancedAchievementManager(db_manager)
@@ -121,32 +124,115 @@ spaced_repetition_manager = SpacedRepetitionManager(db_manager)
 bcrypt = Bcrypt(app)
 
 # ============================================================================
-# APUFUNKTIOT JA DEKORAATTORIT
+# POSTGRESQL YHTEENSOPIVUUS - HELPER FUNKTIO
 # ============================================================================
 
-def json_response(data, status=200):
-    """Helper function to serialize data to JSON with datetime conversion."""
-    def convert_datetimes_to_isoformat(data):
-        if isinstance(data, list):
-            return [convert_datetimes_to_isoformat(item) for item in data]
-        if isinstance(data, dict):
-            return {key: convert_datetimes_to_isoformat(value) for key, value in data.items()}
-        if isinstance(data, datetime):
-            return data.isoformat()
-        return data
-    safe_data = convert_datetimes_to_isoformat(data)
-    return jsonify(safe_data), status
+def execute_query(query, params=(), fetch='all'):
+    """
+    Helper-funktio joka toimii sekä SQLite:n että PostgreSQL:n kanssa.
+    """
+    return db_manager._execute(query, params, fetch)
 
-def api_csrf_protect(f):
-    """Decorator to enforce CSRF protection for API POST routes."""
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if request.is_json:
-            token = request.headers.get('X-CSRF-Token') or request.get_json().get('csrf_token')
-            if not token or not csrf._verify_csrf_token(token):
-                return json_response({'error': 'Invalid or missing CSRF token'}, 403)
-        return f(*args, **kwargs)
-    return decorated_function
+# ============================================================================
+# TIETOKANNAN ALUSTUSTOIMINNOT
+# ============================================================================
+
+def init_distractor_table():
+    """
+    Luo distractor_attempts-taulu jos sitä ei vielä ole.
+    Toimii sekä PostgreSQL:n (Railway) että SQLite:n (local) kanssa.
+    """
+    try:
+        conn = db_manager.get_connection()
+        cursor = conn.cursor()
+        
+        if db_manager.is_postgres:
+            # PostgreSQL-syntaksi (Railway)
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS distractor_attempts (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER NOT NULL,
+                    distractor_scenario TEXT NOT NULL,
+                    user_choice INTEGER NOT NULL,
+                    correct_choice INTEGER NOT NULL,
+                    is_correct BOOLEAN NOT NULL,
+                    response_time INTEGER,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id)
+                )
+            ''')
+        else:
+            # SQLite-syntaksi (paikallinen kehitys)
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS distractor_attempts (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    distractor_scenario TEXT NOT NULL,
+                    user_choice INTEGER NOT NULL,
+                    correct_choice INTEGER NOT NULL,
+                    is_correct BOOLEAN NOT NULL,
+                    response_time INTEGER,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id)
+                )
+            ''')
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+    except Exception as e:
+        app.logger.error(f"Virhe häiriötekijätaulun luomisessa: {e}")
+
+# Kutsu taulun luontifunktio sovelluksen käynnistyessä
+init_distractor_table()
+
+# HUOM: Sarakkeiden lisäysfunktiot (add_distractor_probability_column ja 
+# add_user_expiration_column) on POISTETTU, koska DatabaseManager hoitaa 
+# migraatiot automaattisesti migrate_database() metodissa!
+
+# ============================================================================
+# FLASK-LOGIN SETUP
+# ============================================================================
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login_route'
+login_manager.login_message = "Kirjaudu sisään nähdäksesi tämän sivun."
+login_manager.login_message_category = "info"
+
+@login_manager.user_loader
+def load_user(user_id):
+    """
+    Lataa käyttäjän tiedot tietokannasta.
+    Käyttää db_manager._execute() metodia joka toimii sekä PostgreSQL:n että SQLite:n kanssa.
+    """
+    try:
+        # Käytä db_manager:in _execute metodia (toimii sekä PostgreSQL että SQLite)
+        user_data = db_manager._execute(
+            "SELECT id, username, email, role, distractors_enabled, distractor_probability, expires_at FROM users WHERE id = ?",
+            (user_id,),
+            fetch='one'
+        )
+        
+        if user_data:
+            return User(
+                id=user_data['id'],
+                username=user_data['username'],
+                email=user_data['email'],
+                role=user_data['role'],
+                distractors_enabled=bool(user_data.get('distractors_enabled', False)),
+                distractor_probability=user_data.get('distractor_probability', 25),
+                expires_at=user_data.get('expires_at')
+            )
+            
+    except Exception as e:
+        app.logger.error(f"Virhe käyttäjän lataamisessa: {e}")
+    
+    return None
+
+# ============================================================================
+# APUFUNKTIOT
+# ============================================================================
 
 def admin_required(f):
     """Dekoraattori joka vaatii admin-oikeudet."""
@@ -159,7 +245,10 @@ def admin_required(f):
     return decorated_function
 
 def generate_secure_password(length=10):
-    """Luo turvallisen satunnaisen salasanan."""
+    """
+    Luo turvallisen satunnaisen salasanan.
+    Sisältää: isoja kirjaimia, pieniä kirjaimia ja numeroita.
+    """
     if length < 8:
         length = 8
     
@@ -167,18 +256,25 @@ def generate_secure_password(length=10):
     isot = string.ascii_uppercase
     numerot = string.digits
     
+    # Varmista että salasanassa on vähintään yksi jokaisesta ryhmästä
     salasana = [
         random.choice(pienet),
         random.choice(isot),
         random.choice(numerot),
     ]
     
+    # Täytä loput satunnaisilla merkeillä
     kaikki_merkit = pienet + isot + numerot
     for _ in range(length - len(salasana)):
         salasana.append(random.choice(kaikki_merkit))
     
+    # Sekoita järjestys
     random.shuffle(salasana)
     return "".join(salasana)
+
+# ============================================================================
+# SALASANAN PALAUTUS
+# ============================================================================
 
 def generate_reset_token(email):
     serializer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
@@ -194,17 +290,23 @@ def verify_reset_token(token, expiration=3600):
 
 def send_reset_email(user_email, reset_url):
     """Lähettää salasanan palautusviestin Brevo:n kautta."""
+    
     BREVO_API_KEY = os.environ.get('BREVO_API_KEY')
     FROM_EMAIL = os.environ.get('FROM_EMAIL', 'noreply@example.com')
     
     if not BREVO_API_KEY:
+        # Kehitysympäristössä printtaa linkki
         app.logger.warning(f"Brevo ei konfiguroitu. Palautuslinkki: {reset_url}")
-        print(f"\n{'='*80}\nSALASANAN PALAUTUSLINKKI:\n{reset_url}\n{'='*80}\n")
+        print(f"\n{'='*80}")
+        print(f"SALASANAN PALAUTUSLINKKI:")
+        print(f"{reset_url}")
+        print(f"{'='*80}\n")
         return True
     
     import requests
     
     url = "https://api.brevo.com/v3/smtp/email"
+    
     headers = {
         "accept": "application/json",
         "api-key": BREVO_API_KEY,
@@ -261,47 +363,10 @@ def send_reset_email(user_email, reset_url):
     except Exception as e:
         app.logger.error(f"Failed to send email via Brevo: {e}")
         return False
-
-# ============================================================================
-# FLASK-LOGIN SETUP
-# ============================================================================
-login_manager = LoginManager()
-login_manager.init_app(app)
-login_manager.login_view = 'login_route'
-login_manager.login_message = "Kirjaudu sisään nähdäksesi tämän sivun."
-login_manager.login_message_category = "info"
-
-@login_manager.user_loader
-def load_user(user_id):
-    """Lataa käyttäjän tiedot tietokannasta."""
-    try:
-        user_data = db_manager._execute(
-            "SELECT id, username, email, role, distractors_enabled, distractor_probability, expires_at FROM users WHERE id = ?",
-            (user_id,),
-            fetch='one'
-        )
-        
-        if user_data:
-            return User(
-                id=user_data['id'],
-                username=user_data['username'],
-                email=user_data['email'],
-                role=user_data['role'],
-                distractors_enabled=bool(user_data.get('distractors_enabled', False)),
-                distractor_probability=user_data.get('distractor_probability', 25),
-                expires_at=user_data.get('expires_at')
-            )
-    except Exception as e:
-        app.logger.error(f"Error loading user {user_id}: {e}")
-    return None
-
-# ============================================================================
-# API-REITIT
-# ============================================================================
-
-@app.route("/api/csrf-token", methods=['GET'])
-def get_csrf_token():
-    return json_response({'csrf_token': generate_csrf()})
+    
+#==============================================================================
+# --- API-REITIT ---
+#==============================================================================
 
 @app.route("/api/incorrect_questions")
 @login_required
@@ -309,7 +374,7 @@ def get_csrf_token():
 def get_incorrect_questions_api():
     """Hakee kysymykset joihin käyttäjä on vastannut väärin."""
     try:
-        incorrect_questions = db_manager._execute("""
+        incorrect_questions = execute_query("""
             SELECT 
                 q.id,
                 q.question,
@@ -327,10 +392,11 @@ def get_incorrect_questions_api():
             ORDER BY success_rate ASC NULLS FIRST, p.times_shown DESC
         """, (current_user.id,), fetch='all')
         
-        return json_response({'questions': [dict(q) for q in incorrect_questions] if incorrect_questions else []})
+        return jsonify({'questions': [dict(q) for q in incorrect_questions] if incorrect_questions else []})
+            
     except Exception as e:
-        app.logger.error(f"Error fetching incorrect questions: {e}")
-        return json_response({'error': str(e)}, 500)
+        app.logger.error(f"Virhe väärien vastausten haussa: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route("/api/question_progress/<int:question_id>")
 @login_required
@@ -338,7 +404,7 @@ def get_incorrect_questions_api():
 def get_question_progress_api(question_id):
     """Hakee käyttäjän edistymisen tietyssä kysymyksessä."""
     try:
-        progress = db_manager._execute("""
+        progress = execute_query("""
             SELECT 
                 times_shown,
                 times_correct,
@@ -352,49 +418,50 @@ def get_question_progress_api(question_id):
         """, (current_user.id, question_id), fetch='one')
         
         if progress:
-            return json_response(dict(progress))
-        return json_response({
-            'times_shown': 0,
-            'times_correct': 0,
-            'success_rate': 0,
-            'last_shown': None
-        })
+            return jsonify(dict(progress))
+        else:
+            return jsonify({
+                'times_shown': 0,
+                'times_correct': 0,
+                'success_rate': 0,
+                'last_shown': None
+            })
+            
     except Exception as e:
-        app.logger.error(f"Error fetching question progress: {e}")
-        return json_response({'error': str(e)}, 500)
+        app.logger.error(f"Virhe kysymyksen edistymisen haussa: {e}")
+        return jsonify({'error': str(e)}), 500
+
 
 @app.route("/api/settings/toggle_distractors", methods=['POST'])
 @login_required
 @limiter.limit("30 per minute")
-@api_csrf_protect
 def toggle_distractors_api():
     data = request.get_json()
     is_enabled = data.get('enabled', False)
     
     try:
-        db_manager._execute("UPDATE users SET distractors_enabled = ? WHERE id = ?", (is_enabled, current_user.id), fetch='none')
+        execute_query("UPDATE users SET distractors_enabled = ? WHERE id = ?", (is_enabled, current_user.id), fetch='none')
         app.logger.info(f"User {current_user.username} toggled distractors: {is_enabled}")
-        return json_response({'success': True, 'distractors_enabled': is_enabled})
+        return jsonify({'success': True, 'distractors_enabled': is_enabled})
     except Exception as e:
-        app.logger.error(f"Error toggling distractors: {e}")
-        return json_response({'success': False, 'error': str(e)}, 500)
+        app.logger.error(f"Virhe häiriötekijöiden togglessa: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route("/api/settings/update_distractor_probability", methods=['POST'])
 @login_required
 @limiter.limit("30 per minute")
-@api_csrf_protect
 def update_distractor_probability_api():
     data = request.get_json()
     probability = data.get('probability', 25)
     probability = max(0, min(100, int(probability)))
     
     try:
-        db_manager._execute("UPDATE users SET distractor_probability = ? WHERE id = ?", (probability, current_user.id), fetch='none')
+        execute_query("UPDATE users SET distractor_probability = ? WHERE id = ?", (probability, current_user.id), fetch='none')
         app.logger.info(f"User {current_user.username} updated distractor probability: {probability}%")
-        return json_response({'success': True, 'probability': probability})
+        return jsonify({'success': True, 'probability': probability})
     except Exception as e:
-        app.logger.error(f"Error updating distractor probability: {e}")
-        return json_response({'success': False, 'error': str(e)}, 500)
+        app.logger.error(f"Virhe todennäköisyyden päivityksessä: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route("/api/question_counts")
 @login_required
@@ -402,26 +469,26 @@ def update_distractor_probability_api():
 def get_question_counts_api():
     """Hakee kysymysmäärät kategorioittain ja vaikeustasoittain."""
     try:
-        category_counts = db_manager._execute("""
+        category_counts = execute_query("""
             SELECT category, COUNT(*) as count
             FROM questions
             GROUP BY category
             ORDER BY category
         """, fetch='all')
         
-        difficulty_counts = db_manager._execute("""
+        difficulty_counts = execute_query("""
             SELECT difficulty, COUNT(*) as count
             FROM questions
             GROUP BY difficulty
         """, fetch='all')
         
-        category_difficulty_counts = db_manager._execute("""
+        category_difficulty_counts = execute_query("""
             SELECT category, difficulty, COUNT(*) as count
             FROM questions
             GROUP BY category, difficulty
         """, fetch='all')
         
-        total_result = db_manager._execute("SELECT COUNT(*) as count FROM questions", fetch='one')
+        total_result = execute_query("SELECT COUNT(*) as count FROM questions", fetch='one')
         total_count = total_result['count'] if total_result else 0
         
         cat_diff_map = {}
@@ -434,76 +501,83 @@ def get_question_counts_api():
                     cat_diff_map[cat] = {}
                 cat_diff_map[cat][diff] = count
         
-        return json_response({
+        return jsonify({
             'categories': {row['category']: row['count'] for row in category_counts} if category_counts else {},
             'difficulties': {row['difficulty']: row['count'] for row in difficulty_counts} if difficulty_counts else {},
             'category_difficulty_map': cat_diff_map,
             'total': total_count
         })
     except Exception as e:
-        app.logger.error(f"Error fetching question counts: {e}")
-        return json_response({'error': str(e)}, 500)
+        app.logger.error(f"Virhe kysymysmäärien haussa: {e}")
+        return jsonify({'error': str(e)}), 500
 
+
+
+# KORJATTU OSA: Lisätään uusi API-reitti häiriötekijöille
 @app.route("/api/distractors")
 @login_required
 def get_distractors_api():
     """Palauttaa listan kaikista häiriötekijöistä."""
-    return json_response(DISTRACTORS)
+    return jsonify(DISTRACTORS)
+
 
 @app.route("/api/submit_distractor", methods=['POST'])
 @login_required
 @limiter.limit("100 per minute")
-@api_csrf_protect
 def submit_distractor_api():
     try:
         data = request.get_json()
-        if not data:
-            return json_response({'error': 'No data provided'}, 400)
         scenario = data.get('scenario')
         user_choice = data.get('user_choice')
         response_time = data.get('response_time', 0)
         
-        if scenario is None or user_choice is None:
-            return json_response({'error': 'scenario and user_choice are required'}, 400)
+        if scenario is None:
+            return jsonify({'error': 'scenario is required'}), 400
+        if user_choice is None:
+            return jsonify({'error': 'user_choice is required'}), 400
         
-        correct_choice = next((d['correct'] for d in DISTRACTORS if d['scenario'] == scenario), 0)
+        correct_choice = 0
+        for distractor in DISTRACTORS:
+            if distractor['scenario'] == scenario:
+                correct_choice = distractor.get('correct', 0)
+                break
+        
         is_correct = user_choice == correct_choice
         
-        try:
-            db_manager._execute("""
-                INSERT INTO distractor_attempts
-                (user_id, distractor_scenario, user_choice, correct_choice, is_correct, response_time, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, (current_user.id, scenario, user_choice, correct_choice, is_correct, response_time, datetime.now()), fetch='none')
-            app.logger.info(f"User {current_user.username} submitted distractor: correct={is_correct}")
-            return json_response({
-                'success': True,
-                'is_correct': is_correct,
-                'correct_choice': correct_choice
-            })
-        except Exception as e:
-            app.logger.error(f"Error submitting distractor: {e}")
-            return json_response({'success': False, 'error': str(e)}, 500)
+        execute_query("""
+            INSERT INTO distractor_attempts
+            (user_id, distractor_scenario, user_choice, correct_choice, is_correct, response_time, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (current_user.id, scenario, user_choice, correct_choice, is_correct, response_time, datetime.now()), fetch='none')
+        
+        app.logger.info(f"User {current_user.username} submitted distractor: correct={is_correct}")
+        
+        return jsonify({
+            'success': True,
+            'is_correct': is_correct,
+            'correct_choice': correct_choice
+        })
     except Exception as e:
-        app.logger.error(f"Error in submit_distractor_api: {e}")
-        return json_response({'error': str(e)}, 500)
+        app.logger.error(f"Virhe distractor submitissa: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
-@app.route("/api/user_preferences", methods=['POST'])
+@app.route('/api/user_preferences', methods=['POST'])
 @login_required
-@api_csrf_protect
 def save_user_preferences():
     data = request.get_json()
     categories = data.get('categories', [])
     difficulties = data.get('difficulties', [])
+    
     success, error = db_manager.update_user_practice_preferences(current_user.id, categories, difficulties)
+    
     if success:
-        return json_response({'status': 'success', 'message': 'Asetukset tallennettu.'})
-    return json_response({'status': 'error', 'message': error}, 500)
+        return jsonify({'status': 'success', 'message': 'Asetukset tallennettu.'}), 200
+    else:
+        return jsonify({'status': 'error', 'message': error}), 500
 
 @app.route("/api/submit_answer", methods=['POST'])
 @login_required
 @limiter.limit("100 per minute")
-@api_csrf_protect
 def submit_answer_api():
     data = request.get_json()
     question_id = data.get('question_id')
@@ -511,52 +585,69 @@ def submit_answer_api():
     time_taken = data.get('time_taken', 0)
     
     question = db_manager.get_question_by_id(question_id, current_user.id)
+    
     if not question:
-        app.logger.warning(f"Question {question_id} not found for user {current_user.username}")
-        return json_response({'error': 'Question not found'}, 404)
+        app.logger.warning(f"Kysymystä {question_id} ei löytynyt käyttäjälle {current_user.username}")
+        return jsonify({'error': 'Question not found'}), 404
     
     is_correct = (selected_option_text == question.options[question.correct])
+    
+    # Päivitä normaalit tilastot
     db_manager.update_question_stats(question_id, is_correct, time_taken, current_user.id)
     
+    # --- KORJATTU OSA: Päivitä spaced repetition -järjestelmä oikein ---
     try:
+        # 1. Määritä suorituksen laatu (0-5 asteikolla)
+        # 5 = täydellinen, 2 = väärä vastaus
         quality = 5 if is_correct else 2
+        
+        # 2. Laske uusi kertausväli ja vaikeuskerroin
+        # (question-objekti on jo haettu aiemmin ja sisältää vanhat `interval` ja `ease_factor` arvot)
         new_interval, new_ease_factor = spaced_repetition_manager.calculate_next_review(
             question=question, 
             performance_rating=quality
         )
+        
+        # 3. Tallenna päivitetyt tiedot tietokantaan
         spaced_repetition_manager.record_review(
             user_id=current_user.id,
             question_id=question_id,
             interval=new_interval,
             ease_factor=new_ease_factor
         )
-        app.logger.info(f"Spaced repetition updated: user={current_user.id}, q={question_id}, quality={quality}, new_interval={new_interval}")
+        app.logger.info(f"Spaced repetition päivitetty: user={current_user.id}, q={question_id}, quality={quality}, new_interval={new_interval}")
     except Exception as e:
-        app.logger.error(f"Error updating spaced repetition: {e}")
-    
+        app.logger.error(f"Virhe spaced repetition päivityksessä: {e}")
+        # Ei estetä vastauksen tallentamista vaikka SR epäonnistuisi
+    # --- KORJAUKSEN LOPPU ---
+
+    # Tarkista saavutukset
     new_achievement_ids = achievement_manager.check_achievements(current_user.id)
     new_achievements = []
+    
     for ach_id in new_achievement_ids:
         try:
             if ach_id in ENHANCED_ACHIEVEMENTS:
                 ach_obj = ENHANCED_ACHIEVEMENTS[ach_id]
-                ach_data = asdict(ach_obj) if hasattr(ach_obj, '__dataclass_fields__') else {
-                    'id': getattr(ach_obj, 'id', ach_id),
-                    'name': getattr(ach_obj, 'name', ''),
-                    'description': getattr(ach_obj, 'description', ''),
-                    'icon': getattr(ach_obj, 'icon', ''),
-                    'unlocked': True,
-                    'unlocked_at': getattr(ach_obj, 'unlocked_at', None)
-                }
-                new_achievements.append(ach_data)
+                if hasattr(ach_obj, '__dataclass_fields__'):
+                    new_achievements.append(asdict(ach_obj))
+                else:
+                    new_achievements.append({
+                        'id': getattr(ach_obj, 'id', ach_id),
+                        'name': getattr(ach_obj, 'name', ''),
+                        'description': getattr(ach_obj, 'description', ''),
+                        'icon': getattr(ach_obj, 'icon', ''),
+                        'unlocked': True,
+                        'unlocked_at': getattr(ach_obj, 'unlocked_at', None)
+                    })
         except Exception as e:
-            app.logger.error(f"Error processing achievement {ach_id}: {e}")
+            app.logger.error(f"Virhe saavutuksen {ach_id} käsittelyssä: {e}")
             continue
     
     if new_achievements:
         app.logger.info(f"User {current_user.username} unlocked {len(new_achievements)} achievements")
     
-    return json_response({
+    return jsonify({
         'correct': is_correct,
         'correct_answer_index': question.correct,
         'explanation': question.explanation,
@@ -566,34 +657,37 @@ def submit_answer_api():
 @app.route("/api/submit_simulation", methods=['POST'])
 @login_required
 @limiter.limit("20 per minute")
-@api_csrf_protect
 def submit_simulation_api():
     data = request.get_json()
     answers = data.get('answers')
     questions_ids = data.get('questions')
     
     if not answers or not questions_ids or len(answers) != len(questions_ids):
-        return json_response({'error': 'Invalid data provided'}, 400)
+        return jsonify({'error': 'Invalid data provided'}), 400
     
     correct_answers_count = 0
     detailed_results = []
+    
     for i, q_id in enumerate(questions_ids):
         question_obj = db_manager.get_question_by_id(q_id, current_user.id)
+        
         if question_obj and answers[i] is not None and answers[i] == question_obj.correct:
             correct_answers_count += 1
+        
         detailed_results.append({
-            'question': question_obj.question if question_obj else "Unknown",
-            'options': question_obj.options if question_obj else [],
-            'explanation': question_obj.explanation if question_obj else "",
+            'question': question_obj.question,
+            'options': question_obj.options,
+            'explanation': question_obj.explanation,
             'user_answer': answers[i],
-            'correct_answer': question_obj.correct if question_obj else None,
-            'is_correct': (answers[i] == question_obj.correct) if question_obj else False
+            'correct_answer': question_obj.correct,
+            'is_correct': (answers[i] == question_obj.correct)
         })
     
     percentage = (correct_answers_count / len(questions_ids)) * 100 if questions_ids else 0
+    
     app.logger.info(f"User {current_user.username} completed simulation: {correct_answers_count}/{len(questions_ids)} ({percentage:.1f}%)")
     
-    return json_response({
+    return jsonify({
         'score': correct_answers_count,
         'total': len(questions_ids),
         'percentage': percentage,
@@ -604,50 +698,83 @@ def submit_simulation_api():
 @login_required
 @limiter.limit("60 per minute")
 def get_questions_api():
+    """Hakee harjoituskysymyksiä valintojen mukaan, tukee myös simulaatiota."""
     try:
+        # Käytä getlist() hakemaan kaikki valinnat listoina
         categories = request.args.getlist('categories')
         difficulties = request.args.getlist('difficulties')
         limit = int(request.args.get('count', 10))
         simulation = request.args.get('simulation') == 'true'
+
         app.logger.info(f"API call: user={current_user.id}, simulation={simulation}, categories={categories}, difficulties={difficulties}, limit={limit}")
-        categories = None if not categories else categories
-        difficulties = None if not difficulties else difficulties
-        questions = db_manager.get_questions(
-            user_id=current_user.id,
-            categories=categories,
-            difficulties=difficulties,
-            limit=50 if simulation else limit
-        )
+
+        # Varmista, että tyhjät listat käsitellään oikein
+        if not categories:
+            categories = None
+            app.logger.info("No categories provided - using all categories")
+        if not difficulties:
+            difficulties = None
+            app.logger.info("No difficulties provided - using all difficulties")
+
+        # Hae kysymykset
+        if simulation:
+            app.logger.info("Simulation mode: Fetching 50 random questions")
+            questions = db_manager.get_questions(current_user.id, limit=50)  # Ei suodatus
+        else:
+            app.logger.info("Normal mode: Fetching with filters")
+            questions = db_manager.get_questions(
+                user_id=current_user.id,
+                categories=categories,
+                difficulties=difficulties,
+                limit=limit
+            )
+
+        app.logger.info(f"Raw questions fetched: {len(questions)}")
+
+        # Prosessoi kysymykset
         questions_list = []
         for q in questions:
             if q.options and 0 <= q.correct < len(q.options):
                 original_correct_text = q.options[q.correct]
                 random.shuffle(q.options)
                 q.correct = q.options.index(original_correct_text)
-            questions_list.append(asdict(q))
+            q_dict = asdict(q)
+            questions_list.append(q_dict)
+
         if not questions_list:
-            return json_response({'questions': [], 'message': 'Ei kysymyksiä valituilla kriteereillä.'})
-        return json_response({'questions': questions_list})
+            app.logger.warning("No questions returned - returning empty list")
+            return jsonify({'questions': [], 'message': 'Ei kysymyksiä valituilla kriteereillä.'}), 200
+
+        app.logger.info(f"Returning {len(questions_list)} processed questions")
+        return jsonify({'questions': questions_list})
+
     except ValueError as ve:
-        app.logger.error(f"Invalid parameter: {ve}")
-        return json_response({'error': 'Virheellinen parametri.', 'details': str(ve)}, 400)
+        app.logger.error(f"Invalid parameter: {str(ve)}")
+        return jsonify({'error': 'Virheellinen parametri (esim. count).', 'details': str(ve)}), 400
     except Exception as e:
-        app.logger.error(f"Error in /api/questions: {e}")
-        return json_response({'error': 'Palvelinvirhe.', 'details': str(e)}, 500)
+        app.logger.error(f"Virhe /api/questions haussa: {str(e)}")
+        if app.config['DEBUG']:
+            import traceback
+            traceback.print_exc()
+        return jsonify({'error': 'Palvelinvirhe.', 'details': str(e)}), 500
 
 @app.route("/api/simulation/update", methods=['POST'])
 @login_required
 @limiter.limit("60 per minute")
-@api_csrf_protect
 def update_simulation_api():
     try:
         data = request.get_json()
         active_session = db_manager.get_active_session(current_user.id)
+
         if not active_session or active_session.get('session_type') != 'simulation':
-            return json_response({'success': False, 'error': 'No active simulation found.'}, 404)
+            return jsonify({'success': False, 'error': 'No active simulation found.'}), 404
+
+        # Päivitetään selaimen lähettämät tiedot
         current_index = data.get('current_index', active_session['current_index'])
         answers = data.get('answers', active_session['answers'])
         time_remaining = data.get('time_remaining', active_session['time_remaining'])
+
+        # Tallennetaan päivitetty tila tietokantaan
         db_manager.save_or_update_session(
             user_id=current_user.id,
             session_type='simulation',
@@ -656,53 +783,62 @@ def update_simulation_api():
             current_index=current_index,
             time_remaining=time_remaining
         )
-        app.logger.info(f"Updated simulation for user {current_user.username}")
-        return json_response({'success': True})
+        app.logger.info(f"Päivitettiin simulaation tila käyttäjälle {current_user.username}")
+        return jsonify({'success': True})
     except Exception as e:
-        app.logger.error(f"Error updating simulation: {e}")
-        return json_response({'success': False, 'error': str(e)}, 500)
-
+        app.logger.error(f"Virhe simulaation päivityksessä: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+    
 @app.route("/api/simulation/delete", methods=['POST'])
 @login_required
-@api_csrf_protect
 def delete_active_session_route():
     success, error = db_manager.delete_active_session(current_user.id)
     if success:
-        app.logger.info(f"Deleted active simulation for user {current_user.id}")
-        return json_response({'success': True})
-    app.logger.error(f"Error deleting active session for user {current_user.id}: {error}")
-    return json_response({'success': False, 'error': str(error)}, 500)
+        app.logger.info(f"Poistettiin aktiivinen simulaatio käyttäjältä {current_user.id}")
+        return jsonify({'success': True})
+    else:
+        app.logger.error(f"Virhe aktiivisen session poistossa käyttäjälle {current_user.id}: {error}")
+        return jsonify({'success': False, 'error': str(error)}), 500   
 
 @app.route("/api/stats")
 @login_required
 @limiter.limit("60 per minute")
 def get_stats_api():
-    return json_response(stats_manager.get_learning_analytics(current_user.id))
+    return jsonify(stats_manager.get_learning_analytics(current_user.id))
 
 @app.route("/api/achievements")
 @login_required
 @limiter.limit("60 per minute")
 def get_achievements_api():
     try:
+        # Hae käyttäjän avaamat saavutus-OLIOT
         unlocked_objects = achievement_manager.get_unlocked_achievements(current_user.id)
+        
+        # Käytä olioviittausta (.id) hakasulkeiden sijaan
         unlocked_ids = {ach.id for ach in unlocked_objects}
+        
         all_achievements = []
         for ach_id, ach_obj in ENHANCED_ACHIEVEMENTS.items():
             try:
                 ach_data = asdict(ach_obj)
                 ach_data['unlocked'] = ach_id in unlocked_ids
                 if ach_data['unlocked']:
+                    # Etsi oikea avattu olio listalta
                     unlocked_data = next((item for item in unlocked_objects if item.id == ach_id), None)
                     if unlocked_data:
+                        # Käytä olioviittausta (.unlocked_at) .get()-metodin sijaan
                         ach_data['unlocked_at'] = unlocked_data.unlocked_at
                 all_achievements.append(ach_data)
+
             except Exception as e:
-                app.logger.error(f"Error processing achievement {ach_id}: {e}")
+                logger.error(f"Virhe saavutuksen {ach_id} käsittelyssä: {e}")
                 continue
-        return json_response(all_achievements)
+        
+        return jsonify(all_achievements)
     except Exception as e:
-        app.logger.error(f"Error in /api/achievements: {e}", exc_info=True)
-        return json_response([])
+        # Lisätään tarkempi lokitus koko funktion virheelle
+        logger.error(f"Koko /api/achievements-reitin suoritus epäonnistui: {e}", exc_info=True)
+        return jsonify([])
 
 @app.route("/api/review-questions")
 @login_required
@@ -711,34 +847,40 @@ def get_review_questions_api():
     due_questions = spaced_repetition_manager.get_due_questions(current_user.id, limit=1)
     
     if not due_questions:
-        return json_response({'question': None, 'distractor': None})
+        return jsonify({'question': None, 'distractor': None})
         
     question = due_questions[0]
     distractor = None
     
     try:
+        # Muunna dataclass-objekti sanakirjaksi
         question_data = asdict(question)
     except Exception as e:
-        app.logger.error(f"Error processing review question: {e}")
-        return json_response({'question': None, 'distractor': None})
+        app.logger.error(f"Virhe review-kysymyksen käsittelyssä: {e}")
+        return jsonify({'question': None, 'distractor': None})
     
+    # KORJATTU OSA: Käytä käyttäjän tallennettua todennäköisyyttä
     if hasattr(current_user, 'distractors_enabled') and current_user.distractors_enabled:
+        # Muunna prosentti (0-100) desimaaliluvuksi (0.0-1.0)
         probability = current_user.distractor_probability / 100.0
         if random.random() < probability:
             distractor = random.choice(DISTRACTORS)
-            app.logger.info(f"Showing distractor for user {current_user.id} with probability {probability*100}%")
+            app.logger.info(f"Näytetään häiriötekijä käyttäjälle {current_user.id} todennäköisyydellä {probability*100}%")
 
-    return json_response({'question': question_data, 'distractor': distractor})
+    return jsonify({'question': question_data, 'distractor': distractor})
+
 
 @app.route("/api/recommendations")
 @login_required
 @limiter.limit("30 per minute")
 def get_recommendations_api():
-    return json_response(stats_manager.get_recommendations(current_user.id))
+    return jsonify(stats_manager.get_recommendations(current_user.id))
 
-# ============================================================================
-# SIVUJEN REITIT
-# ============================================================================
+
+
+#==============================================================================
+# --- SIVUJEN REITIT ---
+#==============================================================================
 
 @app.route("/")
 def index_route():
@@ -755,7 +897,10 @@ def terms_route():
 @app.route("/dashboard")
 @login_required
 def dashboard_route():
+    # Hae kaikki käyttäjän tilastot kerralla
     analytics = stats_manager.get_learning_analytics(current_user.id)
+    
+    # Etsi valmentajan valinta (heikoin kategoria)
     coach_pick = None
     weak_categories = [
         cat for cat in analytics.get('categories', []) 
@@ -763,6 +908,8 @@ def dashboard_route():
     ]
     if weak_categories:
         coach_pick = min(weak_categories, key=lambda x: x['success_rate'])
+
+    # Etsi vahvin kategoria
     strength_pick = None
     strong_categories = [
         cat for cat in analytics.get('categories', []) 
@@ -770,17 +917,22 @@ def dashboard_route():
     ]
     if strong_categories:
         strength_pick = max(strong_categories, key=lambda x: x['success_rate'])
+
+    # Hae virheiden määrä
     try:
-        result = db_manager._execute("""
+        result = execute_query("""
             SELECT COUNT(DISTINCT question_id) as count FROM question_attempts 
             WHERE user_id = ? AND correct = ?
         """, (current_user.id, False if db_manager.is_postgres else 0), fetch='one')
         mistake_count = result['count'] if result else 0
     except Exception as e:
-        app.logger.error(f"Error fetching mistake count: {e}")
+        app.logger.error(f"Virhe virheiden määrän haussa: {e}")
         mistake_count = 0
+
+    # Vanhat toiminnot säilyvät ennallaan
     user_data_row = db_manager.get_user_by_id(current_user.id)
     user_data = dict(user_data_row) if user_data_row else {}
+    
     categories_json = user_data.get('last_practice_categories') or '[]'
     difficulties_json = user_data.get('last_practice_difficulties') or '[]'
     last_categories = json.loads(categories_json)
@@ -788,6 +940,7 @@ def dashboard_route():
     all_categories_from_db = db_manager.get_categories()
     active_session = db_manager.get_active_session(current_user.id)
     has_active_simulation = (active_session is not None and active_session.get('session_type') == 'simulation')
+
     return render_template(
         'dashboard.html', 
         categories=all_categories_from_db,
@@ -802,11 +955,13 @@ def dashboard_route():
 @app.route("/practice")
 @login_required
 def practice_route():
+    # Välitetään constants.py:n DISTRACTORS-lista templatelle
     return render_template("practice.html", category="Kaikki kategoriat", constants={'DISTRACTORS': DISTRACTORS})
 
 @app.route("/practice/<category>")
 @login_required
 def practice_category_route(category):
+    # Välitetään constants.py:n DISTRACTORS-lista templatelle
     return render_template("practice.html", category=category, constants={'DISTRACTORS': DISTRACTORS})
 
 @app.route("/review")
@@ -839,63 +994,78 @@ def calculator_route():
 def simulation_route():
     force_new = request.args.get('new', 'false').lower() == 'true'
     resume = request.args.get('resume', 'false').lower() == 'true'
+    
+    # Tarkista onko aktiivista sessiota
     active_session = db_manager.get_active_session(current_user.id)
     has_active = active_session is not None and active_session.get('session_type') == 'simulation'
     
+    # Jos pyydetään jatkamaan JA on aktiivinen sessio
     if resume and has_active:
-        app.logger.info(f"Resuming simulation for user {current_user.username}")
+        app.logger.info(f"Jatketaan simulaatiota käyttäjälle {current_user.username}")
+        
         try:
             question_ids = active_session['question_ids']
             if isinstance(question_ids, str):
                 question_ids = json.loads(question_ids)
+            
             answers = active_session['answers']
             if isinstance(answers, str):
                 answers = json.loads(answers)
+            
+            active_session['question_ids'] = question_ids
+            active_session['answers'] = answers
+            
             if len(answers) != len(question_ids):
                 answers = [None] * len(question_ids)
                 active_session['answers'] = answers
-            if 'last_updated' in active_session and isinstance(active_session['last_updated'], datetime):
-                active_session['last_updated'] = active_session['last_updated'].isoformat()
+            
+            app.logger.info(f"Session ladattu: index={active_session['current_index']}, "
+                              f"time={active_session['time_remaining']}s, "
+                              f"answered={len([a for a in answers if a is not None])}/{len(question_ids)}")
+            
         except (json.JSONDecodeError, KeyError, TypeError) as e:
-            app.logger.error(f"Error parsing session data: {e}")
+            app.logger.error(f"Virhe session datan parsinnassa: {e}")
             flash("Kesken eräisen simulaation lataus epäonnistui. Aloita uusi.", "warning")
-            db_manager.delete_active_session(current_user.id)
             return redirect(url_for('dashboard_route'))
         
         questions = [db_manager.get_question_by_id(qid, current_user.id) for qid in question_ids]
         questions = [q for q in questions if q is not None]
+        
         if len(questions) != len(question_ids):
-            app.logger.error(f"Question count mismatch: {len(questions)} vs {len(question_ids)}")
+            app.logger.error(f"Kysymysten määrä ei täsmää: {len(questions)} vs {len(question_ids)}")
             flash("Virhe kysymysten lataamisessa. Aloita uusi simulaatio.", "danger")
-            db_manager.delete_active_session(current_user.id)
             return redirect(url_for('dashboard_route'))
         
         questions_data = [asdict(q) for q in questions]
-        for q_dict in questions_data:
-            for key, value in q_dict.items():
-                if isinstance(value, datetime):
-                    q_dict[key] = value.isoformat()
-        
         return render_template("simulation.html", 
                                session_data=active_session, 
                                questions_data=questions_data,
                                has_existing_session=False,
                                constants={'DISTRACTORS': DISTRACTORS})
     
+    # Jos on aktiivinen sessio MUTTA ei pyydetty jatkamaan eikä pakoteta uutta
     elif has_active and not force_new:
+        
         try:
             question_ids = active_session['question_ids']
             if isinstance(question_ids, str):
                 question_ids = json.loads(question_ids)
+            
             answers = active_session['answers']
             if isinstance(answers, str):
                 answers = json.loads(answers)
+            
+            answered_count = len([a for a in answers if a is not None])
+            time_remaining = active_session.get('time_remaining', 3600)
+            minutes_left = time_remaining // 60
+            
             session_info = {
-                'answered': len([a for a in answers if a is not None]),
+                'answered': answered_count,
                 'total': len(question_ids),
-                'time_remaining_minutes': active_session.get('time_remaining', 3600) // 60,
+                'time_remaining_minutes': minutes_left,
                 'current_index': active_session.get('current_index', 0) + 1
             }
+            
             return render_template("simulation.html",
                                    session_data={},
                                    questions_data=[],
@@ -903,26 +1073,26 @@ def simulation_route():
                                    session_info=session_info,
                                    constants={'DISTRACTORS': DISTRACTORS})
         except Exception as e:
-            app.logger.error(f"Error parsing session info: {e}")
+            app.logger.error(f"Virhe session infon parsinnassa: {e}")
+            # Jos virhe, poista viallinen sessio ja jatka normaalisti uuteen
             db_manager.delete_active_session(current_user.id)
     
-    app.logger.info(f"Starting new simulation for user {current_user.username}")
+    # Aloita uusi simulaatio (force_new=True TAI ei aktiivista sessiota)
+    app.logger.info(f"Aloitetaan uusi simulaatio käyttäjälle {current_user.username}")
+    
     if has_active:
         db_manager.delete_active_session(current_user.id)
-        app.logger.info(f"Deleted old session before starting new")
+        app.logger.info(f"Poistettiin vanha sessio ennen uuden aloittamista")
     
     questions = db_manager.get_questions(user_id=current_user.id, limit=50)
+    
     if len(questions) < 50:
         flash("Tietokannassa ei ole tarpeeksi kysymyksiä (50) koesimulaation suorittamiseen.", "warning")
         return redirect(url_for('dashboard_route'))
     
     question_ids = [q.id for q in questions]
     questions_data = [asdict(q) for q in questions]
-    for q_dict in questions_data:
-        for key, value in q_dict.items():
-            if isinstance(value, datetime):
-                q_dict[key] = value.isoformat()
-    
+
     new_session = {
         "user_id": current_user.id,
         "session_type": "simulation",
@@ -932,8 +1102,16 @@ def simulation_route():
         "time_remaining": 3600
     }
     
-    db_manager.save_or_update_session(**new_session)
-    app.logger.info(f"New simulation created: {len(questions)} questions")
+    db_manager.save_or_update_session(
+        user_id=current_user.id,
+        session_type=new_session["session_type"],
+        question_ids=new_session["question_ids"],
+        answers=new_session["answers"],
+        current_index=new_session["current_index"],
+        time_remaining=new_session["time_remaining"]
+    )
+    
+    app.logger.info(f"Uusi simulaatio luotu: {len(questions)} kysymystä")
     
     return render_template("simulation.html", 
                            session_data=new_session, 
@@ -959,17 +1137,19 @@ def settings_route():
             return redirect(url_for('settings_route'))
         
         try:
-            user_data = db_manager._execute("SELECT password FROM users WHERE id = ?", (current_user.id,), fetch='one')
+            user_data = execute_query("SELECT password FROM users WHERE id = ?", (current_user.id,), fetch='one')
+            
             if not user_data or not bcrypt.check_password_hash(user_data['password'], current_password):
                 flash('Nykyinen salasana on väärä.', 'danger')
                 return redirect(url_for('settings_route'))
         except Exception as e:
-            app.logger.error(f"Error checking password: {e}")
+            app.logger.error(f"Virhe salasanan tarkistuksessa: {e}")
             flash('Salasanan vaihdossa tapahtui virhe.', 'danger')
             return redirect(url_for('settings_route'))
         
         new_hashed_password = bcrypt.generate_password_hash(new_password).decode('utf-8')
         success, error = db_manager.update_user_password(current_user.id, new_hashed_password)
+        
         if success:
             flash('Salasana vaihdettu onnistuneesti!', 'success')
             app.logger.info(f"User {current_user.username} changed password")
@@ -979,21 +1159,23 @@ def settings_route():
         
         return redirect(url_for('settings_route'))
     
-    return render_template("settings.html")    
+    return render_template("settings.html")
 
-# ============================================================================
-# KIRJAUTUMISEN REITIT
-# ============================================================================
+#==============================================================================
+# --- KIRJAUTUMISEN REITIT ---
+#==============================================================================
 
 @app.route("/login", methods=['GET', 'POST'])
 @limiter.limit("10 per minute")
 def login_route():
+    """Kirjautumissivu"""
     if current_user.is_authenticated:
         return redirect(url_for('dashboard_route'))
     
     if request.method == 'POST':
         username = request.form.get('username', '').strip()
         password = request.form.get('password', '')
+        
         if not username or not password:
             flash('Syötä käyttäjänimi ja salasana.', 'danger')
             return render_template("login.html")
@@ -1004,7 +1186,9 @@ def login_route():
                 (username,),
                 fetch='one'
             )
+            
             if user_data and bcrypt.check_password_hash(user_data['password'], password):
+                # KORJATTU OSA: Luodaan User-olio KAIKILLA tarvittavilla tiedoilla
                 user = User(
                     id=user_data['id'],
                     username=user_data['username'],
@@ -1015,11 +1199,13 @@ def login_route():
                     expires_at=user_data.get('expires_at')
                 )
                 login_user(user)
-                app.logger.info(f"User {username} logged in successfully")
+                app.logger.info(f"User {username} logged in successfully.")
+                
                 next_page = request.args.get('next')
                 return redirect(next_page or url_for('dashboard_route'))
             else:
                 flash('Virheellinen käyttäjänimi tai salasana.', 'danger')
+                
         except Exception as e:
             app.logger.error(f"Login error: {e}", exc_info=True)
             flash('Kirjautumisessa tapahtui odottamaton virhe.', 'danger')
@@ -1033,6 +1219,7 @@ def register_route():
         email = request.form.get('email', '').strip()
         password = request.form.get('password', '')
         
+        # ... (tähän väliin jäävät kaikki aiemmat tarkistukset, kuten salasanan pituus jne.) ...
         if not all([username, email, password]):
             flash('Kaikki kentät ovat pakollisia.', 'danger')
             return render_template("register.html")
@@ -1061,15 +1248,17 @@ def register_route():
         if not re.search(r'[0-9]', password):
             flash('Salasanan tulee sisältää vähintään yksi numero.', 'danger')
             return render_template("register.html")
-        
+
         try:
             hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
             success, error_msg = db_manager.create_user(username, email, hashed_password)
+            
             if success:
                 flash('Rekisteröityminen onnistui! Voit nyt kirjautua sisään.', 'success')
                 app.logger.info(f"New user registered: {username}")
                 return redirect(url_for('login_route'))
             else:
+                # KORJATTU OSA: Tarkempi virheilmoitus käyttäjälle
                 if error_msg and 'users.username' in error_msg:
                     flash('Käyttäjänimi on jo käytössä.', 'danger')
                 elif error_msg and 'users.email' in error_msg:
@@ -1077,6 +1266,7 @@ def register_route():
                 else:
                     flash(f'Rekisteröitymisessä tapahtui odottamaton virhe: {error_msg}', 'danger')
                 app.logger.error(f"Registration failed for {username}: {error_msg}")
+
         except Exception as e:
             flash('Rekisteröitymisessä tapahtui kriittinen virhe.', 'danger')
             app.logger.error(f"Critical registration error: {e}")
@@ -1092,17 +1282,19 @@ def logout_route():
     app.logger.info(f"User {username} logged out")
     return redirect(url_for('login_route'))
 
-# ============================================================================
-# SALASANAN PALAUTUS REITIT
-# ============================================================================
+#==============================================================================
+# --- SALASANAN PALAUTUS REITIT ---
+#==============================================================================
 
 @app.route("/forgot-password", methods=['GET', 'POST'])
 def forgot_password_route():
     if request.method == 'POST':
         email = request.form.get('email', '').strip()
+
         if not email:
             flash('Sähköpostiosoite on pakollinen.', 'danger')
             return render_template("forgot_password.html")
+
         try:
             user = db_manager._execute(
                 "SELECT id, username, email FROM users WHERE email = ?", 
@@ -1112,42 +1304,57 @@ def forgot_password_route():
         except Exception as e:
             app.logger.error(f"Error fetching user by email: {e}")
             user = None
+
         if user:
             token = generate_reset_token(email)
             reset_url = url_for('reset_password_route', token=token, _external=True)
+
             if send_reset_email(email, reset_url):
                 flash('Salasanan palautuslinkki on lähetetty sähköpostiisi.', 'success')
             else:
                 flash('Sähköpostin lähetys epäonnistui.', 'danger')
         else:
             flash('Jos sähköpostiosoite löytyy järjestelmästä, siihen on lähetetty palautuslinkki.', 'info')
+
         return redirect(url_for('login_route'))
+
     return render_template("forgot_password.html")
 
 @app.route("/reset-password/<token>", methods=['GET', 'POST'])
 def reset_password_route(token):
-    email = verify_reset_token(token)
+    """Salasanan resetointi tokenilla."""
+    try:
+        email = verify_reset_token(token)
+    except (SignatureExpired, BadSignature):
+        flash('Palautuslinkki on vanhentunut tai virheellinen.', 'danger')
+        return redirect(url_for('forgot_password_route'))
+
     if not email:
         flash('Palautuslinkki on vanhentunut tai virheellinen.', 'danger')
         return redirect(url_for('forgot_password_route'))
-    
+
     if request.method == 'POST':
         new_password = request.form.get('new_password', '').strip()
         confirm_password = request.form.get('confirm_password', '').strip()
+
         if not new_password or not confirm_password:
             flash('Täytä molemmat kentät.', 'danger')
             return render_template("reset_password.html", token=token, email=email)
+
         if new_password != confirm_password:
             flash('Salasanat eivät täsmää.', 'danger')
             return render_template("reset_password.html", token=token, email=email)
+
         if len(new_password) < 8:
             flash('Salasanan tulee olla vähintään 8 merkkiä pitkä.', 'danger')
             return render_template("reset_password.html", token=token, email=email)
+
         try:
             user = db_manager.get_user_by_email(email)
             if user:
                 hashed_password = bcrypt.generate_password_hash(new_password).decode('utf-8')
                 success, error = db_manager.update_user_password(user['id'], hashed_password)
+
                 if success:
                     flash('Salasana vaihdettu onnistuneesti! Voit nyt kirjautua sisään.', 'success')
                     app.logger.info(f"Password reset successful for user: {user['username']}")
@@ -1159,36 +1366,286 @@ def reset_password_route(token):
         except Exception as e:
             flash('Salasanan vaihdossa tapahtui virhe.', 'danger')
             app.logger.error(f"Password reset error: {e}")
+
     return render_template("reset_password.html", token=token, email=email)
 
-# ============================================================================
-# YLLÄPITÄJÄN REITIT
-# ============================================================================
+#==============================================================================
+# --- YLLÄPITÄJÄN REITIT ---
+#==============================================================================
+
+@app.route("/admin/bulk_delete_duplicates", methods=['POST'])
+@admin_required
+def admin_bulk_delete_duplicates_route():
+    """Poistaa useita duplikaattikysymyksiä kerralla."""
+    
+    question_ids_str = request.form.get('question_ids', '')
+    
+    if not question_ids_str:
+        flash('⚠️ Ei kysymyksiä poistettavaksi.', 'warning')
+        return redirect(url_for('admin_find_duplicates_route'))
+    
+    try:
+        # Parsitaan ID:t
+        question_ids = [int(qid.strip()) for qid in question_ids_str.split(',') if qid.strip()]
+        
+        if not question_ids:
+            flash('⚠️ Ei kelvollisia kysymys-ID:itä.', 'warning')
+            return redirect(url_for('admin_find_duplicates_route'))
+        
+        # Poistetaan kysymykset
+        deleted_count = 0
+        failed_count = 0
+        
+        for question_id in question_ids:
+            success, error = db_manager.delete_question(question_id)
+            if success:
+                deleted_count += 1
+            else:
+                failed_count += 1
+                app.logger.error(f"Failed to delete question {question_id}: {error}")
+        
+        # Näytä tulokset
+        if deleted_count > 0:
+            flash(f'✅ Poistettiin {deleted_count} duplikaattikysymystä onnistuneesti!', 'success')
+            app.logger.info(f"Admin {current_user.username} bulk deleted {deleted_count} duplicate questions")
+        
+        if failed_count > 0:
+            flash(f'⚠️ {failed_count} kysymyksen poisto epäonnistui.', 'warning')
+        
+    except ValueError as e:
+        flash(f'❌ Virheelliset kysymys-ID:t: {str(e)}', 'danger')
+        app.logger.error(f"Bulk delete parsing error: {e}")
+    except Exception as e:
+        flash(f'❌ Odottamaton virhe: {str(e)}', 'danger')
+        app.logger.error(f"Bulk delete error: {e}")
+    
+    return redirect(url_for('admin_find_duplicates_route'))
+
+@app.route("/admin/add_question", methods=['GET', 'POST'])
+@admin_required
+def admin_add_question_route():
+    if request.method == 'POST':
+        question_text = request.form.get('question', '').strip()
+        explanation = request.form.get('explanation', '').strip()
+        category = request.form.get('new_category') if request.form.get('category') == '__add_new__' else request.form.get('category')
+        difficulty = request.form.get('difficulty')
+        
+        options = [
+            request.form.get('option_0', '').strip(),
+            request.form.get('option_1', '').strip(),
+            request.form.get('option_2', '').strip(),
+            request.form.get('option_3', '').strip()
+        ]
+        
+        correct_answer_text = request.form.get('correct_answer', '').strip()
+
+        if not all([question_text, explanation, category, difficulty]) or not all(options) or not correct_answer_text:
+            flash('Kaikki kentät ovat pakollisia.', 'danger')
+            categories_for_template = db_manager.get_categories()
+            return render_template("admin_add_question.html", categories=categories_for_template)
+
+        if correct_answer_text not in options:
+            flash('Oikea vastaus ei löydy vaihtoehdoista!', 'danger')
+            categories_for_template = db_manager.get_categories()
+            return render_template("admin_add_question.html", categories=categories_for_template)
+        
+        # UUSI: Tarkista duplikaatti
+        is_duplicate, existing = db_manager.check_question_duplicate(question_text)
+        
+        if is_duplicate:
+            flash(
+                f'⚠️ Vastaava kysymys on jo kannassa!\n'
+                f'ID: {existing["id"]} | Kategoria: {existing["category"]} | '
+                f'Kysymys: "{existing["question"][:100]}..."',
+                'warning'
+            )
+            categories_for_template = db_manager.get_categories()
+            return render_template("admin_add_question.html", categories=categories_for_template)
+            
+        random.shuffle(options)
+        correct = options.index(correct_answer_text)
+
+        try:
+            question_normalized = db_manager.normalize_question(question_text)
+            execute_query('''
+                INSERT INTO questions (question, question_normalized, options, correct, explanation, category, difficulty, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (question_text, question_normalized, json.dumps(options), correct, explanation, category, difficulty, datetime.now()), fetch='none')
+            
+            flash('Kysymys lisätty onnistuneesti!', 'success')
+            app.logger.info(f"Admin {current_user.username} added new question in category {category}")
+            return redirect(url_for('admin_route'))
+        except Exception as e:
+            flash(f'Virhe kysymyksen lisäämisessä: {e}', 'danger')
+            app.logger.error(f"Question add error: {e}")
+
+    try:
+        categories = db_manager.get_categories()
+    except Exception as e:
+        app.logger.error(f"Could not fetch categories for add_question page: {e}")
+        categories = ['laskut', 'turvallisuus', 'annosjakelu']
+
+    return render_template("add_question.html", categories=categories)
+
+@app.route("/admin/bulk_upload", methods=['POST'])
+@admin_required
+def admin_bulk_upload_route():
+    if 'json_file' not in request.files:
+        flash('Tiedostoa ei valittu.', 'danger')
+        return redirect(url_for('admin_route'))
+    
+    file = request.files['json_file']
+    
+    if file.filename == '':
+        flash('Tiedostoa ei valittu.', 'danger')
+        return redirect(url_for('admin_route'))
+    
+    if not file.filename.endswith('.json'):
+        flash('Tiedoston tulee olla JSON-muotoinen (.json).', 'danger')
+        return redirect(url_for('admin_route'))
+    
+    try:
+        content = file.read().decode('utf-8')
+        questions_data = json.loads(content)
+        
+        if not isinstance(questions_data, list):
+            flash('JSON-tiedoston tulee sisältää lista kysymyksiä.', 'danger')
+            return redirect(url_for('admin_route'))
+        
+        if len(questions_data) == 0:
+            flash('JSON-tiedosto on tyhjä.', 'warning')
+            return redirect(url_for('admin_route'))
+        
+        success, result = db_manager.bulk_add_questions(questions_data)
+        
+        if success:
+            stats = result
+            if stats['added'] > 0:
+                flash(f"✅ Lisättiin {stats['added']} kysymystä onnistuneesti!", 'success')
+            if stats['duplicates'] > 0:
+                flash(f"🔄 Ohitettiin {stats['duplicates']} duplikaattia", 'info')
+            if stats['skipped'] > 0:
+                flash(f"⚠️ Ohitettiin {stats['skipped']} kysymystä muiden virheiden vuoksi", 'warning')
+            if stats['errors']:
+                error_msg = "Virheet:\n" + "\n".join(stats['errors'][:10])
+                if len(stats['errors']) > 10:
+                    error_msg += f"\n... ja {len(stats['errors']) - 10} muuta"
+                flash(error_msg, 'info')
+            
+            app.logger.info(f"Admin {current_user.username} uploaded {stats['added']} questions from JSON")
+        else:
+            flash(f'Virhe kysymysten lataamisessa: {result}', 'danger')
+            app.logger.error(f"Bulk upload error: {result}")
+    
+    except json.JSONDecodeError as e:
+        flash(f'Virheellinen JSON-tiedosto: {str(e)}', 'danger')
+        app.logger.error(f"JSON decode error in bulk upload: {e}")
+    except Exception as e:
+        flash(f'Odottamaton virhe: {str(e)}', 'danger')
+        app.logger.error(f"Unexpected error in bulk upload: {e}")
+    
+    return redirect(url_for('admin_route'))
+
+
+@app.route("/admin/find_duplicates", methods=['GET', 'POST'])
+@admin_required
+def admin_find_duplicates_route():
+    """Etsii duplikaatit ja samankaltaiset kysymykset."""
+    
+    if request.method == 'POST':
+        # Hae threshold lomakkeesta (oletuksena 95%)
+        similarity_threshold = float(request.form.get('threshold', 95)) / 100
+        
+        try:
+            similar_questions = db_manager.find_similar_questions(similarity_threshold)
+            
+            if not similar_questions:
+                flash(f'✅ Ei löytynyt duplikaatteja tai samankaltaisuus {similarity_threshold*100:.0f}% kysymyksiä!', 'success')
+            else:
+                flash(f'🔍 Löydettiin {len(similar_questions)} samankaltaista kysymysparia (kynnys: {similarity_threshold*100:.0f}%)', 'info')
+            
+            return render_template('admin_duplicates.html', 
+                                   similar_questions=similar_questions, 
+                                   threshold=similarity_threshold*100)
+        
+        except Exception as e:
+            flash(f'Virhe duplikaattien etsinnässä: {str(e)}', 'danger')
+            app.logger.error(f"Duplicate search error: {e}")
+            return redirect(url_for('admin_route'))
+    
+    # GET-pyyntö: näytä lomake
+    return render_template('admin_duplicates.html', similar_questions=None, threshold=95)
+
+
+@app.route("/admin/clear_database", methods=['POST'])
+@admin_required
+def admin_clear_database_route():
+    """VAROITUS: Tyhjentää KAIKKI kysymykset tietokannasta!"""
+    
+    # Vaadi vahvistus lomakkeesta
+    confirmation = request.form.get('confirmation', '')
+    
+    if confirmation != 'TYHJENNA KAIKKI':
+        flash('⚠️ Vahvistus epäonnistui. Kirjoita "TYHJENNA KAIKKI" vahvistaaksesi toiminnon.', 'danger')
+        return redirect(url_for('admin_route'))
+    
+    try:
+        success, result = db_manager.clear_all_questions()
+        
+        if success:
+            deleted_count = result['deleted_count']
+            flash(f'🗑️ Tietokanta tyhjennetty! Poistettiin {deleted_count} kysymystä.', 'warning')
+            app.logger.warning(f"Admin {current_user.username} cleared entire database ({deleted_count} questions)")
+        else:
+            flash(f'Virhe tietokannan tyhjentämisessä: {result}', 'danger')
+            app.logger.error(f"Database clear error: {result}")
+    
+    except Exception as e:
+        flash(f'Odottamaton virhe: {str(e)}', 'danger')
+        app.logger.error(f"Unexpected error in database clear: {e}")
+    
+    return redirect(url_for('admin_route'))
 
 @app.route("/admin")
 @admin_required
 def admin_route():
+    # Hae hakuparametrit
     search_query = request.args.get('search', '').strip()
     category_filter = request.args.get('category', '')
     difficulty_filter = request.args.get('difficulty', '')
+    
     try:
+        # Rakenna kysely dynaamisesti
         query = "SELECT id, question, category, difficulty FROM questions WHERE 1=1"
         params = []
+        
+        # Tekstihaku
         if search_query:
             query += " AND (question LIKE ? OR explanation LIKE ?)"
             search_param = f"%{search_query}%"
             params.extend([search_param, search_param])
+        
+        # Kategoria-suodatus
         if category_filter:
             query += " AND category = ?"
             params.append(category_filter)
+        
+        # Vaikeustaso-suodatus
         if difficulty_filter:
             query += " AND difficulty = ?"
             params.append(difficulty_filter)
+        
         query += " ORDER BY id DESC"
-        questions = db_manager._execute(query, tuple(params), fetch='all')
-        categories = db_manager.get_categories()
-        difficulties_result = db_manager._execute("SELECT DISTINCT difficulty FROM questions ORDER BY difficulty", fetch='all')
+        
+        questions = execute_query(query, tuple(params), fetch='all')
+        
+        # Hae kaikki kategoriat ja vaikeustasot dropdown-valikoita varten
+        categories_result = execute_query("SELECT DISTINCT category FROM questions ORDER BY category", fetch='all')
+        categories = [row['category'] for row in categories_result] if categories_result else []
+        
+        difficulties_result = execute_query("SELECT DISTINCT difficulty FROM questions ORDER BY difficulty", fetch='all')
         difficulties = [row['difficulty'] for row in difficulties_result] if difficulties_result else []
+        
         return render_template("admin.html", 
                                questions=[dict(row) for row in questions] if questions else [],
                                categories=categories,
@@ -1218,7 +1675,8 @@ def admin_users_route():
 def admin_stats_route():
     try:
         correct_value = 'true' if db_manager.is_postgres else '1'
-        general_stats = db_manager._execute(f"""
+        
+        general_stats = execute_query(f"""
             SELECT
                 COUNT(DISTINCT u.id) as total_users,
                 COUNT(qa.id) as total_attempts,
@@ -1226,7 +1684,8 @@ def admin_stats_route():
             FROM users u
             LEFT JOIN question_attempts qa ON u.id = qa.user_id
         """, fetch='one')
-        category_stats = db_manager._execute(f"""
+        
+        category_stats = execute_query(f"""
             SELECT
                 q.category,
                 COUNT(qa.id) as attempts,
@@ -1236,6 +1695,7 @@ def admin_stats_route():
             GROUP BY q.category
             ORDER BY attempts DESC
         """, fetch='all')
+        
         return render_template("admin_stats.html",
                                general_stats=dict(general_stats) if general_stats else {},
                                category_stats=[dict(row) for row in category_stats] if category_stats else [])
@@ -1261,11 +1721,13 @@ def admin_edit_question_route(question_id):
             'category': request.form.get('new_category') if request.form.get('category') == 'new_category' else request.form.get('category'),
             'difficulty': request.form.get('difficulty')
         }
+
         if not all(data.values()) or not all(data['options']):
             flash('Kaikki kentät ovat pakollisia.', 'danger')
             question_data = db_manager.get_single_question_for_edit(question_id)
             categories = db_manager.get_categories()
             return render_template("admin_edit_question.html", question=question_data, categories=categories)
+
         success, error = db_manager.update_question(question_id, data)
         if success:
             flash('Kysymys päivitetty onnistuneesti!', 'success')
@@ -1277,24 +1739,31 @@ def admin_edit_question_route(question_id):
             question_data = db_manager.get_single_question_for_edit(question_id)
             categories = db_manager.get_categories()
             return render_template("admin_edit_question.html", question=question_data, categories=categories)
-    
+
     question_data = db_manager.get_single_question_for_edit(question_id)
     if not question_data:
         flash('Kysymystä ei löytynyt.', 'danger')
         return redirect(url_for('admin_route'))
+    
     categories = db_manager.get_categories()
     return render_template("admin_edit_question.html", question=question_data, categories=categories)
 
 @app.route("/admin/delete_question/<int:question_id>", methods=['POST'])
 @admin_required
 def admin_delete_question_route(question_id):
+    """Poistaa kysymyksen."""
+    print(f"DEBUG: Delete route called with question_id={question_id}")
+    app.logger.info(f"DELETE ROUTE REACHED: question_id={question_id}")
+    
     success, error = db_manager.delete_question(question_id)
+    
     if success:
         flash(f'Kysymys #{question_id} poistettu onnistuneesti.', 'success')
         app.logger.info(f"Admin {current_user.username} deleted question {question_id}")
     else:
         flash(f'Virhe kysymyksen poistossa: {error}', 'danger')
         app.logger.error(f"Question delete error for ID {question_id}: {error}")
+    
     return redirect(url_for('admin_route'))
 
 @app.route("/admin/toggle_user/<int:user_id>", methods=['POST'])
@@ -1303,6 +1772,7 @@ def admin_toggle_user_route(user_id):
     if user_id == 1:
         flash('Pääkäyttäjän tilaa ei voi muuttaa.', 'danger')
         return redirect(url_for('admin_users_route'))
+
     success, error = db_manager.toggle_user_status(user_id)
     if success:
         flash('Käyttäjän tila vaihdettu onnistuneesti.', 'success')
@@ -1310,6 +1780,7 @@ def admin_toggle_user_route(user_id):
     else:
         flash(f'Virhe tilan vaihdossa: {error}', 'danger')
         app.logger.error(f"User status toggle error for ID {user_id}: {error}")
+
     return redirect(url_for('admin_users_route'))
 
 @app.route("/admin/toggle_role/<int:user_id>", methods=['POST'])
@@ -1318,10 +1789,12 @@ def admin_toggle_role_route(user_id):
     if user_id == 1:
         flash('Pääkäyttäjän roolia ei voi muuttaa.', 'danger')
         return redirect(url_for('admin_users_route'))
+
     user = db_manager.get_user_by_id(user_id)
     if not user:
         flash('Käyttäjää ei löytynyt.', 'danger')
         return redirect(url_for('admin_users_route'))
+
     new_role = 'admin' if user['role'] == 'user' else 'user'
     success, error = db_manager.update_user_role(user_id, new_role)
     if success:
@@ -1330,110 +1803,141 @@ def admin_toggle_role_route(user_id):
     else:
         flash(f'Virhe roolin vaihdossa: {error}', 'danger')
         app.logger.error(f"User role toggle error for ID {user_id}: {error}")
+
     return redirect(url_for('admin_users_route'))
 
 @app.route("/admin/delete_user/<int:user_id>", methods=['POST'])
 @admin_required
 def admin_delete_user_route(user_id):
-    if user_id == 1:
+    """Poistaa käyttäjän ja kaikki hänen tietonsa."""
+    if user_id == 1: # Suojaus pääkäyttäjän poistoa vastaan
         flash('Pääkäyttäjää ei voi poistaa.', 'danger')
         return redirect(url_for('admin_users_route'))
+
     success, error = db_manager.delete_user_by_id(user_id)
+    
     if success:
         flash(f'Käyttäjä #{user_id} ja kaikki hänen tietonsa on poistettu onnistuneesti.', 'success')
         app.logger.info(f"Admin {current_user.username} deleted user {user_id}")
     else:
         flash(f'Virhe käyttäjän poistossa: {error}', 'danger')
         app.logger.error(f"User delete error for ID {user_id}: {error}")
+    
     return redirect(url_for('admin_users_route'))
 
-@app.route("/admin/bulk_delete_duplicates", methods=['POST'])
+@app.route("/admin/export_questions_document", methods=['GET', 'POST'])
 @admin_required
-def admin_bulk_delete_duplicates_route():
-    question_ids_str = request.form.get('question_ids', '')
-    if not question_ids_str:
-        flash('⚠️ Ei kysymyksiä poistettavaksi.', 'warning')
-        return redirect(url_for('admin_find_duplicates_route'))
-    try:
-        question_ids = [int(qid.strip()) for qid in question_ids_str.split(',') if qid.strip()]
-        if not question_ids:
-            flash('⚠️ Ei kelvollisia kysymys-ID:itä.', 'warning')
-            return redirect(url_for('admin_find_duplicates_route'))
-        deleted_count = 0
-        failed_count = 0
-        for question_id in question_ids:
-            success, error = db_manager.delete_question(question_id)
-            if success:
-                deleted_count += 1
-            else:
-                failed_count += 1
-                app.logger.error(f"Failed to delete question {question_id}: {error}")
-        if deleted_count > 0:
-            flash(f'✅ Poistettiin {deleted_count} duplikaattikysymystä onnistuneesti!', 'success')
-            app.logger.info(f"Admin {current_user.username} bulk deleted {deleted_count} duplicate questions")
-        if failed_count > 0:
-            flash(f'⚠️ {failed_count} kysymyksen poisto epäonnistui.', 'warning')
-    except ValueError as e:
-        flash(f'❌ Virheelliset kysymys-ID:t: {str(e)}', 'danger')
-        app.logger.error(f"Bulk delete parsing error: {e}")
-    except Exception as e:
-        flash(f'❌ Odottamaton virhe: {str(e)}', 'danger')
-        app.logger.error(f"Bulk delete error: {e}")
-    return redirect(url_for('admin_find_duplicates_route'))
-
-@app.route("/admin/add_question", methods=['GET', 'POST'])
-@admin_required
-def admin_add_question_route():
+def admin_export_questions_document_route():
+    """Vie kysymykset PDF- tai Word-dokumenttiin ammattimaisessa muodossa."""
+    
     if request.method == 'POST':
-        question_text = request.form.get('question', '').strip()
-        explanation = request.form.get('explanation', '').strip()
-        category = request.form.get('new_category') if request.form.get('category') == '__add_new__' else request.form.get('category')
-        difficulty = request.form.get('difficulty')
-        options = [
-            request.form.get('option_0', '').strip(),
-            request.form.get('option_1', '').strip(),
-            request.form.get('option_2', '').strip(),
-            request.form.get('option_3', '').strip()
-        ]
-        correct_answer_text = request.form.get('correct_answer', '').strip()
-        if not all([question_text, explanation, category, difficulty]) or not all(options) or not correct_answer_text:
-            flash('Kaikki kentät ovat pakollisia.', 'danger')
-            categories = db_manager.get_categories()
-            return render_template("admin_add_question.html", categories=categories)
-        if correct_answer_text not in options:
-            flash('Oikea vastaus ei löydy vaihtoehdoista!', 'danger')
-            categories = db_manager.get_categories()
-            return render_template("admin_add_question.html", categories=categories)
-        is_duplicate, existing = db_manager.check_question_duplicate(question_text)
-        if is_duplicate:
-            flash(
-                f'⚠️ Vastaava kysymys on jo kannassa!\n'
-                f'ID: {existing["id"]} | Kategoria: {existing["category"]} | '
-                f'Kysymys: "{existing["question"][:100]}..."',
-                'warning'
-            )
-            categories = db_manager.get_categories()
-            return render_template("admin_add_question.html", categories=categories)
-        random.shuffle(options)
-        correct = options.index(correct_answer_text)
+        export_format = request.form.get('format', 'pdf')
+        include_answers = request.form.get('include_answers') == 'on'
+        sort_by = request.form.get('sort_by', 'id')
+        check_duplicates = request.form.get('check_duplicates') == 'on'
+        selected_categories = request.form.getlist('categories')
+        selected_difficulties = request.form.getlist('difficulties')
+        
         try:
-            question_normalized = db_manager.normalize_question(question_text)
-            db_manager._execute('''
-                INSERT INTO questions (question, question_normalized, options, correct, explanation, category, difficulty, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (question_text, question_normalized, json.dumps(options), correct, explanation, category, difficulty, datetime.now()), fetch='none')
-            flash('Kysymys lisätty onnistuneesti!', 'success')
-            app.logger.info(f"Admin {current_user.username} added new question in category {category}")
-            return redirect(url_for('admin_route'))
+            # Rakenna kysely suodattimilla
+            query = "SELECT * FROM questions WHERE 1=1"
+            params = []
+            
+            if selected_categories:
+                placeholders = ','.join('?' * len(selected_categories))
+                query += f" AND category IN ({placeholders})"
+                params.extend(selected_categories)
+            
+            if selected_difficulties:
+                placeholders = ','.join('?' * len(selected_difficulties))
+                query += f" AND difficulty IN ({placeholders})"
+                params.extend(selected_difficulties)
+            
+            # Järjestys
+            sort_mapping = {
+                'id': 'id ASC',
+                'id_desc': 'id DESC',
+                'category': 'category ASC, id ASC',
+                'difficulty': 'CASE difficulty WHEN "helppo" THEN 1 WHEN "keskivaikea" THEN 2 WHEN "vaikea" THEN 3 END, id ASC',
+                'alphabetical': 'question ASC'
+            }
+            query += f" ORDER BY {sort_mapping.get(sort_by, 'id ASC')}"
+            
+            questions = execute_query(query, tuple(params), fetch='all')
+                    
+            if not questions:
+                flash('Ei kysymyksiä vietäväksi valituilla suodattimilla.', 'warning')
+                return redirect(url_for('admin_export_questions_document_route'))
+            
+            # Tarkista duplikaatit jos pyydetty
+            duplicate_info = None
+            if check_duplicates:
+                similar = db_manager.find_similar_questions(0.95)
+                if similar:
+                    duplicate_info = f"⚠️ Löydettiin {len(similar)} mahdollista duplikaattia!"
+            
+            # Muunna kysymykset listaksi
+            questions_list = []
+            for q in questions:
+                questions_list.append({
+                    'id': q['id'],
+                    'question': q['question'],
+                    'options': json.loads(q['options']),
+                    'correct': q['correct'],
+                    'explanation': q['explanation'],
+                    'category': q['category'],
+                    'difficulty': q['difficulty']
+                })
+            
+            # Luo dokumentti
+            if export_format == 'pdf':
+                pdf_buffer = create_pdf_document(questions_list, include_answers, duplicate_info)
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                filename = f'LOVe_Kysymykset_{timestamp}.pdf'
+                
+                from flask import make_response
+                response = make_response(pdf_buffer.getvalue())
+                response.headers['Content-Type'] = 'application/pdf'
+                response.headers['Content-Disposition'] = f'attachment; filename={filename}'
+                
+                app.logger.info(f"Admin {current_user.username} exported {len(questions_list)} questions to PDF")
+                return response
+            
+            else:  # Word
+                doc_buffer = create_word_document(questions_list, include_answers, duplicate_info)
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                filename = f'LOVe_Kysymykset_{timestamp}.docx'
+                
+                from flask import make_response
+                response = make_response(doc_buffer.getvalue())
+                response.headers['Content-Type'] = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+                response.headers['Content-Disposition'] = f'attachment; filename={filename}'
+                
+                app.logger.info(f"Admin {current_user.username} exported {len(questions_list)} questions to Word")
+                return response
+            
         except Exception as e:
-            flash(f'Virhe kysymyksen lisäämisessä: {e}', 'danger')
-            app.logger.error(f"Question add error: {e}")
-    categories = db_manager.get_categories()
-    return render_template("admin_add_question.html", categories=categories)
+            flash(f'Virhe dokumentin luomisessa: {str(e)}', 'danger')
+            app.logger.error(f"Document export error: {e}")
+            import traceback
+            traceback.print_exc()
+            return redirect(url_for('admin_export_questions_document_route'))
+    
+    # GET - Näytä lomake
+    try:
+        categories = db_manager.get_categories()
+        
+        total_result = execute_query("SELECT COUNT(*) as count FROM questions", fetch='one')
+        total_questions = total_result['count'] if total_result else 0
+        
+        return render_template('admin_export_document.html', 
+                               categories=categories,
+                               total_questions=total_questions)
+    except Exception as e:
+        flash(f'Virhe sivun lataamisessa: {str(e)}', 'danger')
+        app.logger.error(f"Export page load error: {e}")
+        return redirect(url_for('admin_route'))
 
-# ============================================================================
-# DOKUMENTTIEN LUONTIFUNKTIOT
-# ============================================================================
 
 def create_pdf_document(questions, include_answers, duplicate_info=None):
     """Luo ammattimaisen PDF-dokumentin kysymyksistä."""
@@ -1605,6 +2109,7 @@ def create_pdf_document(questions, include_answers, duplicate_info=None):
     buffer.seek(0)
     return buffer
 
+
 def create_word_document(questions, include_answers, duplicate_info=None):
     """Luo ammattimaisen Word-dokumentin kysymyksistä."""
     doc = Document()
@@ -1736,147 +2241,7 @@ def create_word_document(questions, include_answers, duplicate_info=None):
     buffer = BytesIO()
     doc.save(buffer)
     buffer.seek(0)
-    return buffer
-
-@app.route("/admin/export_questions_document", methods=['GET', 'POST'])
-@admin_required
-def admin_export_questions_document_route():
-    """Vie kysymykset PDF- tai Word-dokumenttiin ammattimaisessa muodossa."""
-    
-    if request.method == 'POST':
-        export_format = request.form.get('format', 'pdf')
-        include_answers = request.form.get('include_answers') == 'on'
-        sort_by = request.form.get('sort_by', 'id')
-        check_duplicates = request.form.get('check_duplicates') == 'on'
-        selected_categories = request.form.getlist('categories')
-        selected_difficulties = request.form.getlist('difficulties')
-        
-        try:
-            # Rakenna kysely suodattimilla
-            query = "SELECT * FROM questions WHERE 1=1"
-            params = []
-            
-            if selected_categories:
-                placeholders = ','.join('?' * len(selected_categories))
-                query += f" AND category IN ({placeholders})"
-                params.extend(selected_categories)
-            
-            if selected_difficulties:
-                placeholders = ','.join('?' * len(selected_difficulties))
-                query += f" AND difficulty IN ({placeholders})"
-                params.extend(selected_difficulties)
-            
-            # Järjestys
-            sort_mapping = {
-                'id': 'id ASC',
-                'id_desc': 'id DESC',
-                'category': 'category ASC, id ASC',
-                'difficulty': 'CASE difficulty WHEN "helppo" THEN 1 WHEN "keskivaikea" THEN 2 WHEN "vaikea" THEN 3 END, id ASC',
-                'alphabetical': 'question ASC'
-            }
-            query += f" ORDER BY {sort_mapping.get(sort_by, 'id ASC')}"
-            
-            questions = db_manager._execute(query, tuple(params), fetch='all')
-                    
-            if not questions:
-                flash('Ei kysymyksiä vietäväksi valituilla suodattimilla.', 'warning')
-                return redirect(url_for('admin_export_questions_document_route'))
-            
-            # Tarkista duplikaatit jos pyydetty
-            duplicate_info = None
-            if check_duplicates:
-                similar = db_manager.find_similar_questions(0.95)
-                if similar:
-                    duplicate_info = f"⚠️ Löydettiin {len(similar)} mahdollista duplikaattia!"
-            
-            # Muunna kysymykset listaksi
-            questions_list = []
-            for q in questions:
-                questions_list.append({
-                    'id': q['id'],
-                    'question': q['question'],
-                    'options': json.loads(q['options']),
-                    'correct': q['correct'],
-                    'explanation': q['explanation'],
-                    'category': q['category'],
-                    'difficulty': q['difficulty']
-                })
-            
-            # Luo dokumentti
-            if export_format == 'pdf':
-                pdf_buffer = create_pdf_document(questions_list, include_answers, duplicate_info)
-                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-                filename = f'LOVe_Kysymykset_{timestamp}.pdf'
-                
-                response = make_response(pdf_buffer.getvalue())
-                response.headers['Content-Type'] = 'application/pdf'
-                response.headers['Content-Disposition'] = f'attachment; filename={filename}'
-                
-                app.logger.info(f"Admin {current_user.username} exported {len(questions_list)} questions to PDF")
-                return response
-            
-            else:  # Word
-                doc_buffer = create_word_document(questions_list, include_answers, duplicate_info)
-                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-                filename = f'LOVe_Kysymykset_{timestamp}.docx'
-                
-                response = make_response(doc_buffer.getvalue())
-                response.headers['Content-Type'] = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-                response.headers['Content-Disposition'] = f'attachment; filename={filename}'
-                
-                app.logger.info(f"Admin {current_user.username} exported {len(questions_list)} questions to Word")
-                return response
-            
-        except Exception as e:
-            flash(f'Virhe dokumentin luomisessa: {str(e)}', 'danger')
-            app.logger.error(f"Document export error: {e}")
-            import traceback
-            traceback.print_exc()
-            return redirect(url_for('admin_export_questions_document_route'))
-    
-    # GET - Näytä lomake
-    try:
-        categories = db_manager.get_categories()
-        
-        total_result = db_manager._execute("SELECT COUNT(*) as count FROM questions", fetch='one')
-        total_questions = total_result['count'] if total_result else 0
-        
-        return render_template('admin_export_document.html', 
-                               categories=categories,
-                               total_questions=total_questions)
-    except Exception as e:
-        flash(f'Virhe sivun lataamisessa: {str(e)}', 'danger')
-        app.logger.error(f"Export page load error: {e}")
-        return redirect(url_for('admin_route'))
-
-@app.route("/admin/find_duplicates", methods=['GET', 'POST'])
-@admin_required
-def admin_find_duplicates_route():
-    """Etsii duplikaatit ja samankaltaiset kysymykset."""
-    
-    if request.method == 'POST':
-        # Hae threshold lomakkeesta (oletuksena 95%)
-        similarity_threshold = float(request.form.get('threshold', 95)) / 100
-        
-        try:
-            similar_questions = db_manager.find_similar_questions(similarity_threshold)
-            
-            if not similar_questions:
-                flash(f'✅ Ei löytynyt duplikaatteja tai samankaltaisuus {similarity_threshold*100:.0f}% kysymyksiä!', 'success')
-            else:
-                flash(f'🔍 Löydettiin {len(similar_questions)} samankaltaista kysymysparia (kynnys: {similarity_threshold*100:.0f}%)', 'info')
-            
-            return render_template('admin_duplicates.html', 
-                                   similar_questions=similar_questions, 
-                                   threshold=similarity_threshold*100)
-        
-        except Exception as e:
-            flash(f'Virhe duplikaattien etsinnässä: {str(e)}', 'danger')
-            app.logger.error(f"Duplicate search error: {e}")
-            return redirect(url_for('admin_route'))
-    
-    # GET-pyyntö: näytä lomake
-    return render_template('admin_duplicates.html', similar_questions=None, threshold=95)
+    return buffer  
 
 @app.route("/admin/merge_categories", methods=['POST'])
 @admin_required
@@ -1908,7 +2273,7 @@ def admin_merge_categories_route():
 def admin_export_questions_route():
     """Vie kaikki kysymykset JSON-tiedostoon."""
     try:
-        questions = db_manager._execute("""
+        questions = execute_query("""
             SELECT id, question, explanation, options, correct, category, difficulty, created_at
             FROM questions
             ORDER BY category, id
@@ -1933,6 +2298,7 @@ def admin_export_questions_route():
         
         app.logger.info(f"Admin {current_user.username} exported {len(questions_list)} questions")
         
+        from flask import make_response
         response = make_response(json_data)
         response.headers['Content-Type'] = 'application/json; charset=utf-8'
         response.headers['Content-Disposition'] = f'attachment; filename={filename}'
@@ -1960,6 +2326,9 @@ def edit_user_settings(user_id):
         flash(f'Virhe päivitettäessä asetuksia: {error}', 'error')
     return redirect(url_for('admin_users_route'))
 
+#==============================================================================
+# --- ADMIN: TESTIKÄYTTÄJIEN LUONTI ---
+#==============================================================================
 @app.route('/admin/create-test-users', methods=['POST'])
 @admin_required
 def admin_create_test_users_route():
@@ -2008,9 +2377,10 @@ def admin_create_test_users_route():
 
     return render_template('admin_show_created_users.html', created_users=created_users, expiration_days=expiration_days, expires_at=expires_at)
 
-# ============================================================================
-# VIRHEKÄSITTELY
-# ============================================================================
+
+#==============================================================================
+# --- VIRHEKÄSITTELY ---
+#==============================================================================
 
 @app.errorhandler(404)
 def not_found_error(error):
@@ -2034,9 +2404,9 @@ def ratelimit_error(error):
         'retry_after': error.description
     }), 429
 
-# ============================================================================
-# SOVELLUKSEN KÄYNNISTYS
-# ============================================================================
+#==============================================================================
+# --- SOVELLUKSEN KÄYNNISTYS ---
+#==============================================================================
 
 @app.route('/init-database-now')
 def init_database_now():
@@ -2054,6 +2424,7 @@ def init_database_now():
     except Exception as e:
         app.logger.error(f"Virhe tietokannan alustuksessa: {e}")
         return f"❌ Virhe taulujen luomisessa: {str(e)}"
+
 
 @app.route('/emergency-reset-admin')
 def emergency_reset_admin():
@@ -2251,9 +2622,3 @@ def emergency_reset_admin():
         </body>
         </html>
         """
-
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=DEBUG_MODE)
-
-#testi#
