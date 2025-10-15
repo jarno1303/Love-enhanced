@@ -118,6 +118,7 @@
 
 {% block scripts %}
 <script>
+    // --- Alkuperäiset muuttujat Flaskilta ---
     const sessionData = {{ session_data | tojson }};
     const questionsData = {{ questions_data | tojson }};
     const hasExistingSession = {{ has_existing_session | tojson }};
@@ -126,6 +127,7 @@
     const userDistractorsEnabled = {{ current_user.distractors_enabled|tojson|safe }};
     const userDistractorProbability = {{ current_user.distractor_probability or 25 }} / 100.0;
     
+    // --- Globaalit muuttujat simulaatiolle ---
     let currentDistractor = null;
     let currentQuestionIndex = 0;
     let answers = [];
@@ -136,18 +138,41 @@
     let calcCurrentValue = '0', calcOperator = '', calcPreviousValue = '';
     let isDragging = false, xOffset = 0, yOffset = 0;
 
+    // --- PÄÄLOGIIKKA SIVUN LATAUTUESSA ---
     document.addEventListener('DOMContentLoaded', () => {
-        distractorModalInstance = new bootstrap.Modal(document.getElementById('distractorModal'));
-        initCalculatorDrag();
+        // TÄRKEÄ Vianetsintä: Tulostetaan konsoliin data, jonka sivu sai.
+        console.log("--- DEBUG DATA ---");
+        console.log("Saapuva data:", { 
+            hasExistingSession: hasExistingSession, 
+            sessionData: sessionData, 
+            questionsDataLength: questionsData ? questionsData.length : 'questionsData puuttuu' 
+        });
+        console.log("--- END DEBUG ---");
 
-        if (hasExistingSession && !sessionData.user_id) {
-            document.getElementById('start-screen').style.display = 'block';
-        } else if (questionsData && questionsData.length > 0) {
+        const startScreen = document.getElementById('start-screen');
+        const simulationContainer = document.getElementById('simulation-container');
+
+        if (!startScreen || !simulationContainer) {
+            console.error("KRIITTINEN VIRHE: Tarvittavia elementtejä (start-screen tai simulation-container) ei löydy sivulta!");
+            return;
+        }
+
+        // Päätetään, näytetäänkö simulaatio vai aloitussivu
+        if (questionsData && questionsData.length > 0) {
+            console.log("Päätös: Dataa on, aloitetaan simulaatio.");
             startSimulation();
         } else {
-            document.getElementById('start-screen').style.display = 'block';
+            console.log("Päätös: Ei dataa, näytetään aloitussivu.");
+            startScreen.style.display = 'block';
+            simulationContainer.classList.add('d-none'); // Varmistetaan että simulaatio on piilossa
         }
+
+        // Alustetaan modaalit ja muut toiminnallisuudet
+        distractorModalInstance = new bootstrap.Modal(document.getElementById('distractorModal'));
+        initCalculatorDrag();
     });
+
+    // --- KAIKKI MUUT FUNKTIOT (startSimulation, showQuestion, jne.) OVAT TÄSMÄLLEEN SAMAT KUIN ENNEN ---
 
     function startSimulation() {
         document.getElementById('simulation-container').classList.remove('d-none');
@@ -344,8 +369,8 @@
                 <h1 class="display-4">Koe suoritettu!</h1>
                 <p class="lead">Tuloksesi: <strong>${result.score} / ${result.total} (${result.percentage.toFixed(1)}%)</strong></p>
                 <div class="d-flex justify-content-center gap-2 mt-3 mb-4">
-                     <a href="{{ url_for('dashboard_route') }}" class="btn btn-primary">Palaa etusivulle</a>
-                     <a href="{{ url_for('simulation_route', new='true') }}" class="btn btn-outline-secondary">Yritä uudelleen</a>
+                       <a href="{{ url_for('dashboard_route') }}" class="btn btn-primary">Palaa etusivulle</a>
+                       <a href="{{ url_for('simulation_route', new='true') }}" class="btn btn-outline-secondary">Yritä uudelleen</a>
                 </div>
                 <hr>
                 <h3 class="mt-4">Vastausten erittely</h3>
