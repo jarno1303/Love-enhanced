@@ -212,36 +212,36 @@ class DatabaseManager:
         )
 
     def get_next_test_user_number(self):
-    """Palauttaa seuraavan vapaan testuser-numeron."""  # ← LISÄÄ 4 VÄLILYÖNTIÄ TÄHÄN!
-    try:
-        test_users = self._execute("SELECT username FROM users WHERE username LIKE 'testuser%'", fetch='all')
-        if not test_users: 
-            return 1
-        
-        max_num = 0
-        for user in test_users:
-            try:
-                # Yritä ensin dictionary-notaatiota (PostgreSQL DictCursor)
-                username = user['username']
-            except (KeyError, TypeError):
-                # Jos ei toimi, käytä tuple-indeksointia (SQLite)
-                username = user[0]
+        """Palauttaa seuraavan vapaan testuser-numeron."""
+        try:
+            test_users = self._execute("SELECT username FROM users WHERE username LIKE 'testuser%'", fetch='all')
+            if not test_users: 
+                return 1
             
-            # Poista 'testuser' alusta ja tarkista onko numero
-            num_part = username.replace('testuser', '')
-            if num_part.isdigit():
-                num = int(num_part)
-                if num > max_num: 
-                    max_num = num
-        
-        return max_num + 1
-        
-    except Exception as e:
-        logger.error(f"Virhe testuser-numeron haussa: {e}")
-        import traceback
-        traceback.print_exc()
-        # Jos kaikki muut epäonnistuu, palauta 1
-        return 1
+            max_num = 0
+            for user in test_users:
+                try:
+                    # Yritä ensin dictionary-notaatiota (PostgreSQL DictCursor)
+                    username = user['username']
+                except (KeyError, TypeError):
+                    # Jos ei toimi, käytä tuple-indeksointia (SQLite)
+                    username = user[0]
+                
+                # Poista 'testuser' alusta ja tarkista onko numero
+                num_part = username.replace('testuser', '')
+                if num_part.isdigit():
+                    num = int(num_part)
+                    if num > max_num: 
+                        max_num = num
+            
+            return max_num + 1
+            
+        except Exception as e:
+            logger.error(f"Virhe testuser-numeron haussa: {e}")
+            import traceback
+            traceback.print_exc()
+            # Jos kaikki muut epäonnistuu, palauta 1
+            return 1
 
     def update_user_password(self, user_id, new_hashed_password):
         """Päivittää käyttäjän salasanan."""
@@ -348,20 +348,17 @@ class DatabaseManager:
             explanation=row['explanation'],
             category=row['category'],
             difficulty=row['difficulty']
-        )  # ✅ SULKU LISÄTTY TÄHÄN!
+        )
     
     def get_categories(self):
         """Hakee kaikki kategoriat tietokannasta."""
         rows = self._execute("SELECT DISTINCT category FROM questions ORDER BY category", fetch='all')
         return [row['category'] for row in rows] if rows else []
 
-    # =========================================================================
-    # TÄMÄ FUNKTIO ON KORJATTU ✅
-    # =========================================================================
     def get_questions(self, user_id, categories=None, difficulties=None, limit=10):
         """Hakee satunnaisia kysymyksiä tehokkaasti annettujen suodattimien perusteella."""
         try:
-            limit = int(limit) # Varmista, että limit on kokonaisluku
+            limit = int(limit)
             logger.info(f"Fetching {limit} questions for user_id={user_id}, categories={categories}, difficulties={difficulties}")
             
             # --- Vaihe 1: Hae vain suodatusta vastaavien kysymysten ID:t ---
@@ -423,7 +420,7 @@ class DatabaseManager:
                     except (json.JSONDecodeError, TypeError) as e:
                         logger.error(f"Error processing question data for ID {row.get('id', 'N/A')}: {e}")
             
-            # Sekoita lopullinen lista vielä kerran, koska IN-lauseke ei takaa järjestystä
+            # Sekoita lopullinen lista vielä kerran
             random.shuffle(questions)
             logger.info(f"Successfully fetched and processed {len(questions)} questions.")
             return questions
@@ -613,7 +610,6 @@ class DatabaseManager:
                     "UPDATE questions SET category = ? WHERE LOWER(category) = LOWER(?)", 
                     (new_cat, old_cat)
                 )
-                # PostgreSQL ja SQLite palauttavat eri tavalla - ei lasketa tässä
             
             # Laske lopputulema
             categories = self.get_categories()
