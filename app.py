@@ -378,13 +378,24 @@ def get_simulation_question_api(index):
 
     if 0 <= index < len(question_ids):
         question_id = question_ids[index]
-        # KORJAUS: Käytä db_manager eikä logic
         question = db_manager.get_question_by_id(question_id, current_user.id)
         if question:
             # Päivitä sessioon nykyinen indeksi
             session['simulation']['current_index'] = index
             session.modified = True
-            return jsonify(question.to_dict())
+            
+            # Rakenna JSON-vastaus manuaalisesti
+            return jsonify({
+                'id': question.id,
+                'question_text': question.question_text,
+                'options': question.options,
+                'correct': question.correct,
+                'explanation': question.explanation,
+                'category': question.category,
+                'difficulty': question.difficulty,
+                'source': getattr(question, 'source', ''),
+                'tags': getattr(question, 'tags', [])
+            })
         else:
             return jsonify({'error': f'Question with id {question_id} not found'}), 404
     else:
