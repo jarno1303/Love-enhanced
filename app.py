@@ -1656,6 +1656,7 @@ def admin_route():
         app.logger.error(f"Admin page error: {e}")
         import traceback
         traceback.print_exc()
+
         return redirect(url_for('dashboard_route'))
 
 @app.route("/admin/users")
@@ -2370,7 +2371,7 @@ def admin_export_questions_route():
                 'correct': q['correct'],
                 'category': q['category'],
                 'difficulty': q['difficulty'],
-                'created_at': q['created_at']
+                'created_at': q['created_at'].isoformat() if q['created_at'] else None
             })
         
         json_data = json.dumps(questions_list, ensure_ascii=False, indent=2)
