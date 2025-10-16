@@ -212,22 +212,36 @@ class DatabaseManager:
         )
 
     def get_next_test_user_number(self):
-        """Palauttaa seuraavan vapaan testuser-numeron."""
-        try:
-            test_users = self._execute("SELECT username FROM users WHERE username LIKE 'testuser%'", fetch='all')
-            if not test_users: 
-                return 1
-            max_num = 0
-            for user in test_users:
-                num_part = user['username'].replace('testuser', '')
-                if num_part.isdigit():
-                    num = int(num_part)
-                    if num > max_num: 
-                        max_num = num
-            return max_num + 1
-        except Exception as e:
-            logger.error(f"Virhe testuser-numeron haussa: {e}")
+    """Palauttaa seuraavan vapaan testuser-numeron."""
+    try:
+        test_users = self._execute("SELECT username FROM users WHERE username LIKE 'testuser%'", fetch='all')
+        if not test_users: 
             return 1
+        
+        max_num = 0
+        for user in test_users:
+            try:
+                # Yritä ensin dictionary-notaatiota (PostgreSQL DictCursor)
+                username = user['username']
+            except (KeyError, TypeError):
+                # Jos ei toimi, käytä tuple-indeksointia (SQLite)
+                username = user[0]
+            
+            # Poista 'testuser' alusta ja tarkista onko numero
+            num_part = username.replace('testuser', '')
+            if num_part.isdigit():
+                num = int(num_part)
+                if num > max_num: 
+                    max_num = num
+        
+        return max_num + 1
+        
+    except Exception as e:
+        logger.error(f"Virhe testuser-numeron haussa: {e}")
+        import traceback
+        traceback.print_exc()
+        # Jos kaikki muut epäonnistuu, palauta 1
+        return 1
 
     def update_user_password(self, user_id, new_hashed_password):
         """Päivittää käyttäjän salasanan."""
