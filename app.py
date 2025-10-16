@@ -366,10 +366,6 @@ def send_reset_email(user_email, reset_url):
         app.logger.error(f"Failed to send email via Brevo: {e}")
         return False
     
-#==============================================================================
-# --- API-REITIT ---
-#==============================================================================
-
 @app.route('/api/simulation/question/<int:index>')
 @login_required
 def get_simulation_question_api(index):
@@ -382,7 +378,8 @@ def get_simulation_question_api(index):
 
     if 0 <= index < len(question_ids):
         question_id = question_ids[index]
-        question = logic.question_manager.get_question_by_id(question_id)
+        # KORJAUS: Käytä db_manager eikä logic
+        question = db_manager.get_question_by_id(question_id, current_user.id)
         if question:
             # Päivitä sessioon nykyinen indeksi
             session['simulation']['current_index'] = index
