@@ -1630,18 +1630,50 @@ def admin_clear_database_route():
 def admin_route():
     """Admin-pääsivu - näyttää yleiskatsauksen ja toiminnot"""
     try:
-        # Hae tilastoja
-        total_questions = execute_query("SELECT COUNT(*) as count FROM questions", fetch='one')
-        total_users = execute_query("SELECT COUNT(*) as count FROM users", fetch='one')
-        total_categories = execute_query("SELECT COUNT(DISTINCT category) as count FROM questions", fetch='one')
+        # Hae tilastot
+        total_questions_result = execute_query("SELECT COUNT(*) as count FROM questions", fetch='one')
+        total_users_result = execute_query("SELECT COUNT(*) as count FROM users", fetch='one')
+        total_categories_result = execute_query("SELECT COUNT(DISTINCT category) as count FROM questions", fetch='one')
+        total_attempts_result = execute_query("SELECT COUNT(*) as count FROM question_attempts", fetch='one')
+        
+        total_questions = total_questions_result['count'] if total_questions_result else 0
+        total_users = total_users_result['count'] if total_users_result else 0
+        total_categories = total_categories_result['count'] if total_categories_result else 0
+        total_attempts = total_attempts_result['count'] if total_attempts_result else 0
+        
+        # Hae kategoriat ja niiden kysymysmäärät
+        categories = db_manager.get_categories()
+        category_counts = {}
+        for cat in categories:
+            count_result = execute_query(
+                "SELECT COUNT(*) as count FROM questions WHERE category = ?", 
+                (cat,), 
+                fetch='one'
+            )
+            category_counts[cat] = count_result['count'] if count_result else 0
+        
+        # Hae järjestelmän tiedot
+        import platform
+        system_info = {
+            'python_version': platform.python_version(),
+            'database_type': 'PostgreSQL' if db_manager.is_postgres else 'SQLite',
+            'database_path': db_manager.database_url if db_manager.is_postgres else db_manager.db_path
+        }
         
         return render_template("admin.html",
-                             total_questions=total_questions['count'] if total_questions else 0,
-                             total_users=total_users['count'] if total_users else 0,
-                             total_categories=total_categories['count'] if total_categories else 0)
+                             total_questions=total_questions,
+                             total_users=total_users,
+                             total_categories=total_categories,
+                             total_attempts=total_attempts,
+                             categories=categories,
+                             category_counts=category_counts,
+                             system_info=system_info)
+                             
     except Exception as e:
         flash(f'Virhe admin-sivun lataamisessa: {e}', 'danger')
         app.logger.error(f"Admin page error: {e}")
+        import traceback
+        traceback.print_exc()
         return redirect(url_for('dashboard_route'))
 
 @app.route("/admin/users")
