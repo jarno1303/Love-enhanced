@@ -52,7 +52,7 @@
 {% endblock %}
 
 
-{% block scripts %}
+{% block extra_scripts %}
 <script>
     const initialSessionData = {{ session_data | tojson }};
     const csrfToken = "{{ csrf_token() }}";
@@ -120,25 +120,25 @@
     async function showQuestion(index) {
         currentQuestionIndex = index;
         const wrapper = document.getElementById('question-content-wrapper');
-        wrapper.innerHTML = \`<div class="text-center p-5"><div class="spinner-border"></div></div>\`;
+        wrapper.innerHTML = `<div class="text-center p-5"><div class="spinner-border"></div></div>`;
         updateQuestionGrid();
 
         let question = questionsCache[index];
         if (!question) {
             try {
-                const response = await fetch(\`/api/simulation/question/\${index}\`);
+                const response = await fetch(`/api/simulation/question/${index}`);
                 if (!response.ok) throw new Error('Kysymyksen haku epäonnistui');
                 question = await response.json();
                 questionsCache[index] = question;
             } catch (error) {
-                wrapper.innerHTML = \`<div class="alert alert-danger">\${error.message}</div>\`;
+                wrapper.innerHTML = `<div class="alert alert-danger">${error.message}</div>`;
                 return;
             }
         }
         
-        let optionsHtml = question.options.map((option, i) => \`<div class="form-check"><input class="form-check-input" type="radio" name="answer" id="option\${i}" value="\${i}" \${answers[index] === i ? 'checked' : ''}><label class="form-check-label p-2 border rounded" for="option\${i}" style="cursor:pointer; width: 100%;">\${String.fromCharCode(65 + i)}. \${option}</label></div>\`).join('');
+        let optionsHtml = question.options.map((option, i) => `<div class="form-check"><input class="form-check-input" type="radio" name="answer" id="option${i}" value="${i}" ${answers[index] === i ? 'checked' : ''}><label class="form-check-label p-2 border rounded" for="option${i}" style="cursor:pointer; width: 100%;">${String.fromCharCode(65 + i)}. ${option}</label></div>`).join('');
             
-        wrapper.innerHTML = \`<h5 class="card-title">Kysymys \${index + 1} / \${questionIds.length}</h5><p class="fs-5">\${question.question}</p><div class="d-grid gap-3 mt-4">\${optionsHtml}</div>\`;
+        wrapper.innerHTML = `<h5 class="card-title">Kysymys ${index + 1} / ${questionIds.length}</h5><p class="fs-5">${question.question}</p><div class="d-grid gap-3 mt-4">${optionsHtml}</div>`;
         
         wrapper.querySelectorAll('input[name="answer"]').forEach(radio => {
             radio.addEventListener('change', (e) => {
@@ -181,12 +181,12 @@
         const answeredCount = answers.filter(a => a !== null).length;
         const progress = (answeredCount / questionIds.length) * 100;
         const bar = document.getElementById('progress-bar');
-        if (bar) bar.style.width = \`\${progress}%\`;
+        if (bar) bar.style.width = `${progress}%`;
     }
 
     function startTimer() {
         clearInterval(timerInterval);
-        updateTimerDisplay(); // Aseta aika heti näkyviin
+        updateTimerDisplay();
         timerInterval = setInterval(() => {
             timeRemaining--;
             updateTimerDisplay();
@@ -203,7 +203,7 @@
         const seconds = timeRemaining % 60;
         const timerEl = document.getElementById('timer');
         if (timerEl) {
-            timerEl.textContent = \`\${minutes}:\${seconds.toString().padStart(2, '0')}\`;
+            timerEl.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
             if (timeRemaining <= 300) {
                 timerEl.classList.add('text-danger');
             }
@@ -214,7 +214,7 @@
         const unanswered = answers.filter(a => a === null).length;
         let message = 'Haluatko varmasti palauttaa kokeen?';
         if (unanswered > 0) {
-            message += \` Sinulla on \${unanswered} vastaamatonta kysymystä.\`;
+            message += ` Sinulla on ${unanswered} vastaamatonta kysymystä.`;
         }
         if (confirm(message)) {
             finishSimulation();
@@ -268,32 +268,32 @@
         document.getElementById('floating-calculator-btn').classList.add('d-none');
         const resultsScreen = document.getElementById('results-screen');
         resultsScreen.classList.remove('d-none');
-        let detailedResultsHtml = result.detailed_results.map((res, index) => \`
+        let detailedResultsHtml = result.detailed_results.map((res, index) => `
             <div class="card mb-3">
                 <div class="card-body">
-                    <p><strong>\${index + 1}. \${res.question}</strong></p>
-                    <p class="\${res.is_correct ? 'text-success' : 'text-danger'}">
-                        <i class="fas \${res.is_correct ? 'fa-check-circle' : 'fa-times-circle'}"></i>
-                        Vastasit: \${res.user_answer_text || 'Ei vastattu'}
+                    <p><strong>${index + 1}. ${res.question}</strong></p>
+                    <p class="${res.is_correct ? 'text-success' : 'text-danger'}">
+                        <i class="fas ${res.is_correct ? 'fa-check-circle' : 'fa-times-circle'}"></i>
+                        Vastasit: ${res.user_answer_text || 'Ei vastattu'}
                     </p>
-                    \${!res.is_correct ? \`<p class="text-success">Oikea vastaus: \${res.correct_answer_text}</p>\` : ''}
-                    <p class="text-muted small">\${res.explanation}</p>
+                    ${!res.is_correct ? `<p class="text-success">Oikea vastaus: ${res.correct_answer_text}</p>` : ''}
+                    <p class="text-muted small">${res.explanation}</p>
                 </div>
             </div>
-        \`).join('');
-        resultsScreen.innerHTML = \`
+        `).join('');
+        resultsScreen.innerHTML = `
             <div class="card shadow-lg border-0 text-center p-4">
                 <h1 class="display-4">Koe suoritettu!</h1>
-                <p class="lead">Tuloksesi: <strong>\${result.score} / \${result.total} (\${result.percentage.toFixed(1)}%)</strong></p>
+                <p class="lead">Tuloksesi: <strong>${result.score} / ${result.total} (${result.percentage.toFixed(1)}%)</strong></p>
                 <div class="d-flex justify-content-center gap-2 mt-3 mb-4">
                     <a href="{{ url_for('dashboard_route') }}" class="btn btn-primary">Palaa etusivulle</a>
                     <a href="{{ url_for('simulation_route', new='true') }}" class="btn btn-outline-secondary">Yritä uudelleen</a>
                 </div>
                 <hr>
                 <h3 class="mt-4">Vastausten erittely</h3>
-                <div class="text-start mt-3" style="max-height: 400px; overflow-y: auto;">\${detailedResultsHtml}</div>
+                <div class="text-start mt-3" style="max-height: 400px; overflow-y: auto;">${detailedResultsHtml}</div>
             </div>
-        \`;
+        `;
     }
     
     let isDragging = false, xOffset = 0, yOffset = 0, calcCurrentValue = '0', calcOperator = '', calcPreviousValue = '';
