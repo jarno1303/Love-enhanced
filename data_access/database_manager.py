@@ -212,7 +212,7 @@ class DatabaseManager:
         )
 
     def get_next_test_user_number(self):
-    """Palauttaa seuraavan vapaan testuser-numeron."""
+    """Palauttaa seuraavan vapaan testuser-numeron."""  # ← LISÄÄ 4 VÄLILYÖNTIÄ TÄHÄN!
     try:
         test_users = self._execute("SELECT username FROM users WHERE username LIKE 'testuser%'", fetch='all')
         if not test_users: 
