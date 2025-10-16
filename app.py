@@ -384,17 +384,17 @@ def get_simulation_question_api(index):
             session['simulation']['current_index'] = index
             session.modified = True
             
-            # Rakenna JSON-vastaus manuaalisesti
+            # Rakenna JSON-vastaus oikeilla kentillä
             return jsonify({
                 'id': question.id,
-                'question_text': question.question_text,
+                'question': question.question,
                 'options': question.options,
                 'correct': question.correct,
                 'explanation': question.explanation,
                 'category': question.category,
                 'difficulty': question.difficulty,
-                'source': getattr(question, 'source', ''),
-                'tags': getattr(question, 'tags', [])
+                'times_shown': getattr(question, 'times_shown', 0),
+                'times_correct': getattr(question, 'times_correct', 0)
             })
         else:
             return jsonify({'error': f'Question with id {question_id} not found'}), 404
