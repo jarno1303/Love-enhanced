@@ -1688,6 +1688,87 @@ def admin_users_route():
         flash(f'Virhe käyttäjien haussa: {e}', 'danger')
         app.logger.error(f"Admin users fetch error: {e}")
         return redirect(url_for('admin_route'))
+    
+@app.route('/admin/create_test_users', methods=['POST'])
+@login_required
+@limiter.limit("10 per minute")
+def admin_create_test_users_route():
+    """Luo useita testikäyttäjiä kerralla."""
+    if current_user.role != 'admin':
+        flash('Sinulla ei ole oikeuksia tähän toimintoon.', 'danger')
+        return redirect(url_for('dashboard_route'))
+    
+    try:
+        user_count = int(request.form.get('user_count', 10))
+        expiration_days = int(request.form.get('expiration_days', 30))
+        
+        # Validoi syötteet
+        if user_count < 1 or user_count > 200:
+            flash('Käyttäjien määrän tulee olla 1-200 välillä.', 'warning')
+            return redirect(url_for('admin_users_route'))
+        
+        if expiration_days < 1 or expiration_days > 365:
+            flash('Voimassaoloajan tulee olla 1-365 päivää.', 'warning')
+            return redirect(url_for('admin_users_route'))
+        
+        # Hae seuraava vapaa testuser-numero
+        start_number = db_manager.get_next_test_user_number()
+        
+        # Laske vanhenemispäivä
+        from datetime import datetime, timedelta
+        expires_at = datetime.now() + timedelta(days=expiration_days)
+        
+        # Luo käyttäjät
+        created_count = 0
+        failed_count = 0
+        
+        for i in range(user_count):
+            username = f"testuser{start_number + i}"
+            email = f"test{start_number + i}@example.com"
+            # Yksinkertainen salasana testausta varten
+            password = "test1234"
+            hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
+            
+            success, error = db_manager.create_user(
+                username=username,
+                email=email,
+                hashed_password=hashed_password,
+                expires_at=expires_at
+            )
+            
+            if success:
+                created_count += 1
+            else:
+                failed_count += 1
+                app.logger.warning(f"Käyttäjän {username} luonti epäonnistui: {error}")
+        
+        # Näytä tulos käyttäjälle
+        if created_count > 0:
+            flash(
+                f'✅ Testikäyttäjät luotu onnistuneesti! '
+                f'Luotiin {created_count} käyttäjää (nimet olivat ehkä jo varattuja). '
+                f'Käyttäjänimet: testuser{start_number} - testuser{start_number + created_count - 1}. '
+                f'Salasana kaikille: test1234. '
+                f'Voimassaoloaika: {expiration_days} päivää.',
+                'success'
+            )
+        
+        if failed_count > 0:
+            flash(
+                f'⚠️ {failed_count} käyttäjän luonti epäonnistui (nimet olivat ehkä jo varattuja).',
+                'warning'
+            )
+        
+        if created_count == 0:
+            flash('❌ Ei uusia käyttäjiä luotu. Tämä voi johtua siitä, että kaikki ehdotetut käyttäjänimet olivat jo olemassa.', 'danger')
+        
+    except ValueError:
+        flash('Virheellinen syöte. Tarkista että syötit numeroita.', 'danger')
+    except Exception as e:
+        app.logger.error(f"Virhe testikäyttäjien luonnissa: {e}")
+        flash(f'Virhe testikäyttäjien luonnissa: {str(e)}', 'danger')
+    
+    return redirect(url_for('admin_users_route'))    
 
 @app.route("/admin/stats")
 @admin_required
