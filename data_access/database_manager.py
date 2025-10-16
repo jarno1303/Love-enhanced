@@ -334,6 +334,7 @@ class DatabaseManager:
             explanation=row['explanation'],
             category=row['category'],
             difficulty=row['difficulty']
+        )  # ✅ SULKU LISÄTTY TÄHÄN!
     
     def get_categories(self):
         """Hakee kaikki kategoriat tietokannasta."""
