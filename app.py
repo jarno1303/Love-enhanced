@@ -1628,7 +1628,21 @@ def admin_clear_database_route():
 @app.route("/admin")
 @admin_required
 def admin_route():
-    # ... vanha koodi tässä ...
+    """Admin-pääsivu - näyttää yleiskatsauksen ja toiminnot"""
+    try:
+        # Hae tilastoja
+        total_questions = execute_query("SELECT COUNT(*) as count FROM questions", fetch='one')
+        total_users = execute_query("SELECT COUNT(*) as count FROM users", fetch='one')
+        total_categories = execute_query("SELECT COUNT(DISTINCT category) as count FROM questions", fetch='one')
+        
+        return render_template("admin.html",
+                             total_questions=total_questions['count'] if total_questions else 0,
+                             total_users=total_users['count'] if total_users else 0,
+                             total_categories=total_categories['count'] if total_categories else 0)
+    except Exception as e:
+        flash(f'Virhe admin-sivun lataamisessa: {e}', 'danger')
+        app.logger.error(f"Admin page error: {e}")
+        return redirect(url_for('dashboard_route'))
 
 @app.route("/admin/users")
 @admin_required
