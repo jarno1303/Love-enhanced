@@ -843,6 +843,65 @@ def delete_active_session_route():
 def get_stats_api():
     return jsonify(stats_manager.get_learning_analytics(current_user.id))
 
+@app.route("/api/distractor_stats")
+@login_required
+@limiter.limit("60 per minute")
+def get_distractor_stats_api():
+    """Palauta häiriötekijätilastot käyttäjälle."""
+    try:
+        # Hae häiriötekijätilastot tietokannasta
+        query = """
+            SELECT 
+                COUNT(*) as total_attempts,
+                SUM(CASE WHEN is_correct THEN 1 ELSE 0 END) as correct_attempts,
+                AVG(response_time) as avg_response_time
+            FROM distractor_attempts 
+            WHERE user_id = ?
+        """
+        result = db_manager._execute(query, (current_user.id,), fetch='one')
+        
+        if not result or result['total_attempts'] == 0:
+            return jsonify({
+                'total_attempts': 0,
+                'success_rate': 0,
+                'avg_response_time': 0,
+                'category_stats': [],
+                'recent_attempts': []
+            })
+        
+        total = result['total_attempts'] or 0
+        correct = result['correct_attempts'] or 0
+        success_rate = round((correct / total * 100) if total > 0 else 0, 1)
+        
+        # Hae viimeisimmät häiriötilanteet
+        recent_query = """
+            SELECT distractor_scenario, is_correct, response_time, created_at
+            FROM distractor_attempts
+            WHERE user_id = ?
+            ORDER BY created_at DESC
+            LIMIT 5
+        """
+        recent = db_manager._execute(recent_query, (current_user.id,), fetch='all')
+        
+        return jsonify({
+            'total_attempts': total,
+            'success_rate': success_rate,
+            'avg_response_time': result['avg_response_time'] or 0,
+            'category_stats': [],
+            'recent_attempts': [dict(r) for r in (recent or [])]
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Virhe häiriötekijätilastojen haussa: {e}")
+        # Palauta tyhjä data virheen sijaan
+        return jsonify({
+            'total_attempts': 0,
+            'success_rate': 0,
+            'avg_response_time': 0,
+            'category_stats': [],
+            'recent_attempts': []
+        })
+
 @app.route("/api/achievements")
 @login_required
 @limiter.limit("60 per minute")
