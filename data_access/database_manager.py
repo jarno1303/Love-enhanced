@@ -214,7 +214,13 @@ class DatabaseManager:
     def get_next_test_user_number(self):
         """Palauttaa seuraavan vapaan testuser-numeron."""
         try:
-            test_users = self._execute("SELECT username FROM users WHERE username LIKE 'testuser%'", fetch='all')
+            # KORJAUS: Käytetään parametreja oikein PostgreSQL:lle ja SQLite:lle
+            test_users = self._execute(
+                "SELECT username FROM users WHERE username LIKE ?", 
+                ('testuser%',),  # ← TÄMÄ ON KRIITTINEN KORJAUS!
+                fetch='all'
+            )
+            
             if not test_users: 
                 return 1
             
@@ -240,8 +246,9 @@ class DatabaseManager:
             logger.error(f"Virhe testuser-numeron haussa: {e}")
             import traceback
             traceback.print_exc()
-            # Jos kaikki muut epäonnistuu, palauta 1
-            return 1
+            # Jos kaikki muut epäonnistuu, palauta satunnainen iso numero
+            import random
+            return random.randint(1000, 9999)
 
     def update_user_password(self, user_id, new_hashed_password):
         """Päivittää käyttäjän salasanan."""
