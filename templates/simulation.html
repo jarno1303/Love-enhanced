@@ -40,6 +40,14 @@
         </div>
     </div>
 
+    <!-- 3-2-1 Countdown Modal -->
+    <div id="countdown-modal" class="d-none" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 9999; display: flex; align-items: center; justify-content: center;">
+        <div class="text-center">
+            <div id="countdown-number" class="display-1 fw-bold text-white" style="font-size: 150px;"></div>
+            <p class="text-white fs-3 mt-3">Valmistaudu...</p>
+        </div>
+    </div>
+
     <div id="simulation-container" class="d-none"></div>
 
     <div id="results-screen" class="d-none"></div>
@@ -76,16 +84,43 @@
 
     async function initializeSimulation() {
         document.getElementById('start-screen').style.display = 'none';
-        document.getElementById('floating-calculator-btn').classList.remove('d-none');
         
         answers = initialSessionData.answers || [];
         questionIds = initialSessionData.question_ids || [];
         currentQuestionIndex = initialSessionData.current_index || 0;
         timeRemaining = initialSessionData.time_remaining || 3600;
         
+        // Jos aloitetaan alusta (current_index = 0), näytä countdown
+        if (currentQuestionIndex === 0) {
+            await showCountdown();
+        }
+        
+        document.getElementById('floating-calculator-btn').classList.remove('d-none');
         buildSimulationView();
         await showQuestion(currentQuestionIndex);
         startTimer();
+    }
+
+    // 3-2-1 Countdown
+    async function showCountdown() {
+        const modal = document.getElementById('countdown-modal');
+        const numberEl = document.getElementById('countdown-number');
+        modal.classList.remove('d-none');
+        modal.style.display = 'flex';
+        
+        const numbers = [3, 2, 1, 'ALOITA!'];
+        
+        for (let num of numbers) {
+            numberEl.textContent = num;
+            numberEl.style.animation = 'none';
+            setTimeout(() => {
+                numberEl.style.animation = 'pulse 1s ease-in-out';
+            }, 10);
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+        
+        modal.style.display = 'none';
+        modal.classList.add('d-none');
     }
 
     function buildSimulationView() {
@@ -136,16 +171,60 @@
             }
         }
         
-        let optionsHtml = question.options.map((option, i) => `<div class="form-check"><input class="form-check-input" type="radio" name="answer" id="option${i}" value="${i}" ${answers[index] === i ? 'checked' : ''}><label class="form-check-label p-2 border rounded" for="option${i}" style="cursor:pointer; width: 100%;">${String.fromCharCode(65 + i)}. ${option}</label></div>`).join('');
-            
-        wrapper.innerHTML = `<h5 class="card-title">Kysymys ${index + 1} / ${questionIds.length}</h5><p class="fs-5">${question.question}</p><div class="d-grid gap-3 mt-4">${optionsHtml}</div>`;
+        let optionsHtml = question.options.map((option, i) => `
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="answer" id="option${i}" value="${i}" ${answers[index] === i ? 'checked' : ''}>
+                <label class="form-check-label p-2 border rounded" for="option${i}" style="cursor:pointer; width: 100%;">
+                    ${String.fromCharCode(65 + i)}. ${option}
+                </label>
+            </div>
+        `).join('');
         
+        // Määritä seuraava-napin teksti ja toiminto
+        const isLastQuestion = index === questionIds.length - 1;
+        const nextButtonText = isLastQuestion ? '<i class="fas fa-flag-checkered me-2"></i>Viimeinen kysymys' : '<i class="fas fa-arrow-right me-2"></i>Seuraava kysymys';
+        const nextButtonClass = isLastQuestion ? 'btn-warning' : 'btn-primary';
+            
+        wrapper.innerHTML = `
+            <h5 class="card-title">Kysymys ${index + 1} / ${questionIds.length}</h5>
+            <p class="fs-5">${question.question}</p>
+            <div class="d-grid gap-3 mt-4 mb-4">${optionsHtml}</div>
+            <div class="d-flex gap-2 justify-content-between">
+                <button id="prev-btn" class="btn btn-outline-secondary" ${index === 0 ? 'disabled' : ''}>
+                    <i class="fas fa-arrow-left me-2"></i>Edellinen
+                </button>
+                <button id="next-btn" class="btn ${nextButtonClass}">
+                    ${nextButtonText}
+                </button>
+            </div>
+        `;
+        
+        // Lisää event listenerit vastausvalinnoille
         wrapper.querySelectorAll('input[name="answer"]').forEach(radio => {
             radio.addEventListener('change', (e) => {
                 answers[currentQuestionIndex] = parseInt(e.target.value);
                 updateQuestionGrid();
                 updateProgress();
             });
+        });
+        
+        // Edellinen-nappi
+        const prevBtn = document.getElementById('prev-btn');
+        if (prevBtn && index > 0) {
+            prevBtn.addEventListener('click', () => showQuestion(index - 1));
+        }
+        
+        // Seuraava-nappi
+        const nextBtn = document.getElementById('next-btn');
+        nextBtn.addEventListener('click', () => {
+            if (isLastQuestion) {
+                // Jos viimeinen kysymys, vieritä ylös näyttämään "Palauta koe" -nappi
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                alert('Olet viimeisellä kysymyksellä! Kun olet valmis, paina "Tarkista ja palauta koe" -nappia oikealla.');
+            } else {
+                // Siirry seuraavaan kysymykseen
+                showQuestion(index + 1);
+            }
         });
     }
 
@@ -381,4 +460,11 @@
         isDragging = false;
     }
 </script>
+
+<style>
+    @keyframes pulse {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.2); opacity: 0.8; }
+    }
+</style>
 {% endblock %}
