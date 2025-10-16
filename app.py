@@ -1628,55 +1628,7 @@ def admin_clear_database_route():
 @app.route("/admin")
 @admin_required
 def admin_route():
-    # Hae hakuparametrit
-    search_query = request.args.get('search', '').strip()
-    category_filter = request.args.get('category', '')
-    difficulty_filter = request.args.get('difficulty', '')
-    
-    try:
-        # Rakenna kysely dynaamisesti
-        query = "SELECT id, question, category, difficulty FROM questions WHERE 1=1"
-        params = []
-        
-        # Tekstihaku
-        if search_query:
-            query += " AND (question LIKE ? OR explanation LIKE ?)"
-            search_param = f"%{search_query}%"
-            params.extend([search_param, search_param])
-        
-        # Kategoria-suodatus
-        if category_filter:
-            query += " AND category = ?"
-            params.append(category_filter)
-        
-        # Vaikeustaso-suodatus
-        if difficulty_filter:
-            query += " AND difficulty = ?"
-            params.append(difficulty_filter)
-        
-        query += " ORDER BY id DESC"
-        
-        questions = execute_query(query, tuple(params), fetch='all')
-        
-        # Hae kaikki kategoriat ja vaikeustasot dropdown-valikoita varten
-        categories_result = execute_query("SELECT DISTINCT category FROM questions ORDER BY category", fetch='all')
-        categories = [row['category'] for row in categories_result] if categories_result else []
-        
-        difficulties_result = execute_query("SELECT DISTINCT difficulty FROM questions ORDER BY difficulty", fetch='all')
-        difficulties = [row['difficulty'] for row in difficulties_result] if difficulties_result else []
-        
-        return render_template("admin.html", 
-                               questions=[dict(row) for row in questions] if questions else [],
-                               categories=categories,
-                               difficulties=difficulties,
-                               search_query=search_query,
-                               category_filter=category_filter,
-                               difficulty_filter=difficulty_filter,
-                               total_count=len(questions) if questions else 0)
-    except Exception as e:
-        flash(f'Virhe kysymysten haussa: {e}', 'danger')
-        app.logger.error(f"Admin questions fetch error: {e}")
-        return render_template("admin.html", questions=[], categories=[], difficulties=[])
+    # ... vanha koodi tässä ...
 
 @app.route("/admin/users")
 @admin_required

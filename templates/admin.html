@@ -1,407 +1,824 @@
 {% extends "base.html" %}
-{% block title %}Admin-paneeli{% endblock %}
+
+{% block title %}Admin Dashboard - LOVe Enhanced{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+    :root {
+        --admin-primary: #5b21b6;
+        --admin-secondary: #7c3aed;
+        --admin-success: #10b981;
+        --admin-warning: #f59e0b;
+        --admin-danger: #ef4444;
+        --admin-info: #3b82f6;
+        --admin-dark: #1f2937;
+        --admin-light-bg: #f9fafb;
+        --card-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+        --card-shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+
+    body {
+        background: var(--admin-light-bg);
+    }
+
+    /* Dashboard Header */
+    .dashboard-header {
+        background: white;
+        border-bottom: 1px solid #e5e7eb;
+        padding: 2rem 0;
+        margin-bottom: 2rem;
+        border-radius: 12px;
+        box-shadow: var(--card-shadow);
+    }
+
+    .dashboard-title {
+        color: var(--admin-dark);
+        font-size: 2rem;
+        font-weight: 700;
+        margin: 0;
+    }
+
+    .dashboard-subtitle {
+        color: #6b7280;
+        font-size: 0.95rem;
+        margin-top: 0.5rem;
+    }
+
+    /* KPI Cards */
+    .kpi-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: var(--card-shadow);
+        transition: all 0.3s ease;
+        border: 1px solid #e5e7eb;
+        height: 100%;
+    }
+
+    .kpi-card:hover {
+        box-shadow: var(--card-shadow-hover);
+        transform: translateY(-2px);
+    }
+
+    .kpi-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .kpi-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--admin-dark);
+        margin: 0;
+    }
+
+    .kpi-label {
+        color: #6b7280;
+        font-size: 0.9rem;
+        margin-top: 0.25rem;
+    }
+
+    /* Tab Navigation */
+    .tab-navigation {
+        background: white;
+        border-radius: 12px;
+        padding: 0.5rem;
+        box-shadow: var(--card-shadow);
+        margin-bottom: 2rem;
+        display: flex;
+        gap: 0.5rem;
+        overflow-x: auto;
+    }
+
+    .tab-btn {
+        padding: 0.75rem 1.5rem;
+        border: none;
+        background: transparent;
+        color: #6b7280;
+        font-weight: 500;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+        white-space: nowrap;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .tab-btn:hover {
+        background: var(--admin-light-bg);
+        color: var(--admin-dark);
+    }
+
+    .tab-btn.active {
+        background: var(--admin-primary);
+        color: white;
+    }
+
+    /* Content Card */
+    .content-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: var(--card-shadow);
+        margin-bottom: 1.5rem;
+    }
+
+    .content-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .content-card-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--admin-dark);
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    /* Quick Actions */
+    .quick-actions {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+    }
+
+    .quick-action-btn {
+        padding: 1.25rem;
+        border: 2px dashed #d1d5db;
+        border-radius: 10px;
+        background: white;
+        cursor: pointer;
+        transition: all 0.3s;
+        text-align: center;
+        color: #6b7280;
+        text-decoration: none;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .quick-action-btn:hover {
+        border-color: var(--admin-primary);
+        background: #faf5ff;
+        color: var(--admin-primary);
+        transform: translateY(-2px);
+    }
+
+    .quick-action-icon {
+        font-size: 2rem;
+    }
+
+    /* Modern Button Styles */
+    .btn-modern {
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 500;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .btn-modern-primary {
+        background: var(--admin-primary);
+        color: white;
+    }
+
+    .btn-modern-primary:hover {
+        background: var(--admin-secondary);
+        transform: translateY(-1px);
+    }
+
+    .btn-modern-success {
+        background: var(--admin-success);
+        color: white;
+    }
+
+    .btn-modern-danger {
+        background: var(--admin-danger);
+        color: white;
+    }
+
+    /* Tab Content */
+    .tab-content-pane {
+        display: none;
+    }
+
+    .tab-content-pane.active {
+        display: block;
+    }
+
+    /* Form Styles */
+    .modern-form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .modern-form-label {
+        display: block;
+        font-weight: 500;
+        color: var(--admin-dark);
+        margin-bottom: 0.5rem;
+    }
+
+    .modern-form-input,
+    .modern-form-select,
+    .modern-form-textarea {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 0.95rem;
+        transition: all 0.2s;
+    }
+
+    .modern-form-input:focus,
+    .modern-form-select:focus,
+    .modern-form-textarea:focus {
+        outline: none;
+        border-color: var(--admin-primary);
+        box-shadow: 0 0 0 3px rgba(91, 33, 182, 0.1);
+    }
+
+    /* Questions Table */
+    .questions-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0 0.5rem;
+    }
+
+    .questions-table thead th {
+        background: var(--admin-light-bg);
+        padding: 1rem;
+        text-align: left;
+        font-weight: 600;
+        color: var(--admin-dark);
+        border: none;
+    }
+
+    .questions-table tbody tr {
+        background: white;
+        transition: all 0.2s;
+    }
+
+    .questions-table tbody tr:hover {
+        box-shadow: var(--card-shadow);
+        transform: translateY(-1px);
+    }
+
+    .questions-table tbody td {
+        padding: 1rem;
+        border-top: 1px solid #e5e7eb;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .questions-table tbody td:first-child {
+        border-left: 1px solid #e5e7eb;
+        border-radius: 8px 0 0 8px;
+    }
+
+    .questions-table tbody td:last-child {
+        border-right: 1px solid #e5e7eb;
+        border-radius: 0 8px 8px 0;
+    }
+
+    /* Badge Styles */
+    .badge-modern {
+        padding: 0.35rem 0.75rem;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        font-weight: 500;
+    }
+
+    .badge-primary { background: #ede9fe; color: var(--admin-primary); }
+    .badge-success { background: #d1fae5; color: var(--admin-success); }
+    .badge-warning { background: #fef3c7; color: var(--admin-warning); }
+    .badge-danger { background: #fee2e2; color: var(--admin-danger); }
+    .badge-info { background: #dbeafe; color: var(--admin-info); }
+
+    /* Color Utilities */
+    .bg-primary-light { background: #ede9fe; color: var(--admin-primary); }
+    .bg-success-light { background: #d1fae5; color: var(--admin-success); }
+    .bg-warning-light { background: #fef3c7; color: var(--admin-warning); }
+    .bg-danger-light { background: #fee2e2; color: var(--admin-danger); }
+    .bg-info-light { background: #dbeafe; color: var(--admin-info); }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .dashboard-title {
+            font-size: 1.5rem;
+        }
+        
+        .kpi-value {
+            font-size: 1.5rem;
+        }
+    }
+
+    /* File Upload Area */
+    .upload-area {
+        border: 2px dashed #d1d5db;
+        border-radius: 12px;
+        padding: 2rem;
+        text-align: center;
+        transition: all 0.3s;
+        cursor: pointer;
+    }
+
+    .upload-area:hover {
+        border-color: var(--admin-primary);
+        background: #faf5ff;
+    }
+
+    .upload-area.dragover {
+        border-color: var(--admin-primary);
+        background: #ede9fe;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="container-fluid px-4">
-    <div class="d-flex justify-content-between align-items-center mb-4 mt-3">
-        <h1 class="mb-0"><i class="bi bi-shield-lock-fill text-primary me-2"></i>Admin-paneeli</h1>
-    </div>
-
-    <!-- Hakulomake -->
-    <div class="card shadow-sm mb-4 border-0">
-        <div class="card-body">
-            <form method="GET" action="{{ url_for('admin_route') }}" class="row g-3">
-                <div class="col-md-4">
-                    <label for="search" class="form-label fw-semibold">
-                        <i class="bi bi-search me-1"></i> Hae kysymyksistä
-                    </label>
-                    <input type="text" class="form-control" id="search" name="search" 
-                           placeholder="Etsi kysymystekstistä tai selityksestä..." 
-                           value="{{ search_query }}">
+<div class="container-fluid px-4 py-4">
+    
+    <!-- Dashboard Header -->
+    <div class="dashboard-header">
+        <div class="container-fluid">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="dashboard-title">
+                        <i class="fas fa-gauge-high me-2"></i>
+                        Admin Dashboard
+                    </h1>
+                    <p class="dashboard-subtitle">Hallinnoi kysymyksiä, käyttäjiä ja järjestelmän asetuksia</p>
                 </div>
-                <div class="col-md-3">
-                    <label for="category" class="form-label fw-semibold">
-                        <i class="bi bi-folder me-1"></i> Kategoria
-                    </label>
-                    <select class="form-select" id="category" name="category">
-                        <option value="">Kaikki kategoriat</option>
-                        {% for cat in categories %}
-                        <option value="{{ cat }}" {% if cat == category_filter %}selected{% endif %}>
-                            {{ cat.title() }}
-                        </option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label for="difficulty" class="form-label fw-semibold">
-                        <i class="bi bi-speedometer2 me-1"></i> Vaikeustaso
-                    </label>
-                    <select class="form-select" id="difficulty" name="difficulty">
-                        <option value="">Kaikki tasot</option>
-                        {% for diff in difficulties %}
-                        <option value="{{ diff }}" {% if diff == difficulty_filter %}selected{% endif %}>
-                            {{ diff.title() }}
-                        </option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-2 d-flex align-items-end">
-                    <button type="submit" class="btn btn-primary w-100 me-2">
-                        <i class="bi bi-funnel-fill me-1"></i> Hae
-                    </button>
-                    <a href="{{ url_for('admin_route') }}" class="btn btn-outline-secondary">
-                        <i class="bi bi-x-lg"></i>
+                <div>
+                    <a href="/dashboard" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Takaisin dashboardiin
                     </a>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- KPI Cards -->
+    <div class="row g-4 mb-4">
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="kpi-card">
+                <div class="kpi-icon bg-primary-light">
+                    <i class="fas fa-question-circle"></i>
+                </div>
+                <h2 class="kpi-value">{{ question_count }}</h2>
+                <p class="kpi-label">Kysymystä tietokannassa</p>
+            </div>
+        </div>
+        
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="kpi-card">
+                <div class="kpi-icon bg-success-light">
+                    <i class="fas fa-users"></i>
+                </div>
+                <h2 class="kpi-value">{{ user_count }}</h2>
+                <p class="kpi-label">Rekisteröitynyttä käyttäjää</p>
+            </div>
+        </div>
+        
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="kpi-card">
+                <div class="kpi-icon bg-warning-light">
+                    <i class="fas fa-folder"></i>
+                </div>
+                <h2 class="kpi-value">{{ category_count }}</h2>
+                <p class="kpi-label">Kategoriaa käytössä</p>
+            </div>
+        </div>
+        
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="kpi-card">
+                <div class="kpi-icon bg-info-light">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <h2 class="kpi-value">{{ attempt_count }}</h2>
+                <p class="kpi-label">Kysymysyritystä yhteensä</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab Navigation -->
+    <div class="tab-navigation">
+        <button class="tab-btn active" data-tab="overview">
+            <i class="fas fa-home"></i> Yleiskuva
+        </button>
+        <button class="tab-btn" data-tab="questions">
+            <i class="fas fa-question-circle"></i> Kysymykset
+        </button>
+        <button class="tab-btn" data-tab="users">
+            <i class="fas fa-users"></i> Käyttäjät
+        </button>
+        <button class="tab-btn" data-tab="settings">
+            <i class="fas fa-cog"></i> Asetukset
+        </button>
+    </div>
+
+    <!-- Tab Content: Overview -->
+    <div class="tab-content-pane active" id="tab-overview">
+        
+        <!-- Quick Actions -->
+        <div class="content-card">
+            <div class="content-card-header">
+                <h3 class="content-card-title">
+                    <i class="fas fa-bolt"></i>
+                    Pikatoiminnot
+                </h3>
+            </div>
+            
+            <div class="quick-actions">
+                <a href="javascript:void(0)" class="quick-action-btn" onclick="showTab('questions')">
+                    <div class="quick-action-icon">
+                        <i class="fas fa-plus-circle"></i>
+                    </div>
+                    <div><strong>Lisää kysymys</strong></div>
+                    <small>Luo uusi kysymys manuaalisesti</small>
+                </a>
+                
+                <a href="/admin/users" class="quick-action-btn">
+                    <div class="quick-action-icon">
+                        <i class="fas fa-user-plus"></i>
+                    </div>
+                    <div><strong>Käyttäjien hallinta</strong></div>
+                    <small>Hallinnoi ja luo testikäyttäjiä</small>
+                </a>
+                
+                <a href="javascript:void(0)" class="quick-action-btn" onclick="showTab('questions'); document.getElementById('upload-json-section').scrollIntoView({behavior: 'smooth'});">
+                    <div class="quick-action-icon">
+                        <i class="fas fa-upload"></i>
+                    </div>
+                    <div><strong>Lataa JSON</strong></div>
+                    <small>Tuo kysymyksiä massana</small>
+                </a>
+                
+                <a href="/tilastot" class="quick-action-btn">
+                    <div class="quick-action-icon">
+                        <i class="fas fa-chart-bar"></i>
+                    </div>
+                    <div><strong>Tilastot</strong></div>
+                    <small>Näytä yksityiskohtaiset tilastot</small>
+                </a>
+            </div>
+        </div>
+
+        <!-- System Info -->
+        <div class="row g-4">
+            <div class="col-md-6">
+                <div class="content-card">
+                    <div class="content-card-header">
+                        <h3 class="content-card-title">
+                            <i class="fas fa-server"></i>
+                            Järjestelmän tila
+                        </h3>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
+                        <span><i class="fas fa-database me-2"></i>Tietokanta</span>
+                        <span class="badge bg-success">Toimii</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
+                        <span><i class="fas fa-plug me-2"></i>API</span>
+                        <span class="badge bg-success">Toimii</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-clock me-2"></i>Palvelin</span>
+                        <span class="text-muted">Railway</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="content-card">
+                    <div class="content-card-header">
+                        <h3 class="content-card-title">
+                            <i class="fas fa-info-circle"></i>
+                            Kategoriat
+                        </h3>
+                    </div>
+                    {% for category in categories %}
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="badge-modern badge-primary">{{ category }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab Content: Questions -->
+    <div class="tab-content-pane" id="tab-questions">
+        
+        <!-- Add Question Form -->
+        <div class="content-card">
+            <div class="content-card-header">
+                <h3 class="content-card-title">
+                    <i class="fas fa-plus-circle"></i>
+                    Lisää uusi kysymys
+                </h3>
+            </div>
+            
+            <form action="/admin/add_question" method="POST">
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="modern-form-group">
+                            <label class="modern-form-label">Kysymys *</label>
+                            <textarea class="modern-form-textarea" name="question" rows="3" required></textarea>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-12">
+                        <div class="modern-form-group">
+                            <label class="modern-form-label">Selitys *</label>
+                            <textarea class="modern-form-textarea" name="explanation" rows="3" required></textarea>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="modern-form-group">
+                            <label class="modern-form-label">Kategoria *</label>
+                            <select class="modern-form-select" name="category" required>
+                                <option value="">Valitse kategoria</option>
+                                {% for category in categories %}
+                                <option value="{{ category }}">{{ category }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="modern-form-group">
+                            <label class="modern-form-label">Vaikeustaso *</label>
+                            <select class="modern-form-select" name="difficulty" required>
+                                <option value="">Valitse vaikeustaso</option>
+                                <option value="Helppo">Helppo</option>
+                                <option value="Keskivaikea">Keskivaikea</option>
+                                <option value="Vaikea">Vaikea</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="modern-form-group">
+                            <label class="modern-form-label">Vastausvaihtoehto 1 *</label>
+                            <input type="text" class="modern-form-input" name="option_0" required>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="modern-form-group">
+                            <label class="modern-form-label">Vastausvaihtoehto 2 *</label>
+                            <input type="text" class="modern-form-input" name="option_1" required>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="modern-form-group">
+                            <label class="modern-form-label">Vastausvaihtoehto 3 *</label>
+                            <input type="text" class="modern-form-input" name="option_2" required>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="modern-form-group">
+                            <label class="modern-form-label">Vastausvaihtoehto 4 *</label>
+                            <input type="text" class="modern-form-input" name="option_3" required>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-12">
+                        <div class="modern-form-group">
+                            <label class="modern-form-label">Oikea vastaus (0-3) *</label>
+                            <select class="modern-form-select" name="correct" required>
+                                <option value="">Valitse oikea vastaus</option>
+                                <option value="0">Vaihtoehto 1</option>
+                                <option value="1">Vaihtoehto 2</option>
+                                <option value="2">Vaihtoehto 3</option>
+                                <option value="3">Vaihtoehto 4</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn-modern btn-modern-primary">
+                    <i class="fas fa-check"></i>
+                    Lisää kysymys
+                </button>
             </form>
         </div>
+
+        <!-- Upload JSON Section -->
+        <div class="content-card" id="upload-json-section">
+            <div class="content-card-header">
+                <h3 class="content-card-title">
+                    <i class="fas fa-file-upload"></i>
+                    Lataa kysymyksiä JSON-tiedostosta
+                </h3>
+            </div>
+            
+            <form action="/admin/upload_json" method="POST" enctype="multipart/form-data">
+                <div class="upload-area" onclick="document.getElementById('json-file').click()">
+                    <i class="fas fa-cloud-upload-alt" style="font-size: 3rem; color: var(--admin-primary);"></i>
+                    <h4 class="mt-3">Raahaa tiedosto tähän tai klikkaa valitaksesi</h4>
+                    <p class="text-muted">Tuetut formaatit: JSON</p>
+                    <input type="file" id="json-file" name="file" accept=".json" style="display: none;" onchange="this.form.querySelector('.upload-area h4').textContent = this.files[0].name">
+                </div>
+                
+                <button type="submit" class="btn-modern btn-modern-primary mt-3">
+                    <i class="fas fa-upload"></i>
+                    Lataa JSON
+                </button>
+            </form>
+        </div>
+
+        <!-- All Questions List -->
+        <div class="content-card">
+            <div class="content-card-header">
+                <h3 class="content-card-title">
+                    <i class="fas fa-list"></i>
+                    Kaikki kysymykset ({{ question_count }})
+                </h3>
+                <a href="/admin/questions" class="btn-modern btn-modern-primary btn-sm">
+                    Näytä kaikki
+                </a>
+            </div>
+            <p class="text-muted">Näet täällä kaikki kysymykset. Voit muokata ja poistaa kysymyksiä.</p>
+        </div>
     </div>
 
-    <!-- Hallintakortit - Ensimmäinen rivi -->
-    <div class="row g-3 mb-4">
-        <!-- Kysymysten hallinta -->
-        <div class="col-md-6 col-lg-3">
-            <div class="card h-100 border-0 shadow-sm">
-                <div class="card-body d-flex flex-column">
-                    <div class="d-flex align-items-center mb-3">
-                        <div class="bg-success bg-opacity-10 rounded-3 p-2 me-3">
-                            <i class="bi bi-plus-circle-fill text-success fs-4"></i>
-                        </div>
-                        <h6 class="card-title mb-0 fw-bold">Kysymykset</h6>
-                    </div>
-                    <p class="card-text text-muted small flex-grow-1">Lisää, muokkaa tai poista kysymyksiä tietokannasta.</p>
-                    <a href="{{ url_for('admin_add_question_route') }}" class="btn btn-outline-success btn-sm w-100">
-                        <i class="bi bi-plus-lg me-1"></i> Lisää kysymys
-                    </a>
-                </div>
+    <!-- Tab Content: Users -->
+    <div class="tab-content-pane" id="tab-users">
+        <div class="content-card">
+            <div class="content-card-header">
+                <h3 class="content-card-title">
+                    <i class="fas fa-users"></i>
+                    Käyttäjien hallinta
+                </h3>
+                <a href="/admin/users" class="btn-modern btn-modern-primary btn-sm">
+                    Avaa käyttäjähallinta
+                </a>
             </div>
-        </div>
-
-        <!-- Massalisäys -->
-        <div class="col-md-6 col-lg-3">
-            <div class="card h-100 border-0 shadow-sm">
-                <div class="card-body d-flex flex-column">
-                    <div class="d-flex align-items-center mb-3">
-                        <div class="bg-primary bg-opacity-10 rounded-3 p-2 me-3">
-                            <i class="bi bi-upload text-primary fs-4"></i>
-                        </div>
-                        <h6 class="card-title mb-0 fw-bold">Massalisäys</h6>
+            <p class="text-muted">Hallinnoi käyttäjiä, luo testikäyttäjiä ja muokkaa käyttäjäoikeuksia.</p>
+            
+            <div class="row g-3 mt-3">
+                <div class="col-md-6">
+                    <div class="p-3 border rounded">
+                        <h5><i class="fas fa-user-shield me-2 text-danger"></i>Admin-käyttäjät</h5>
+                        <p class="text-muted mb-0">Käyttäjiä admin-oikeuksilla järjestelmässä</p>
                     </div>
-                    <p class="card-text text-muted small flex-grow-1">Lataa useita kysymyksiä JSON-tiedostosta.</p>
-                    <button type="button" class="btn btn-outline-primary btn-sm w-100" data-bs-toggle="modal" data-bs-target="#uploadModal">
-                        <i class="bi bi-file-earmark-arrow-up me-1"></i> Lataa JSON
-                    </button>
                 </div>
-            </div>
-        </div>
-
-        <!-- Varmuuskopio -->
-        <div class="col-md-6 col-lg-3">
-            <div class="card h-100 border-0 shadow-sm">
-                <div class="card-body d-flex flex-column">
-                    <div class="d-flex align-items-center mb-3">
-                        <div class="bg-info bg-opacity-10 rounded-3 p-2 me-3">
-                            <i class="bi bi-download text-info fs-4"></i>
-                        </div>
-                        <h6 class="card-title mb-0 fw-bold">Varmuuskopio</h6>
+                <div class="col-md-6">
+                    <div class="p-3 border rounded">
+                        <h5><i class="fas fa-user me-2 text-primary"></i>Tavalliset käyttäjät</h5>
+                        <p class="text-muted mb-0">Rekisteröityneitä käyttäjiä yhteensä</p>
                     </div>
-                    <p class="card-text text-muted small flex-grow-1">Vie kaikki kysymykset JSON-tiedostoon.</p>
-                    <a href="{{ url_for('admin_export_questions_route') }}" class="btn btn-outline-info btn-sm w-100">
-                        <i class="bi bi-file-earmark-arrow-down me-1"></i> Vie JSON
-                    </a>
-                </div>
-            </div>
-        </div>
-
-        <!-- Käyttäjähallinta -->
-        <div class="col-md-6 col-lg-3">
-            <div class="card h-100 border-0 shadow-sm">
-                <div class="card-body d-flex flex-column">
-                    <div class="d-flex align-items-center mb-3">
-                        <div class="bg-secondary bg-opacity-10 rounded-3 p-2 me-3">
-                            <i class="bi bi-people-fill text-secondary fs-4"></i>
-                        </div>
-                        <h6 class="card-title mb-0 fw-bold">Käyttäjät</h6>
-                    </div>
-                    <p class="card-text text-muted small flex-grow-1">Hallitse käyttäjiä ja oikeuksia.</p>
-                    <a href="{{ url_for('admin_users_route') }}" class="btn btn-outline-secondary btn-sm w-100">
-                        <i class="bi bi-gear me-1"></i> Hallitse
-                    </a>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Toinen rivi: Työkalut -->
-    <div class="row g-3 mb-4">
-        <!-- Duplikaattien tarkistus -->
-        <div class="col-md-6 col-lg-3">
-            <div class="card h-100 border-0 shadow-sm">
-                <div class="card-body d-flex flex-column">
-                    <div class="d-flex align-items-center mb-3">
-                        <div class="bg-warning bg-opacity-10 rounded-3 p-2 me-3">
-                            <i class="bi bi-search text-warning fs-4"></i>
-                        </div>
-                        <h6 class="card-title mb-0 fw-bold">Duplikaatit</h6>
+    <!-- Tab Content: Settings -->
+    <div class="tab-content-pane" id="tab-settings">
+        
+        <!-- Dangerous Actions -->
+        <div class="content-card border-danger">
+            <div class="content-card-header">
+                <h3 class="content-card-title text-danger">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Vaaralliset toiminnot
+                </h3>
+            </div>
+            
+            <div class="alert alert-danger">
+                <strong><i class="fas fa-warning me-2"></i>Varoitus!</strong>
+                Nämä toiminnot ovat peruuttamattomia. Varmista että tiedät mitä teet!
+            </div>
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="p-4 border border-warning rounded">
+                        <h5 class="text-warning"><i class="fas fa-sync me-2"></i>Yhdistä kategoriat</h5>
+                        <p class="text-muted">Standardoi kategoriat yhtenäiseen muotoon</p>
+                        <form action="/admin/merge_categories" method="POST" onsubmit="return confirm('Oletko varma? Tämä yhdistää kaikki samankaltaiset kategoriat.')">
+                            <button type="submit" class="btn btn-warning">
+                                <i class="fas fa-sync"></i> Yhdistä
+                            </button>
+                        </form>
                     </div>
-                    <p class="card-text text-muted small flex-grow-1">Etsi ja poista päällekkäiset kysymykset.</p>
-                    <a href="{{ url_for('admin_find_duplicates_route') }}" class="btn btn-outline-warning btn-sm w-100">
-                        <i class="bi bi-search me-1"></i> Etsi duplikaatit
-                    </a>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="p-4 border border-danger rounded">
+                        <h5 class="text-danger"><i class="fas fa-trash me-2"></i>Tyhjennä tietokanta</h5>
+                        <p class="text-muted">Poistaa KAIKKI kysymykset pysyvästi</p>
+                        <form action="/admin/clear_database" method="POST" onsubmit="return confirm('VAROITUS! Tämä poistaa KAIKKI kysymykset peruuttamattomasti. Oletko TÄYSIN varma?')">
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-trash"></i> Tyhjennä
+                            </button>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Vie dokumenttiin -->
-<div class="col-md-6 col-lg-3">
-    <div class="card h-100 border-0 shadow-sm">
-        <div class="card-body d-flex flex-column">
-            <div class="d-flex align-items-center mb-3">
-                <div class="bg-success bg-opacity-10 rounded-3 p-2 me-3">
-                    <i class="bi bi-file-earmark-arrow-down text-success fs-4"></i>
-                </div>
-                <h6 class="card-title mb-0 fw-bold">Vie dokumenttiin</h6>
+        <!-- Find Duplicates -->
+        <div class="content-card">
+            <div class="content-card-header">
+                <h3 class="content-card-title">
+                    <i class="fas fa-search"></i>
+                    Etsi duplikaatteja
+                </h3>
             </div>
-            <p class="card-text text-muted small flex-grow-1">Luo ammattimainen PDF tai Word-dokumentti kysymyksistä.</p>
-            <a href="{{ url_for('admin_export_questions_document_route') }}" class="btn btn-outline-success btn-sm w-100">
-                <i class="bi bi-download me-1"></i> Vie PDF/Word
+            <p class="text-muted">Etsi samankaltaiset kysymykset tietokannasta</p>
+            <a href="/admin/find_duplicates" class="btn-modern btn-modern-primary">
+                <i class="fas fa-search"></i>
+                Etsi duplikaatit
             </a>
         </div>
     </div>
-</div>
 
-    <!-- VAARALLINEN ALUE -->
-    <div class="card border-danger shadow-sm mb-4">
-        <div class="card-header bg-danger text-white">
-            <h6 class="mb-0">
-                <i class="bi bi-exclamation-triangle-fill me-2"></i>VAARALLINEN ALUE
-            </h6>
-        </div>
-        <div class="card-body">
-            <div class="d-flex align-items-start">
-                <div class="bg-danger bg-opacity-10 rounded-3 p-3 me-3">
-                    <i class="bi bi-trash text-danger fs-3"></i>
-                </div>
-                <div class="flex-grow-1">
-                    <h5 class="text-danger mb-2">Tyhjennä koko tietokanta</h5>
-                    <p class="text-muted mb-3">
-                        <strong>VAROITUS:</strong> Tämä poistaa KAIKKI kysymykset ja kaikkien käyttäjien edistymisen pysyvästi. 
-                        Toimintoa ei voi perua!
-                    </p>
-                    <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#clearDatabaseModal">
-                        <i class="bi bi-trash me-2"></i>Tyhjennä tietokanta
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Kysymyslista -->
-    <div class="card shadow-sm border-0">
-        <div class="card-header bg-white d-flex justify-content-between align-items-center">
-            <span class="fw-bold">
-                {% if search_query or category_filter or difficulty_filter %}
-                    <i class="bi bi-funnel-fill me-1"></i> Hakutulokset ({{ total_count }})
-                {% else %}
-                    <i class="bi bi-list-ul me-1"></i> Kaikki kysymykset ({{ total_count }})
-                {% endif %}
-            </span>
-        </div>
-        <div class="card-body p-0">
-            <div class="table-responsive" style="max-height: 600px;">
-                <table class="table table-hover mb-0">
-                    <thead class="table-light sticky-top">
-                        <tr>
-                            <th style="width: 60px;">ID</th>
-                            <th>Kysymys</th>
-                            <th style="width: 150px;">Kategoria</th>
-                            <th style="width: 120px;">Vaikeustaso</th>
-                            <th style="width: 180px;">Toiminnot</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for q in questions %}
-                        <tr>
-                            <td class="align-middle"><span class="badge bg-light text-dark">{{ q['id'] }}</span></td>
-                            <td class="align-middle">{{ q['question']|truncate(100) }}</td>
-                            <td class="align-middle">
-                                <span class="badge bg-secondary">{{ q['category'].title() }}</span>
-                            </td>
-                            <td class="align-middle">
-                                {% if q['difficulty'] == 'helppo' %}
-                                <span class="badge bg-success">Helppo</span>
-                                {% elif q['difficulty'] == 'keskivaikea' %}
-                                <span class="badge bg-warning text-dark">Keskivaikea</span>
-                                {% else %}
-                                <span class="badge bg-danger">Vaikea</span>
-                                {% endif %}
-                            </td>
-                            <td class="align-middle">
-                                <a href="{{ url_for('admin_edit_question_route', question_id=q['id']) }}" 
-                                   class="btn btn-sm btn-outline-primary me-1">
-                                    <i class="bi bi-pencil"></i> Muokkaa
-                                </a>
-                                <button type="button" 
-                                        class="btn btn-sm btn-outline-danger" 
-                                        onclick="confirmDelete({{ q['id'] }}, '{{ q['question'][:50]|replace("'", "\\'") }}...')">
-                                    <i class="bi bi-trash"></i> Poista
-                                </button>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Upload Modal -->
-<div class="modal fade" id="uploadModal" tabindex="-1" aria-labelledby="uploadModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="uploadModalLabel">
-                    <i class="bi bi-upload me-2"></i>Lataa kysymyksiä JSON-tiedostosta
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form method="POST" action="{{ url_for('admin_bulk_upload_route') }}" enctype="multipart/form-data">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <div class="modal-body">
-                    <div class="alert alert-info">
-                        <strong><i class="bi bi-info-circle me-1"></i>JSON-tiedoston muoto:</strong>
-                        <pre class="mt-2 mb-0" style="font-size: 0.85em;">[
-  {
-    "question": "Kysymysteksti?",
-    "explanation": "Selitys",
-    "options": ["A", "B", "C", "D"],
-    "correct": 0,
-    "category": "kategoria",
-    "difficulty": "helppo"
-  }
-]</pre>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="json_file" class="form-label fw-bold">Valitse JSON-tiedosto</label>
-                        <input type="file" class="form-control" id="json_file" name="json_file" accept=".json" required>
-                        <div class="form-text">Tiedoston tulee olla .json -muotoinen</div>
-                    </div>
-                    
-                    <div class="alert alert-warning">
-                        <strong><i class="bi bi-exclamation-triangle me-1"></i>Huomio:</strong> 
-                        Duplikaatit ja virheelliset kysymykset ohitetaan automaattisesti. 
-                        Saat yhteenvedon latauksen jälkeen.
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Peruuta</button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-upload me-1"></i> Lataa tiedosto
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Modal tietokannan tyhjentämiselle -->
-<div class="modal fade" id="clearDatabaseModal" tabindex="-1" aria-labelledby="clearDatabaseModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title" id="clearDatabaseModalLabel">
-                    <i class="bi bi-exclamation-triangle-fill me-2"></i>Vahvista tietokannan tyhjennys
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form method="POST" action="{{ url_for('admin_clear_database_route') }}">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                <div class="modal-body">
-                    <div class="alert alert-danger" role="alert">
-                        <strong><i class="bi bi-exclamation-triangle-fill me-1"></i>VAROITUS!</strong> Tämä toiminto:
-                        <ul class="mb-0 mt-2">
-                            <li>Poistaa KAIKKI kysymykset ({{ total_count }} kpl)</li>
-                            <li>Poistaa kaikkien käyttäjien edistymisen</li>
-                            <li>Nollaa kaikki tilastot</li>
-                            <li>On PERUUTTAMATON - dataa ei voi palauttaa</li>
-                        </ul>
-                    </div>
-                    
-                    <div class="alert alert-warning">
-                        <strong><i class="bi bi-lightbulb me-1"></i>Vinkki:</strong> 
-                        Varmista että sinulla on varmuuskopio ennen tyhjentämistä. 
-                        Voit ladata JSON-varmuuskopion "Varmuuskopio"-kortista.
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="confirmation_input" class="form-label fw-bold">
-                            Kirjoita <code>TYHJENNA KAIKKI</code> vahvistaaksesi:
-                        </label>
-                        <input type="text" 
-                               class="form-control form-control-lg" 
-                               id="confirmation_input"
-                               name="confirmation" 
-                               placeholder="TYHJENNA KAIKKI"
-                               required
-                               autocomplete="off">
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        <i class="bi bi-x-lg me-1"></i> Peruuta
-                    </button>
-                    <button type="submit" class="btn btn-danger">
-                        <i class="bi bi-trash-fill me-1"></i> Kyllä, tyhjennä tietokanta
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Poisto-vahvistus modal -->
-<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title" id="deleteModalLabel">
-                    <i class="bi bi-exclamation-triangle-fill me-2"></i>Vahvista poisto
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p class="mb-2">Haluatko varmasti poistaa tämän kysymyksen?</p>
-                <div class="alert alert-light border">
-                    <p class="fw-bold mb-0" id="deleteQuestionText"></p>
-                </div>
-                <p class="text-danger mb-0">
-                    <i class="bi bi-exclamation-octagon-fill me-1"></i>
-                    <strong>Huom:</strong> Tätä toimintoa ei voi perua. Kysymys poistetaan pysyvästi.
-                </p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="bi bi-x-lg me-1"></i> Peruuta
-                </button>
-                <form id="deleteForm" method="POST" style="display: inline;">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn btn-danger">
-                        <i class="bi bi-trash-fill me-1"></i> Poista kysymys
-                    </button>
-                </form>
-            </div>
-        </div>
-    </div>
 </div>
 
 <script>
-function confirmDelete(questionId, questionText) {
-    document.getElementById('deleteQuestionText').textContent = questionText;
-    document.getElementById('deleteForm').action = `/admin/delete_question/${questionId}`;
-    new bootstrap.Modal(document.getElementById('deleteModal')).show();
-}
+    // Tab switching functionality
+    document.querySelectorAll('.tab-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const targetTab = this.dataset.tab;
+            showTab(targetTab);
+        });
+    });
+
+    function showTab(tabName) {
+        // Remove active class from all tabs
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        document.querySelectorAll('.tab-content-pane').forEach(pane => {
+            pane.classList.remove('active');
+        });
+        
+        // Add active class to selected tab
+        const tabBtn = document.querySelector(`[data-tab="${tabName}"]`);
+        const tabPane = document.getElementById(`tab-${tabName}`);
+        
+        if (tabBtn && tabPane) {
+            tabBtn.classList.add('active');
+            tabPane.classList.add('active');
+        }
+    }
+
+    // Drag and drop for file upload
+    const uploadArea = document.querySelector('.upload-area');
+    if (uploadArea) {
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (file) {
+                document.getElementById('json-file').files = e.dataTransfer.files;
+                uploadArea.querySelector('h4').textContent = file.name;
+            }
+        });
+    }
 </script>
 {% endblock %}
