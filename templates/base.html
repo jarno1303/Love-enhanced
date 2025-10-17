@@ -158,74 +158,75 @@ body.dark-mode::before {
 }
 
         /* ============================================
-           ✨ WOW: GLASSMORPHISM NAVBAR
-           ============================================ */
-        .navbar {
-            background: rgba(255, 255, 255, 0.1) !important;
-            backdrop-filter: blur(20px) saturate(180%);
-            -webkit-backdrop-filter: blur(20px) saturate(180%);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-            transition: all var(--transition-normal);
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-        }
+   ✨ WOW: GLASSMORPHISM NAVBAR (PARANNETTU KONTRASTI)
+   ============================================ */
+.navbar {
+    background: linear-gradient(135deg, rgba(90, 103, 216, 0.9) 0%, rgba(76, 81, 191, 0.9) 100%) !important;
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    transition: all var(--transition-normal);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
 
-        body.dark-mode .navbar {
-            background: rgba(15, 15, 15, 0.4) !important;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .navbar-brand {
-            font-weight: 800;
-            font-size: 1.5rem;
-            color: white !important;
-            text-shadow: 0 2px 10px rgba(0,0,0,0.3);
-            transition: all var(--transition-fast);
-        }
+body.dark-mode .navbar {
+    background: linear-gradient(135deg, rgba(30, 27, 75, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+}
 
-        .navbar-brand:hover {
-            transform: translateY(-2px);
-            text-shadow: 0 4px 20px rgba(0,0,0,0.4);
-        }
-        
-        .nav-link {
-            color: rgba(255, 255, 255, 0.95) !important;
-            font-weight: 500;
-            padding: 0.5rem 1rem !important;
-            border-radius: var(--radius-md);
-            transition: all var(--transition-fast);
-            position: relative;
-        }
+.navbar-brand {
+    font-weight: 800;
+    font-size: 1.5rem;
+    color: white !important;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.6);
+    transition: all var(--transition-fast);
+}
 
-        /* 💫 WOW: Nav link underline effect */
-        .nav-link::before {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 50%;
-            width: 0%;
-            height: 2px;
-            background: white;
-            transition: all var(--transition-normal);
-            transform: translateX(-50%);
-        }
-        
-        .nav-link:hover {
-            background: rgba(255, 255, 255, 0.15);
-            transform: translateY(-2px);
-        }
+.navbar-brand:hover {
+    transform: translateY(-2px);
+    text-shadow: 0 4px 20px rgba(0,0,0,0.8);
+}
 
-        .nav-link:hover::before {
-            width: 80%;
-        }
+.nav-link {
+    color: white !important;  /* Täysin valkoinen! */
+    font-weight: 600;  /* Paksumpi */
+    padding: 0.5rem 1rem !important;
+    border-radius: var(--radius-md);
+    transition: all var(--transition-fast);
+    position: relative;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.5);
+}
 
-        .nav-link.active {
-            background: rgba(255, 255, 255, 0.2);
-            color: white !important;
-        }
+/* 💫 WOW: Nav link underline effect */
+.nav-link::before {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    width: 0%;
+    height: 2px;
+    background: white;
+    transition: all var(--transition-normal);
+    transform: translateX(-50%);
+}
 
+.nav-link:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+    color: white !important;
+}
+
+.nav-link:hover::before {
+    width: 80%;
+}
+
+.nav-link.active {
+    background: rgba(255, 255, 255, 0.25);
+    color: white !important;
+}
         /* ============================================
            💫 WOW: MIKROINTERAKTIOT
            ============================================ */
