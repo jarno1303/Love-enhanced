@@ -2526,7 +2526,37 @@ def admin_export_json_quick():
             return redirect(url_for('admin_route'))
         
         questions_list = []
+        for q in questions:
+            questions_list.append({
+                'id': q['id'],
+                'question': q['question'],
+                'options': json.loads(q['options']),
+                'correct': q['correct'],
+                'explanation': q['explanation'],
+                'category': q['category'],
+                'difficulty': q['difficulty']
+            })
         
+        # Luo JSON response
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f'LOVe_Kysymykset_{timestamp}.json'
+        
+        app.logger.info(f"Admin {current_user.username} exported {len(questions_list)} questions to JSON")
+        
+        from flask import make_response
+        response = make_response(json.dumps(questions_list, indent=2, ensure_ascii=False))
+        response.headers['Content-Type'] = 'application/json; charset=utf-8'
+        response.headers['Content-Disposition'] = f'attachment; filename={filename}'
+        
+        return response
+        
+    except Exception as e:
+        flash(f'Virhe JSON-viennissä: {str(e)}', 'danger')
+        app.logger.error(f"JSON export error: {e}")
+        import traceback
+        traceback.print_exc()
+        return redirect(url_for('admin_route'))
+       
 #==============================================================================
 # --- VIRHEKÄSITTELY ---
 #==============================================================================
