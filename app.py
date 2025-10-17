@@ -2409,6 +2409,125 @@ def edit_user_settings(user_id):
     return redirect(url_for('admin_users_route'))
 
 #==============================================================================
+# --- YKSINKERTAISET EXPORT-REITIT (PDF, WORD, JSON) ---
+#==============================================================================
+
+@app.route("/admin/export_pdf", methods=['GET'])
+@admin_required
+def admin_export_pdf_quick():
+    """Vie kaikki kysymykset PDF-tiedostoon."""
+    try:
+        questions = execute_query("""
+            SELECT id, question, explanation, options, correct, category, difficulty
+            FROM questions
+            ORDER BY category, id
+        """, fetch='all')
+        
+        if not questions:
+            flash('Ei kysymyksiä vietäväksi.', 'warning')
+            return redirect(url_for('admin_route'))
+        
+        questions_list = []
+        for q in questions:
+            questions_list.append({
+                'id': q['id'],
+                'question': q['question'],
+                'options': json.loads(q['options']),
+                'correct': q['correct'],
+                'explanation': q['explanation'],
+                'category': q['category'],
+                'difficulty': q['difficulty']
+            })
+        
+        pdf_buffer = create_pdf_document(questions_list, include_answers=True, duplicate_info=None)
+        
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f'LOVe_Kysymykset_{timestamp}.pdf'
+        
+        app.logger.info(f"Admin {current_user.username} exported {len(questions_list)} questions to PDF")
+        
+        from flask import make_response
+        response = make_response(pdf_buffer.getvalue())
+        response.headers['Content-Type'] = 'application/pdf'
+        response.headers['Content-Disposition'] = f'attachment; filename={filename}'
+        
+        return response
+        
+    except Exception as e:
+        flash(f'Virhe PDF-viennissä: {str(e)}', 'danger')
+        app.logger.error(f"PDF export error: {e}")
+        import traceback
+        traceback.print_exc()
+        return redirect(url_for('admin_route'))
+
+
+@app.route("/admin/export_word", methods=['GET'])
+@admin_required
+def admin_export_word_quick():
+    """Vie kaikki kysymykset Word-tiedostoon."""
+    try:
+        questions = execute_query("""
+            SELECT id, question, explanation, options, correct, category, difficulty
+            FROM questions
+            ORDER BY category, id
+        """, fetch='all')
+        
+        if not questions:
+            flash('Ei kysymyksiä vietäväksi.', 'warning')
+            return redirect(url_for('admin_route'))
+        
+        questions_list = []
+        for q in questions:
+            questions_list.append({
+                'id': q['id'],
+                'question': q['question'],
+                'options': json.loads(q['options']),
+                'correct': q['correct'],
+                'explanation': q['explanation'],
+                'category': q['category'],
+                'difficulty': q['difficulty']
+            })
+        
+        doc_buffer = create_word_document(questions_list, include_answers=True, duplicate_info=None)
+        
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f'LOVe_Kysymykset_{timestamp}.docx'
+        
+        app.logger.info(f"Admin {current_user.username} exported {len(questions_list)} questions to Word")
+        
+        from flask import make_response
+        response = make_response(doc_buffer.getvalue())
+        response.headers['Content-Type'] = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        response.headers['Content-Disposition'] = f'attachment; filename={filename}'
+        
+        return response
+        
+    except Exception as e:
+        flash(f'Virhe Word-viennissä: {str(e)}', 'danger')
+        app.logger.error(f"Word export error: {e}")
+        import traceback
+        traceback.print_exc()
+        return redirect(url_for('admin_route'))
+
+
+@app.route("/admin/export_json", methods=['GET'])
+@admin_required
+def admin_export_json_quick():
+    """Vie kaikki kysymykset JSON-tiedostoon."""
+    try:
+        questions = execute_query("""
+            SELECT id, question, explanation, options, correct, category, difficulty
+            FROM questions
+            ORDER BY category, id
+        """, fetch='all')
+        
+        if not questions:
+            flash('Ei kysymyksiä vietäväksi.', 'warning')
+            return redirect(url_for('admin_route'))
+        
+        questions_list = []
+        
+#==============================================================================
 # --- VIRHEKÄSITTELY ---
 #==============================================================================
 

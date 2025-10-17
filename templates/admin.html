@@ -778,8 +778,106 @@
     </div>
 
     <!-- Tab Content: Settings -->
-    <div class="tab-content-pane" id="tab-settings">
+    <!-- Tab Content: Settings -->
+<div class="tab-content-pane" id="tab-settings">
+    
+    <!-- ====== VIE KYSYMYKSET ====== -->
+    <div class="content-card">
+        <div class="content-card-header">
+            <h3 class="content-card-title">
+                <i class="fas fa-download"></i>
+                Vie kysymykset
+            </h3>
+        </div>
         
+        <p class="text-muted mb-4">
+            Lataa kaikki kysymykset tietokannasta eri formaateissa. 
+            Tiedostot sisältävät kaikki kysymykset, vastausvaihtoehdot, oikeat vastaukset ja selitykset.
+        </p>
+
+        <div class="row g-4">
+            <!-- PDF Export -->
+            <div class="col-md-4">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body text-center d-flex flex-column">
+                        <div class="mb-3">
+                            <i class="fas fa-file-pdf" style="font-size: 4rem; color: #dc2626;"></i>
+                        </div>
+                        <h5 class="card-title mb-2">PDF-dokumentti</h5>
+                        <p class="card-text text-muted small flex-grow-1">
+                            Ammattimainen tulostettava dokumentti kategorisoituna ja selityksin.
+                        </p>
+                        <div class="mt-3">
+                            <span class="badge bg-secondary mb-2">{{ question_count }} kysymystä</span>
+                        </div>
+                        <a href="/admin/export_pdf" class="btn btn-danger w-100 mt-auto">
+                            <i class="fas fa-file-pdf me-2"></i>Lataa PDF
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Word Export -->
+            <div class="col-md-4">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body text-center d-flex flex-column">
+                        <div class="mb-3">
+                            <i class="fas fa-file-word" style="font-size: 4rem; color: #2563eb;"></i>
+                        </div>
+                        <h5 class="card-title mb-2">Word-dokumentti</h5>
+                        <p class="card-text text-muted small flex-grow-1">
+                            Muokattava Word-tiedosto (.docx) jota voit editoida vapaasti.
+                        </p>
+                        <div class="mt-3">
+                            <span class="badge bg-secondary mb-2">{{ question_count }} kysymystä</span>
+                        </div>
+                        <a href="/admin/export_word" class="btn btn-primary w-100 mt-auto">
+                            <i class="fas fa-file-word me-2"></i>Lataa Word
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- JSON Export -->
+            <div class="col-md-4">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body text-center d-flex flex-column">
+                        <div class="mb-3">
+                            <i class="fas fa-file-code" style="font-size: 4rem; color: #059669;"></i>
+                        </div>
+                        <h5 class="card-title mb-2">JSON-data</h5>
+                        <p class="card-text text-muted small flex-grow-1">
+                            Strukturoitu data. Sopii varmuuskopiointiin ja datan siirtoon.
+                        </p>
+                        <div class="mt-3">
+                            <span class="badge bg-secondary mb-2">{{ question_count }} kysymystä</span>
+                        </div>
+                        <a href="/admin/export_json" class="btn btn-success w-100 mt-auto">
+                            <i class="fas fa-file-code me-2"></i>Lataa JSON
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="alert alert-info mt-4 mb-0">
+            <div class="d-flex align-items-start">
+                <i class="fas fa-info-circle me-3 mt-1" style="font-size: 1.5rem;"></i>
+                <div>
+                    <strong>Tiedoston sisältö:</strong>
+                    <ul class="mb-0 mt-2">
+                        <li>Kaikki kysymykset kategorisoituna</li>
+                        <li>Vastausvaihtoehdot A-D</li>
+                        <li>Oikeat vastaukset merkitty</li>
+                        <li>Yksityiskohtaiset selitykset</li>
+                        <li>Vaikeustaso ja metatiedot</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    
         <!-- Dangerous Actions -->
         <div class="content-card border-danger">
             <div class="content-card-header">
@@ -820,6 +918,8 @@
                 </div>
             </div>
         </div>
+
+        
 
         <!-- Find Duplicates -->
         <div class="content-card">
