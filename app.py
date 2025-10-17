@@ -1715,7 +1715,7 @@ def admin_create_test_users_route():
         start_number = db_manager.get_next_test_user_number()
         
         # Laske vanhenemispäivä
-        from datetime import datetime, timedelta
+        from datetime import datetime, timedelta, timezone
         expires_at = datetime.now() + timedelta(days=expiration_days)
         
         # Luo käyttäjät
