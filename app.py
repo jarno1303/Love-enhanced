@@ -1086,6 +1086,7 @@ def calculator_route():
     return render_template("calculator.html")
 
 # TÄMÄ KORVAA VANHAN simulation_routen
+
 @app.route('/simulation')
 @login_required
 def simulation_route():
@@ -1108,30 +1109,47 @@ def simulation_route():
             'question_ids': question_ids,
             'answers': [None] * len(question_ids),
             'current_index': 0,
-            'start_time': datetime.now().isoformat(),
+            'start_time': datetime.now(timezone.utc).isoformat(),
             'time_remaining': 3600
         }
         session.modified = True
         app.logger.info(f"Uusi simulaatio luotu: {len(question_ids)} kysymystä.")
         return redirect(url_for('simulation_route', resume='true'))
 
-    if request.args.get('resume') == 'true' and has_existing_session:
-         app.logger.info(f"Jatketaan simulaatiota.")
-         return render_template('simulation.html', 
-                                session_data=session['simulation'], 
-                                has_existing_session=True,
-                                session_info={})
-
+    # ✅ KORJATTU: Laske session_info aina jos sessio on olemassa
     session_info = {}
     if has_existing_session:
         sim = session['simulation']
-        time_left = simulation_manager.calculate_remaining_time(sim.get('start_time'), sim.get('time_remaining'))
+        
+        # ✅ KORJATTU: Laske jäljellä oleva aika oikein
+        try:
+            start_time = datetime.fromisoformat(sim.get('start_time'))
+            # Varmista että start_time on timezone-aware
+            if start_time.tzinfo is None:
+                start_time = start_time.replace(tzinfo=timezone.utc)
+            
+            elapsed_seconds = (datetime.now(timezone.utc) - start_time).total_seconds()
+            time_left = max(0, 3600 - elapsed_seconds)  # ✅ OIKEA JÄRJESTYS!
+            
+            app.logger.info(f"⏰ Elapsed: {elapsed_seconds:.0f}s, Remaining: {time_left:.0f}s")
+        except Exception as e:
+            app.logger.error(f"Time calculation error: {e}")
+            time_left = 3600  # Fallback
+        
         session_info = {
             'current_index': sim.get('current_index', 0) + 1,
             'total': len(sim.get('question_ids', [])),
             'answered': len([a for a in sim.get('answers', []) if a is not None]),
-            'time_remaining_minutes': time_left // 60
+            'time_remaining_minutes': int(time_left // 60)
         }
+    
+    # ✅ KORJATTU: Palauta session_info aina
+    if request.args.get('resume') == 'true' and has_existing_session:
+         app.logger.info(f"Jatketaan simulaatiota. Aikaa jäljellä: {session_info.get('time_remaining_minutes', 0)} min")
+         return render_template('simulation.html', 
+                                session_data=session['simulation'], 
+                                has_existing_session=True,
+                                session_info=session_info)  # ✅ EI TYHJÄ!
 
     return render_template('simulation.html', 
                            session_data=session.get('simulation', {}), 
