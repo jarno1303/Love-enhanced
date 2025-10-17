@@ -246,69 +246,54 @@
     });
 
     async function initializeSimulation() {
-    document.getElementById('start-screen').style.display = 'none';
-    
-    answers = initialSessionData.answers || [];
-    questionIds = initialSessionData.question_ids || [];
-    currentQuestionIndex = initialSessionData.current_index || 0;
-    
-    // 🔧 VAHVISTETTU DEBUG
-    console.log('═══════════════════════════════════');
-    console.log('📊 KOKO SESSION DATA:', JSON.stringify(initialSessionData, null, 2));
-    console.log('═══════════════════════════════════');
-    console.log('⏰ time_remaining arvo:', initialSessionData.time_remaining);
-    console.log('⏰ time_remaining tyyppi:', typeof initialSessionData.time_remaining);
-    console.log('⏰ start_time arvo:', initialSessionData.start_time);
-    console.log('═══════════════════════════════════');
-
-    // Laske aika KAHDELLA tavalla ja vertaa
-    let calculatedTime1 = 3600; // Default
-    let calculatedTime2 = 3600; // Default
-    
-    // Tapa 1: Suoraan time_remaining
-    if (initialSessionData.time_remaining !== undefined && initialSessionData.time_remaining !== null) {
-        calculatedTime1 = Math.max(0, parseInt(initialSessionData.time_remaining));
-        console.log('✅ Tapa 1 (time_remaining): ' + calculatedTime1 + ' sekuntia');
-    } else {
-        console.log('❌ Tapa 1: time_remaining puuttuu!');
-    }
-    
-    // Tapa 2: Laske start_time perusteella
-    if (initialSessionData.start_time) {
-        try {
-            const sessionStart = new Date(initialSessionData.start_time).getTime();
-            const now = new Date().getTime();
-            const elapsedSeconds = Math.floor((now - sessionStart) / 1000);
-            const originalTimeLimit = 3600;
-            calculatedTime2 = Math.max(0, originalTimeLimit - elapsedSeconds);
-            
-            console.log('✅ Tapa 2 (start_time):');
-            console.log('   Start:', new Date(initialSessionData.start_time));
-            console.log('   Now:', new Date());
-            console.log('   Elapsed:', elapsedSeconds, 'seconds');
-            console.log('   Remaining:', calculatedTime2, 'seconds');
-        } catch (e) {
-            console.log('❌ Tapa 2: Virhe start_time laskennassa:', e);
+        document.getElementById('start-screen').style.display = 'none';
+        
+        answers = initialSessionData.answers || [];
+        questionIds = initialSessionData.question_ids || [];
+        currentQuestionIndex = initialSessionData.current_index || 0;
+        
+        // 🔍 DEBUG
+        console.log('═══════════════════════════════════');
+        console.log('📊 SESSION DATA:', initialSessionData);
+        console.log('⏰ start_time:', initialSessionData.start_time);
+        console.log('⏰ time_remaining:', initialSessionData.time_remaining);
+        console.log('═══════════════════════════════════');
+        
+        // Käytä start_time jos saatavilla
+        if (initialSessionData.start_time) {
+            try {
+                const sessionStart = new Date(initialSessionData.start_time);
+                const now = new Date();
+                const elapsedSeconds = Math.floor((now - sessionStart) / 1000);
+                timeRemaining = Math.max(0, 3600 - elapsedSeconds);
+                
+                console.log('✅ Laskettu start_time perusteella:');
+                console.log('   Start:', sessionStart.toISOString());
+                console.log('   Now:', now.toISOString());
+                console.log('   Elapsed:', elapsedSeconds, 'sec');
+                console.log('   Remaining:', timeRemaining, 'sec =', Math.floor(timeRemaining/60), 'min');
+            } catch (e) {
+                console.error('❌ Virhe:', e);
+                timeRemaining = 3600;
+            }
+        } else {
+            timeRemaining = 3600;
+            console.log('⏰ Uusi koe: 60 min');
         }
-    } else {
-        console.log('❌ Tapa 2: start_time puuttuu!');
+        
+        console.log('═══════════════════════════════════');
+        console.log('🎯 LOPULLINEN:', timeRemaining, 'sec =', Math.floor(timeRemaining/60), 'min');
+        console.log('═══════════════════════════════════');
+        
+        if (currentQuestionIndex === 0) {
+            await showCountdown();
+        }
+        
+        document.getElementById('floating-calculator-btn').classList.remove('d-none');
+        buildSimulationView();
+        await showQuestion(currentQuestionIndex);
+        startTimer();
     }
-    
-    // Käytä parempaa arvoa
-    if (calculatedTime2 > 0 && calculatedTime2 < 3600) {
-        timeRemaining = calculatedTime2;
-        console.log('🎯 KÄYTETÄÄN: Tapa 2 (start_time): ' + timeRemaining + ' sekuntia');
-    } else if (calculatedTime1 < 3600) {
-        timeRemaining = calculatedTime1;
-        console.log('🎯 KÄYTETÄÄN: Tapa 1 (time_remaining): ' + timeRemaining + ' sekuntia');
-    } else {
-        timeRemaining = 3600;
-        console.log('🎯 KÄYTETÄÄN: Default 60 min');
-    }
-    
-    console.log('═══════════════════════════════════');
-    console.log('✅ LOPULLINEN AIKA: ' + timeRemaining + ' sekuntia (' + Math.floor(timeRemaining/60) + ' min)');
-    console.log('═══════════════════════════════════');
 
     async function showCountdown() {
         const modal = document.getElementById('countdown-modal');
