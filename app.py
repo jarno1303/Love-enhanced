@@ -18,7 +18,7 @@ import smtplib
 import logging
 import string
 from dataclasses import asdict
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from functools import wraps
 from io import BytesIO
 from logging.handlers import RotatingFileHandler
@@ -1715,7 +1715,6 @@ def admin_create_test_users_route():
         start_number = db_manager.get_next_test_user_number()
         
         # Laske vanhenemispäivä
-        from datetime import datetime, timedelta, timezone
         expires_at = datetime.now() + timedelta(days=expiration_days)
         
         # Luo käyttäjät
