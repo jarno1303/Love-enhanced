@@ -40,6 +40,128 @@
     body.dark-mode .card {
         background: rgba(30, 30, 30, 0.98) !important;
     }
+
+    /* 🎯 TÄYDELLINEN RESPONSIIVINEN QUESTION GRID */
+    #question-grid {
+        display: grid;
+        grid-template-columns: repeat(10, 1fr);
+        gap: 8px;
+        padding: 1rem;
+    }
+
+    #question-grid .btn {
+        min-height: 50px;
+        font-size: 1rem;
+        font-weight: 600;
+        border-width: 2px;
+        transition: all 0.2s ease;
+        position: relative;
+    }
+
+    #question-grid .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+
+    #question-grid .btn-primary {
+        background: var(--primary-color);
+        border-color: var(--primary-color);
+        color: white;
+        box-shadow: 0 0 0 3px rgba(90, 103, 216, 0.3);
+    }
+
+    #question-grid .btn-success {
+        background: var(--success-color);
+        border-color: var(--success-color);
+        color: white;
+    }
+
+    /* Tablet: 5 kolumnia */
+    @media (max-width: 992px) {
+        #question-grid {
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            padding: 0.75rem;
+        }
+
+        #question-grid .btn {
+            min-height: 55px;
+            font-size: 1.1rem;
+        }
+    }
+
+    /* Mobile: 5 kolumnia, isommat napit */
+    @media (max-width: 576px) {
+        #question-grid {
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+            padding: 0.5rem;
+        }
+
+        #question-grid .btn {
+            min-height: 60px;
+            font-size: 1.05rem;
+        }
+    }
+
+    /* Timer parannus */
+    #timer {
+        font-size: 1.5rem !important;
+        padding: 0.75rem 1.5rem !important;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        animation: pulse-timer 2s infinite;
+    }
+
+    @keyframes pulse-timer {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.02); }
+    }
+
+    /* Progress bar parannus */
+    .progress {
+        height: 12px !important;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .progress-bar {
+        transition: width 0.5s ease;
+        background: linear-gradient(90deg, var(--primary-color), var(--primary-light));
+    }
+
+    /* Kysymyskortti parannus */
+    #question-content-wrapper {
+        min-height: 400px;
+    }
+
+    #question-content-wrapper .form-check-label {
+        transition: all 0.2s ease;
+        border: 2px solid #e2e8f0 !important;
+        background: white;
+    }
+
+    #question-content-wrapper .form-check-label:hover {
+        border-color: var(--primary-color) !important;
+        background: rgba(90, 103, 216, 0.05);
+        transform: translateX(4px);
+    }
+
+    #question-content-wrapper .form-check-input:checked + .form-check-label {
+        border-color: var(--primary-color) !important;
+        background: rgba(90, 103, 216, 0.1);
+        font-weight: 600;
+    }
+
+    body.dark-mode #question-content-wrapper .form-check-label {
+        background: rgba(45, 45, 45, 0.5);
+        border-color: #4a4a4a !important;
+    }
+
+    body.dark-mode #question-content-wrapper .form-check-label:hover {
+        background: rgba(90, 103, 216, 0.15);
+    }
 </style>
 {% endblock %}
 
@@ -104,7 +226,6 @@
 {% block extra_scripts %}
 <script>
     const initialSessionData = {{ session_data | tojson }};
-    // ✅ KORJATTU: Käytä eri nimeä välttääkseen konfliktin base.html:n kanssa
     const simCsrf = "{{ csrf_token() }}";
     
     let questionsCache = {};
@@ -131,26 +252,24 @@
         questionIds = initialSessionData.question_ids || [];
         currentQuestionIndex = initialSessionData.current_index || 0;
         
-        // ✅ KORJATTU: Laske jäljellä oleva aika oikein start_time perusteella
-        if (initialSessionData.start_time) {
-            const sessionStart = new Date(initialSessionData.start_time).getTime();
-            const now = new Date().getTime();
-            const elapsedSeconds = Math.floor((now - sessionStart) / 1000);
-            const originalTimeLimit = 3600; // 60 min
-            timeRemaining = Math.max(0, originalTimeLimit - elapsedSeconds);
-            
-            console.log('⏰ Session started:', new Date(initialSessionData.start_time));
-            console.log('⏰ Elapsed time:', Math.floor(elapsedSeconds / 60), 'minutes');
-            console.log('⏰ Time remaining:', Math.floor(timeRemaining / 60), 'minutes');
-        } else if (initialSessionData.time_remaining !== undefined && initialSessionData.time_remaining !== null) {
-            timeRemaining = Math.max(0, initialSessionData.time_remaining);
-            console.log('⏰ Using saved time_remaining:', Math.floor(timeRemaining / 60), 'minutes');
+        // 🔧 YKSINKERTAISTETTU: Käytä suoraan time_remaining
+        console.log('📊 Initial session data:', initialSessionData);
+
+        if (initialSessionData.time_remaining !== undefined && initialSessionData.time_remaining !== null) {
+            timeRemaining = Math.max(0, parseInt(initialSessionData.time_remaining));
+            console.log('⏰ Loaded saved time:', timeRemaining, 'seconds =', Math.floor(timeRemaining / 60), 'minutes');
         } else {
             timeRemaining = 3600;
-            console.log('⏰ No saved time, starting fresh with 60 minutes');
+            console.log('⏰ New test, starting with 60 minutes');
         }
+
+        if (timeRemaining < 0) {
+            console.error('❌ ERROR: Negative time remaining! Setting to 0.');
+            timeRemaining = 0;
+        }
+
+        console.log('✅ Final time remaining:', timeRemaining, 'seconds');
         
-        // Jos aloitetaan alusta (current_index = 0), näytä countdown
         if (currentQuestionIndex === 0) {
             await showCountdown();
         }
@@ -161,7 +280,6 @@
         startTimer();
     }
 
-    // 3-2-1 Countdown
     async function showCountdown() {
         const modal = document.getElementById('countdown-modal');
         const numberEl = document.getElementById('countdown-number');
@@ -187,21 +305,33 @@
         const container = document.getElementById('simulation-container');
         container.classList.remove('d-none');
         container.innerHTML = `
-            <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-3 gap-3">
                 <h2 class="mb-0">Koesimulaatio</h2>
-                <div id="timer" class="fs-4 fw-bold badge bg-danger-subtle text-danger-emphasis p-2"></div>
+                <div id="timer" class="fs-4 fw-bold badge bg-danger-subtle text-danger-emphasis"></div>
             </div>
-            <div class="progress mb-4" style="height: 8px;"><div id="progress-bar" class="progress-bar"></div></div>
+            <div class="progress mb-4"><div id="progress-bar" class="progress-bar" role="progressbar"></div></div>
             <div class="row">
-                <div class="col-lg-8"><div class="card shadow-sm"><div class="card-body p-4" id="question-content-wrapper"></div></div></div>
-                <div class="col-lg-4 mt-4 mt-lg-0">
+                <div class="col-lg-8 mb-4 mb-lg-0">
                     <div class="card shadow-sm">
-                        <div class="card-header">Kysymysnavigaatio</div>
-                        <div class="card-body"><div id="question-grid" class="d-grid gap-2" style="grid-template-columns: repeat(10, 1fr);"></div>
+                        <div class="card-body p-4" id="question-content-wrapper"></div>
                     </div>
-                    <div class="d-grid gap-2 mt-3">
-                        <button id="finish-btn" class="btn btn-success"><i class="fas fa-check-double me-2"></i>Tarkista ja palauta koe</button>
-                        <button id="save-quit-btn" class="btn btn-outline-secondary"><i class="fas fa-save me-2"></i>Tallenna ja poistu</button>
+                </div>
+                <div class="col-lg-4">
+                    <div class="card shadow-sm mb-3">
+                        <div class="card-header bg-primary text-white fw-bold">
+                            <i class="fas fa-th me-2"></i>Kysymysnavigaatio
+                        </div>
+                        <div class="card-body p-2">
+                            <div id="question-grid"></div>
+                        </div>
+                    </div>
+                    <div class="d-grid gap-2">
+                        <button id="finish-btn" class="btn btn-success btn-lg">
+                            <i class="fas fa-check-double me-2"></i>Tarkista ja palauta koe
+                        </button>
+                        <button id="save-quit-btn" class="btn btn-outline-secondary">
+                            <i class="fas fa-save me-2"></i>Tallenna ja poistu
+                        </button>
                     </div>
                 </div>
             </div>`;
@@ -215,7 +345,7 @@
     async function showQuestion(index) {
         currentQuestionIndex = index;
         const wrapper = document.getElementById('question-content-wrapper');
-        wrapper.innerHTML = `<div class="text-center p-5"><div class="spinner-border"></div></div>`;
+        wrapper.innerHTML = `<div class="text-center p-5"><div class="spinner-border text-primary"></div><p class="mt-3 text-muted">Ladataan kysymystä...</p></div>`;
         updateQuestionGrid();
 
         let question = questionsCache[index];
@@ -226,31 +356,38 @@
                 question = await response.json();
                 questionsCache[index] = question;
             } catch (error) {
-                wrapper.innerHTML = `<div class="alert alert-danger">${error.message}</div>`;
+                wrapper.innerHTML = `<div class="alert alert-danger"><i class="fas fa-exclamation-triangle me-2"></i>${error.message}</div>`;
                 return;
             }
         }
         
         let optionsHtml = question.options.map((option, i) => `
-            <div class="form-check">
+            <div class="form-check mb-3">
                 <input class="form-check-input" type="radio" name="answer" id="option${i}" value="${i}" ${answers[index] === i ? 'checked' : ''}>
-                <label class="form-check-label p-2 border rounded" for="option${i}" style="cursor:pointer; width: 100%;">
-                    ${String.fromCharCode(65 + i)}. ${option}
+                <label class="form-check-label p-3 rounded w-100" for="option${i}" style="cursor:pointer;">
+                    <strong>${String.fromCharCode(65 + i)}.</strong> ${option}
                 </label>
             </div>
         `).join('');
         
-        // Määritä seuraava-napin teksti ja toiminto
         const isLastQuestion = index === questionIds.length - 1;
-        const nextButtonText = isLastQuestion ? '<i class="fas fa-flag-checkered me-2"></i>Viimeinen kysymys' : '<i class="fas fa-arrow-right me-2"></i>Seuraava kysymys';
+        const nextButtonText = isLastQuestion ? '<i class="fas fa-flag-checkered me-2"></i>Viimeinen kysymys' : '<i class="fas fa-arrow-right me-2"></i>Seuraava';
         const nextButtonClass = isLastQuestion ? 'btn-warning' : 'btn-primary';
             
         wrapper.innerHTML = `
-            <h5 class="card-title">Kysymys ${index + 1} / ${questionIds.length}</h5>
-            <p class="fs-5">${question.question}</p>
-            <div class="d-grid gap-3 mt-4 mb-4">${optionsHtml}</div>
+            <div class="mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-question-circle text-primary me-2"></i>
+                        Kysymys ${index + 1} / ${questionIds.length}
+                    </h5>
+                    <span class="badge bg-secondary">${question.category || 'Yleinen'}</span>
+                </div>
+                <p class="fs-5 fw-medium">${question.question}</p>
+            </div>
+            <div class="mb-4">${optionsHtml}</div>
             <div class="d-flex gap-2 justify-content-between">
-                <button id="prev-btn" class="btn btn-outline-secondary" ${index === 0 ? 'disabled' : ''}>
+                <button id="prev-btn" class="btn btn-outline-secondary ${index === 0 ? 'disabled' : ''}" ${index === 0 ? 'disabled' : ''}>
                     <i class="fas fa-arrow-left me-2"></i>Edellinen
                 </button>
                 <button id="next-btn" class="btn ${nextButtonClass}">
@@ -259,7 +396,6 @@
             </div>
         `;
         
-        // Lisää event listenerit vastausvalinnoille
         wrapper.querySelectorAll('input[name="answer"]').forEach(radio => {
             radio.addEventListener('change', (e) => {
                 answers[currentQuestionIndex] = parseInt(e.target.value);
@@ -268,21 +404,17 @@
             });
         });
         
-        // Edellinen-nappi
         const prevBtn = document.getElementById('prev-btn');
         if (prevBtn && index > 0) {
             prevBtn.addEventListener('click', () => showQuestion(index - 1));
         }
         
-        // Seuraava-nappi
         const nextBtn = document.getElementById('next-btn');
         nextBtn.addEventListener('click', () => {
             if (isLastQuestion) {
-                // Jos viimeinen kysymys, vieritä ylös näyttämään "Palauta koe" -nappi
                 window.scrollTo({ top: 0, behavior: 'smooth' });
                 alert('Olet viimeisellä kysymyksellä! Kun olet valmis, paina "Tarkista ja palauta koe" -nappia oikealla.');
             } else {
-                // Siirry seuraavaan kysymykseen
                 showQuestion(index + 1);
             }
         });
@@ -320,7 +452,11 @@
         const answeredCount = answers.filter(a => a !== null).length;
         const progress = (answeredCount / questionIds.length) * 100;
         const bar = document.getElementById('progress-bar');
-        if (bar) bar.style.width = `${progress}%`;
+        if (bar) {
+            bar.style.width = `${progress}%`;
+            bar.setAttribute('aria-valuenow', progress);
+            bar.textContent = `${answeredCount}/${questionIds.length}`;
+        }
     }
 
     function startTimer() {
@@ -331,7 +467,7 @@
             updateTimerDisplay();
             if (timeRemaining <= 0) {
                 clearInterval(timerInterval);
-                alert('Aika loppui! Koe tarkistetaan.');
+                alert('Aika loppui! Koe tarkistetaan automaattisesti.');
                 finishSimulation();
             }
         }, 1000);
@@ -342,9 +478,10 @@
         const seconds = timeRemaining % 60;
         const timerEl = document.getElementById('timer');
         if (timerEl) {
-            timerEl.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            timerEl.innerHTML = `<i class="fas fa-clock me-2"></i>${minutes}:${seconds.toString().padStart(2, '0')}`;
             if (timeRemaining <= 300) {
-                timerEl.classList.add('text-danger');
+                timerEl.classList.remove('bg-danger-subtle', 'text-danger-emphasis');
+                timerEl.classList.add('bg-danger', 'text-white');
             }
         }
     }
@@ -353,7 +490,7 @@
         const unanswered = answers.filter(a => a === null).length;
         let message = 'Haluatko varmasti palauttaa kokeen?';
         if (unanswered > 0) {
-            message += ` Sinulla on ${unanswered} vastaamatonta kysymystä.`;
+            message += `\n\n⚠️ Sinulla on ${unanswered} vastaamatonta kysymystä.`;
         }
         if (confirm(message)) {
             finishSimulation();
@@ -361,7 +498,7 @@
     }
 
     async function saveAndQuit() {
-        if (confirm('Haluatko tallentaa edistymisesi ja poistua? Voit jatkaa myöhemmin.')) {
+        if (confirm('Haluatko tallentaa edistymisesi ja poistua?\n\nVoit jatkaa koetta myöhemmin samasta kohdasta.')) {
             await saveProgressToBackend();
             window.location.href = "{{ url_for('dashboard_route') }}";
         }
@@ -376,7 +513,6 @@
             };
             if (isFinishing) payload.is_finishing = true;
             
-            // ✅ KORJATTU: Käytä simCsrf
             await fetch('/api/simulation/update', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': simCsrf },
@@ -384,7 +520,7 @@
             });
         } catch (e) {
             console.error('Failed to save progress:', e);
-            alert("Tallennus epäonnistui. Tarkista verkkoyhteys.");
+            alert("❌ Tallennus epäonnistui. Tarkista verkkoyhteys.");
         }
     }
 
@@ -392,7 +528,6 @@
         clearInterval(timerInterval);
         await saveProgressToBackend(true);
         try {
-            // ✅ KORJATTU: Käytä simCsrf
             const response = await fetch('/api/submit_simulation', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': simCsrf }
@@ -401,7 +536,7 @@
             showResults(result);
         } catch (error) {
             console.error('Error finishing simulation:', error);
-            alert('Virhe kokeen palautuksessa.');
+            alert('❌ Virhe kokeen palautuksessa. Yritä uudelleen.');
         }
     }
 
@@ -410,30 +545,64 @@
         document.getElementById('floating-calculator-btn').classList.add('d-none');
         const resultsScreen = document.getElementById('results-screen');
         resultsScreen.classList.remove('d-none');
+        
+        const percentage = result.percentage;
+        let gradeEmoji = '📊';
+        let gradeClass = 'text-primary';
+        
+        if (percentage >= 90) {
+            gradeEmoji = '🌟';
+            gradeClass = 'text-success';
+        } else if (percentage >= 75) {
+            gradeEmoji = '✅';
+            gradeClass = 'text-success';
+        } else if (percentage >= 50) {
+            gradeEmoji = '📈';
+            gradeClass = 'text-warning';
+        } else {
+            gradeEmoji = '📉';
+            gradeClass = 'text-danger';
+        }
+        
         let detailedResultsHtml = result.detailed_results.map((res, index) => `
-            <div class="card mb-3">
+            <div class="card mb-3 border-${res.is_correct ? 'success' : 'danger'}">
                 <div class="card-body">
-                    <p><strong>${index + 1}. ${res.question}</strong></p>
-                    <p class="${res.is_correct ? 'text-success' : 'text-danger'}">
-                        <i class="fas ${res.is_correct ? 'fa-check-circle' : 'fa-times-circle'}"></i>
-                        Vastasit: ${res.user_answer_text || 'Ei vastattu'}
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h6 class="mb-0"><strong>${index + 1}.</strong> ${res.question}</h6>
+                        <span class="badge ${res.is_correct ? 'bg-success' : 'bg-danger'}">
+                            <i class="fas ${res.is_correct ? 'fa-check' : 'fa-times'}"></i>
+                        </span>
+                    </div>
+                    <p class="${res.is_correct ? 'text-success' : 'text-danger'} mb-2">
+                        <strong>Sinun vastauksesi:</strong> ${res.user_answer_text || 'Ei vastattu'}
                     </p>
-                    ${!res.is_correct ? `<p class="text-success">Oikea vastaus: ${res.correct_answer_text}</p>` : ''}
-                    <p class="text-muted small">${res.explanation}</p>
+                    ${!res.is_correct ? `<p class="text-success mb-2"><strong>Oikea vastaus:</strong> ${res.correct_answer_text}</p>` : ''}
+                    <p class="text-muted small mb-0"><i class="fas fa-info-circle me-1"></i>${res.explanation}</p>
                 </div>
             </div>
         `).join('');
+        
         resultsScreen.innerHTML = `
-            <div class="card shadow-lg border-0 text-center p-4">
-                <h1 class="display-4">Koe suoritettu!</h1>
-                <p class="lead">Tuloksesi: <strong>${result.score} / ${result.total} (${result.percentage.toFixed(1)}%)</strong></p>
-                <div class="d-flex justify-content-center gap-2 mt-3 mb-4">
-                    <a href="{{ url_for('dashboard_route') }}" class="btn btn-primary">Palaa etusivulle</a>
-                    <a href="{{ url_for('simulation_route', new='true') }}" class="btn btn-outline-secondary">Yritä uudelleen</a>
+            <div class="card shadow-lg border-0 text-center p-5">
+                <div class="mb-4">
+                    <div style="font-size: 80px;">${gradeEmoji}</div>
+                </div>
+                <h1 class="display-4 mb-3">Koe suoritettu!</h1>
+                <p class="lead ${gradeClass} mb-4">
+                    <strong>${result.score} / ${result.total}</strong> oikein
+                    <span class="d-block fs-2 fw-bold">${percentage.toFixed(1)}%</span>
+                </p>
+                <div class="d-flex justify-content-center gap-3 mb-5 flex-wrap">
+                    <a href="{{ url_for('dashboard_route') }}" class="btn btn-primary btn-lg">
+                        <i class="fas fa-home me-2"></i>Palaa etusivulle
+                    </a>
+                    <a href="{{ url_for('simulation_route', new='true') }}" class="btn btn-outline-secondary btn-lg">
+                        <i class="fas fa-redo me-2"></i>Yritä uudelleen
+                    </a>
                 </div>
                 <hr>
-                <h3 class="mt-4">Vastausten erittely</h3>
-                <div class="text-start mt-3" style="max-height: 400px; overflow-y: auto;">${detailedResultsHtml}</div>
+                <h3 class="mt-5 mb-4"><i class="fas fa-list-check me-2"></i>Vastausten erittely</h3>
+                <div class="text-start" style="max-height: 500px; overflow-y: auto;">${detailedResultsHtml}</div>
             </div>
         `;
     }
