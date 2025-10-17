@@ -24,11 +24,11 @@
     
     /* Navbar yhä glassmorphism */
     .navbar {
-        background: rgba(255, 255, 255, 0.15) !important;
+        background: rgba(90, 103, 216, 0.85) !important;
     }
     
     body.dark-mode .navbar {
-        background: rgba(15, 15, 15, 0.5) !important;
+        background: rgba(30, 27, 75, 0.9) !important;
     }
     
     /* Sisältö selkeästi näkyvissä */
@@ -104,7 +104,8 @@
 {% block extra_scripts %}
 <script>
     const initialSessionData = {{ session_data | tojson }};
-    
+    // ✅ KORJATTU: Käytä eri nimeä välttääkseen konfliktin base.html:n kanssa
+    const simCsrf = "{{ csrf_token() }}";
     
     let questionsCache = {};
     let answers = [];
@@ -129,7 +130,25 @@
         answers = initialSessionData.answers || [];
         questionIds = initialSessionData.question_ids || [];
         currentQuestionIndex = initialSessionData.current_index || 0;
-        timeRemaining = initialSessionData.time_remaining || 3600;
+        
+        // ✅ KORJATTU: Laske jäljellä oleva aika oikein start_time perusteella
+        if (initialSessionData.start_time) {
+            const sessionStart = new Date(initialSessionData.start_time).getTime();
+            const now = new Date().getTime();
+            const elapsedSeconds = Math.floor((now - sessionStart) / 1000);
+            const originalTimeLimit = 3600; // 60 min
+            timeRemaining = Math.max(0, originalTimeLimit - elapsedSeconds);
+            
+            console.log('⏰ Session started:', new Date(initialSessionData.start_time));
+            console.log('⏰ Elapsed time:', Math.floor(elapsedSeconds / 60), 'minutes');
+            console.log('⏰ Time remaining:', Math.floor(timeRemaining / 60), 'minutes');
+        } else if (initialSessionData.time_remaining !== undefined && initialSessionData.time_remaining !== null) {
+            timeRemaining = Math.max(0, initialSessionData.time_remaining);
+            console.log('⏰ Using saved time_remaining:', Math.floor(timeRemaining / 60), 'minutes');
+        } else {
+            timeRemaining = 3600;
+            console.log('⏰ No saved time, starting fresh with 60 minutes');
+        }
         
         // Jos aloitetaan alusta (current_index = 0), näytä countdown
         if (currentQuestionIndex === 0) {
@@ -356,9 +375,11 @@
                 time_remaining: timeRemaining
             };
             if (isFinishing) payload.is_finishing = true;
+            
+            // ✅ KORJATTU: Käytä simCsrf
             await fetch('/api/simulation/update', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': simCsrf },
                 body: JSON.stringify(payload)
             });
         } catch (e) {
@@ -371,9 +392,10 @@
         clearInterval(timerInterval);
         await saveProgressToBackend(true);
         try {
+            // ✅ KORJATTU: Käytä simCsrf
             const response = await fetch('/api/submit_simulation', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken }
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': simCsrf }
             });
             const result = await response.json();
             showResults(result);
