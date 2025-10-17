@@ -104,7 +104,7 @@
 {% block extra_scripts %}
 <script>
     const initialSessionData = {{ session_data | tojson }};
-    const csrfToken = "{{ csrf_token() }}";
+    
     
     let questionsCache = {};
     let answers = [];
