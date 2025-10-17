@@ -2,6 +2,47 @@
 
 {% block title %}Koesimulaatio - LOVe Enhanced{% endblock %}
 
+{% block extra_head %}
+<style>
+    /* 🎨 Simulaatio: Vahvempi tausta, ei animaatiota */
+    body {
+        animation: none !important;
+        background: #f0f4f8 !important;
+    }
+    
+    body::before {
+        background: rgba(240, 244, 248, 0.98) !important;
+    }
+    
+    body.dark-mode {
+        background: #0f1419 !important;
+    }
+    
+    body.dark-mode::before {
+        background: rgba(15, 20, 25, 0.98) !important;
+    }
+    
+    /* Navbar yhä glassmorphism */
+    .navbar {
+        background: rgba(255, 255, 255, 0.15) !important;
+    }
+    
+    body.dark-mode .navbar {
+        background: rgba(15, 15, 15, 0.5) !important;
+    }
+    
+    /* Sisältö selkeästi näkyvissä */
+    .card {
+        background: rgba(255, 255, 255, 0.98) !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+    }
+    
+    body.dark-mode .card {
+        background: rgba(30, 30, 30, 0.98) !important;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container mt-4">
     <div id="start-screen" class="card shadow-lg border-0" style="display: none;">
