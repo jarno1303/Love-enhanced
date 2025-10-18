@@ -218,6 +218,56 @@ class DatabaseManager:
                 logger.error(f"Virhe lisättäessä saraketta '{column_name}': {e}")
                 # Ei heitetä exceptionia, jatketaan
 
+    def _add_column_if_not_exists(self, table_name, column_name, column_type):
+        """Apufunktio sarakkeen lisäämiseksi, jos sitä ei ole olemassa."""
+        try:
+            conn = self.get_connection()
+            try:
+                with conn.cursor(cursor_factory=DictCursor if self.is_postgres else None) as cur:
+                    # Tarkista sarakkeen olemassaolo
+                    if self.is_postgres:
+                        cur.execute("""
+                            SELECT 1 FROM information_schema.columns 
+                            WHERE table_name = %s AND column_name = %s
+                        """, (table_name, column_name))
+                    else:  # SQLite
+                        cur.execute(f"PRAGMA table_info({table_name})")
+                    
+                    result = cur.fetchall()
+                    
+                    if not result:
+                        # Taulu ei ole olemassa vielä
+                        logger.info(f"Taulua '{table_name}' ei vielä ole, ohitetaan sarakkeen lisäys.")
+                        return
+                    
+                    if self.is_postgres:
+                        # PostgreSQL: jos result on tyhjä, saraketta ei ole
+                        column_exists = len(result) > 0
+                    else:
+                        # SQLite: tarkista onko sarake listassa
+                        columns = [row[1] for row in result]
+                        column_exists = column_name in columns
+                    
+                    if not column_exists:
+                        # Lisää sarake
+                        logger.info(f"Lisätään sarake '{column_name}' tauluun '{table_name}'...")
+                        cur.execute(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type}")
+                        conn.commit()
+                        logger.info(f"Sarake '{column_name}' lisätty tauluun '{table_name}'.")
+                    else:
+                        logger.debug(f"Sarake '{column_name}' on jo taulussa '{table_name}'.")
+            finally:
+                conn.close()
+                    
+        except Exception as e:
+            # Voi epäonnistua jos taulua ei vielä ole, mikä on ok
+            error_msg = str(e).lower()
+            if "no such table" in error_msg or "does not exist" in error_msg:
+                logger.info(f"Taulua '{table_name}' ei vielä ole, ohitetaan sarakkeen lisäys.")
+            else:
+                logger.error(f"Virhe lisättäessä saraketta '{column_name}': {e}")
+                # Ei heitetä exceptionia, jatketaan
+
     def normalize_question(self, text):
 
 def _add_column_if_not_exists(self, table_name, column_name, column_type):
