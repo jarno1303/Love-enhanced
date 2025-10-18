@@ -144,21 +144,54 @@ class DatabaseManager:
             conn.close()
 
     def migrate_database(self):
-        """Suorittaa tarvittavat tietokantamigraatiot."""
-        try:
-            with self.get_connection() as conn:
-                with conn.cursor(cursor_factory=DictCursor if self.is_postgres else None) as cur:
-                    if self.is_postgres:
-                        cur.execute("SELECT column_name FROM information_schema.columns WHERE table_name = 'users' AND table_schema = 'public'")
-                        user_columns = [row['column_name'] for row in cur.fetchall()]
-                    else:
-                        cur.execute("PRAGMA table_info(users)")
-                        user_columns = [row['name'] for row in cur.fetchall()]
-                    
-                    if 'expires_at' not in user_columns:
-                        self._execute("ALTER TABLE users ADD COLUMN expires_at TIMESTAMP")
-        except Exception as e:
-            logger.warning(f"Migraatiovirhe (voi olla normaali jos tauluja ei ole vielä luotu): {e}")
+    """Suorittaa tarvittavat tietokantamigraatiot."""
+    try:
+        # Ennestään ollut migraatio
+        self._add_column_if_not_exists('users', 'expires_at', 'TIMESTAMP')
+
+        # Uudet lisäykset validointiin
+        self._add_column_if_not_exists('questions', 'status', "TEXT DEFAULT 'needs_review'")
+        self._add_column_if_not_exists('questions', 'validated_by', 'INTEGER')
+        self._add_column_if_not_exists('questions', 'validated_at', 'TIMESTAMP')
+
+        # Lisää title-sarake users-tauluun
+        self._add_column_if_not_exists('users', 'title', 'TEXT')
+
+        logger.info("Tietokantamigraatiot tarkistettu onnistuneesti.")
+
+    except Exception as e:
+        logger.warning(f"Migraatiovirhe (voi olla normaali ensiasennuksessa): {e}")
+
+def _add_column_if_not_exists(self, table_name, column_name, column_type):
+    """Apufunktio sarakkeen lisäämiseksi, jos sitä ei ole olemassa."""
+    try:
+        with self.get_connection() as conn:
+            with conn.cursor(cursor_factory=DictCursor if self.is_postgres else None) as cur:
+                # Tarkista sarakkeen olemassaolo
+                if self.is_postgres:
+                    cur.execute("""
+                        SELECT 1 FROM information_schema.columns 
+                        WHERE table_name = %s AND column_name = %s
+                    """, (table_name, column_name))
+                else:  # SQLite
+                    cur.execute(f"PRAGMA table_info({table_name})")
+                
+                result = cur.fetchall()
+                columns = [row['column_name'] if self.is_postgres else row[1] for row in result]
+                
+                if column_name not in columns:
+                    # Lisää sarake, jos sitä ei löytynyt
+                    logger.info(f"Lisätään sarake '{column_name}' tauluun '{table_name}'...")
+                    self._execute(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type}")
+                    logger.info("Sarake lisätty.")
+                
+    except Exception as e:
+        # Voi epäonnistua jos taulua ei vielä ole, mikä on ok
+        if "no such table" in str(e) or "does not exist" in str(e):
+            logger.info(f"Taulua '{table_name}' ei vielä ole, ohitetaan sarakkeen lisäys.")
+        else:
+            logger.error(f"Virhe lisättäessä saraketta '{column_name}': {e}")
+            raise
 
     def normalize_question(self, text):
         """Normalisoi kysymystekstin vertailua varten."""
