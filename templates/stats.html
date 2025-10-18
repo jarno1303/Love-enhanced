@@ -225,34 +225,20 @@ let categoryChart, distractorChart, weeklyChart;
 
 async function loadStats() {
     try {
-        showLoading();
+        const response = await fetch('/api/stats');
+        const data = await response.json();
         
-        // Lataa molemmat API:t
-        const [statsResponse, distractorResponse] = await Promise.all([
-            fetch('/api/stats'),
-            fetch('/api/distractor_stats')
-        ]);
-        
-        if (!statsResponse.ok || !distractorResponse.ok) {
-            throw new Error('Virhe tilastojen lataamisessa');
-        }
-        
-        const statsData = await statsResponse.json();
-        const distractorData = await distractorResponse.json();
-        
-        console.log('📊 Stats data received:', statsData);
-        
-        // ✅ KORJATTU: Tarkista data.general.total_attempts
-        if (!statsData.general || statsData.general.total_attempts === 0) {
+        // KORJATTU TARKISTUS
+        if (!data || !data.general || !data.general.answered_questions || data.general.answered_questions === 0) {
             showEmptyState();
             return;
         }
         
-        // Näytä tilastot
-        showStats(statsData, distractorData);
+        hideEmptyState();
+        displayStats(data);
         
     } catch (error) {
-        console.error('Virhe tilastojen lataamisessa:', error);
+        console.error('Error loading stats:', error);
         showEmptyState();
     }
 }
