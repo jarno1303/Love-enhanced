@@ -23,11 +23,17 @@ class DatabaseManager:
         if not self.is_postgres:
             self.db_path = db_path if db_path else 'love_enhanced_web.db'
         
-        # Suoritetaan migraatiot vasta yhteyden ollessa varma
-        try:
-            self.migrate_database()
-        except Exception as e:
-            logger.error(f"Tietokannan alustus tai migraatio epäonnistui käynnistyksessä: {e}")
+        # ✅ KORJATTU 18.10.2025: Poistettu migrate_database() käynnistyksestä
+        # Migraatio kestää liian kauan (>30s) Railway PostgreSQL:ssä ja aiheuttaa worker timeoutin.
+        # Sarakkeet on jo lisätty manuaalisesti SQL:llä Railway Dashboardissa.
+        # Migraatiota ei tarvitse ajaa joka käynnistyksellä.
+        logger.info("DatabaseManager initialized successfully (migrations skipped)")
+        
+        # VANHA KOODI (poistettu):
+        # try:
+        #     self.migrate_database()
+        # except Exception as e:
+        #     logger.error(f"Tietokannan alustus tai migraatio epäonnistui käynnistyksessä: {e}")
 
     def get_connection(self):
         """Luo ja palauttaa tietokantayhteyden."""
