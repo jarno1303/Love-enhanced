@@ -795,36 +795,54 @@ def get_questions_api():
             traceback.print_exc()
         return jsonify({'error': 'Palvelinvirhe.', 'details': str(e)}), 500
 
-@app.route("/api/simulation/update", methods=['POST'])
+@app.route('/api/simulation/update', methods=['POST'])
 @login_required
-@limiter.limit("60 per minute")
-def update_simulation_api():
+def update_simulation():
+    """Update simulation progress with CORRECT time handling"""
     try:
-        data = request.get_json()
-        active_session = db_manager.get_active_session(current_user.id)
-
-        if not active_session or active_session.get('session_type') != 'simulation':
-            return jsonify({'success': False, 'error': 'No active simulation found.'}), 404
-
-        # Päivitetään selaimen lähettämät tiedot
-        current_index = data.get('current_index', active_session['current_index'])
-        answers = data.get('answers', active_session['answers'])
-        time_remaining = data.get('time_remaining', active_session['time_remaining'])
-
-        # Tallennetaan päivitetty tila tietokantaan
-        db_manager.save_or_update_session(
-            user_id=current_user.id,
-            session_type='simulation',
-            question_ids=active_session['question_ids'],
-            answers=answers,
-            current_index=current_index,
-            time_remaining=time_remaining
-        )
-        app.logger.info(f"Päivitettiin simulaation tila käyttäjälle {current_user.username}")
-        return jsonify({'success': True})
+        data = request.json
+        user_id = session.get('user_id')
+        
+        # Find active simulation
+        sim = Simulation.query.filter_by(
+            user_id=user_id, 
+            is_completed=False
+        ).order_by(Simulation.id.desc()).first()
+        
+        if not sim:
+            return jsonify({'error': 'No active simulation'}), 404
+        
+        # ✅ KRIITTINEN KORJAUS: Tallenna time_remaining SUORAAN frontendistä
+        if 'time_remaining' in data:
+            sim.time_remaining = int(data['time_remaining'])
+            print(f"💾 Tallennetaan time_remaining: {sim.time_remaining} sekuntia")
+        
+        # Update other fields
+        if 'answers' in data:
+            sim.answers = json.dumps(data['answers'])
+        
+        if 'current_index' in data:
+            sim.current_index = data['current_index']
+        
+        # Mark as finishing if requested
+        if data.get('is_finishing'):
+            sim.is_completed = True
+            sim.completed_at = datetime.now(timezone.utc)
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'time_remaining': sim.time_remaining
+        })
+        
     except Exception as e:
-        app.logger.error(f"Virhe simulaation päivityksessä: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        print(f"❌ ERROR in update_simulation: {e}")
+        print(f"❌ Data received: {data}")
+        import traceback
+        traceback.print_exc()
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
     
 @app.route("/api/simulation/delete", methods=['POST'])
 @login_required
@@ -1090,71 +1108,112 @@ def calculator_route():
 @app.route('/simulation')
 @login_required
 def simulation_route():
-    """Renderöi koesimulaatiosivun uudella, kestävällä mallilla."""
-    has_existing_session = 'simulation' in session and session['simulation'].get('user_id') == current_user.id
+    """Renderöi koesimulaatiosivun tietokantapohjaisella mallilla."""
+    user_id = current_user.id
     
+    # Etsi aktiivinen simulaatio tietokannasta
+    session_obj = Simulation.query.filter_by(
+        user_id=user_id, 
+        is_completed=False
+    ).order_by(Simulation.id.desc()).first()
+    
+    has_existing_session = session_obj is not None
+    
+    # ============================================
+    # UUSI KOE - Luo uusi simulaatio tietokantaan
+    # ============================================
     if request.args.get('new') == 'true':
-        if has_existing_session:
-            session.pop('simulation', None)
+        # Poista vanha sessio jos on olemassa
+        if session_obj:
+            session_obj.is_completed = True
+            db.session.commit()
         
-        # KORJATTU KOHTA: Käytetään db_manageria, ei logic.question_manageria
+        # Hae satunnaiset kysymykset
         question_ids = db_manager.get_random_question_ids(50)
         
         if not question_ids or len(question_ids) < 50:
             flash(f"Simulaation luonti epäonnistui: tietokannassa ei ole tarpeeksi kysymyksiä (vaaditaan 50, löytyi {len(question_ids)}).", "danger")
             return redirect(url_for('dashboard_route'))
-
-        session['simulation'] = {
-            'user_id': current_user.id,
-            'question_ids': question_ids,
-            'answers': [None] * len(question_ids),
-            'current_index': 0,
-            'start_time': datetime.now(timezone.utc).isoformat(),
-            'time_remaining': 3600
-        }
-        session.modified = True
-        app.logger.info(f"Uusi simulaatio luotu: {len(question_ids)} kysymystä.")
-        return redirect(url_for('simulation_route', resume='true'))
-
-    # ✅ KORJATTU: Laske session_info aina jos sessio on olemassa
-    session_info = {}
-    if has_existing_session:
-        sim = session['simulation']
         
-        # ✅ KORJATTU: Laske jäljellä oleva aika oikein
-        try:
-            start_time = datetime.fromisoformat(sim.get('start_time'))
-            # Varmista että start_time on timezone-aware
-            if start_time.tzinfo is None:
-                start_time = start_time.replace(tzinfo=timezone.utc)
-            
-            elapsed_seconds = (datetime.now(timezone.utc) - start_time).total_seconds()
-            time_left = max(0, 3600 - elapsed_seconds)  # ✅ OIKEA JÄRJESTYS!
-            
-            app.logger.info(f"⏰ Elapsed: {elapsed_seconds:.0f}s, Remaining: {time_left:.0f}s")
-        except Exception as e:
-            app.logger.error(f"Time calculation error: {e}")
-            time_left = 3600  # Fallback
+        # Luo uusi simulaatio TIETOKANTAAN
+        new_simulation = Simulation(
+            user_id=user_id,
+            question_ids=json.dumps(question_ids),
+            answers=json.dumps([None] * len(question_ids)),
+            current_index=0,
+            start_time=datetime.now(timezone.utc),
+            time_remaining=3600,  # 60 minuuttia
+            is_completed=False
+        )
+        
+        db.session.add(new_simulation)
+        db.session.commit()
+        
+        app.logger.info(f"✅ Uusi simulaatio luotu tietokantaan: ID={new_simulation.id}, {len(question_ids)} kysymystä")
+        
+        return redirect(url_for('simulation_route', resume='true'))
+    
+    # ============================================
+    # JATKA KOETTA - Lataa olemassa oleva sessio
+    # ============================================
+    session_info = {}
+    session_data = {}
+    
+    if has_existing_session:
+        # ✅ KRIITTINEN KORJAUS: Käytä tallennettua time_remaining
+        if session_obj.time_remaining is not None:
+            # Käytä tallennettua arvoa (kun sessio on keskeytetty ja jatkettu)
+            time_remaining = max(0, int(session_obj.time_remaining))
+            app.logger.info(f"✅ Käytetään tallennettua time_remaining: {time_remaining} sek = {time_remaining//60} min")
+        elif session_obj.start_time:
+            # Fallback: laske start_time perusteella (vain UUDELLE koeelle)
+            elapsed = (datetime.now(timezone.utc) - session_obj.start_time).total_seconds()
+            time_remaining = max(0, 3600 - int(elapsed))
+            app.logger.info(f"⚠️ Lasketaan start_time perusteella: {time_remaining} sek")
+        else:
+            # Virhetilanne: ei kumpaakaan
+            time_remaining = 3600
+            app.logger.warning(f"⚠️ Ei time_remaining eikä start_time! Käytetään oletusta: 60 min")
+        
+        # Rakenna session_data frontendille
+        session_data = {
+            'question_ids': json.loads(session_obj.question_ids),
+            'answers': json.loads(session_obj.answers) if session_obj.answers else [None] * len(json.loads(session_obj.question_ids)),
+            'current_index': session_obj.current_index,
+            'start_time': session_obj.start_time.isoformat() if session_obj.start_time else None,
+            'time_remaining': time_remaining  # ✅ Tämä menee frontendiin
+        }
+        
+        # Rakenna session_info start-screenille
+        question_ids_list = json.loads(session_obj.question_ids)
+        answers_list = json.loads(session_obj.answers) if session_obj.answers else []
         
         session_info = {
-            'current_index': sim.get('current_index', 0) + 1,
-            'total': len(sim.get('question_ids', [])),
-            'answered': len([a for a in sim.get('answers', []) if a is not None]),
-            'time_remaining_minutes': int(time_left // 60)
+            'current_index': session_obj.current_index + 1,  # +1 koska näytetään ihmisluettavana (1-50)
+            'total': len(question_ids_list),
+            'answered': len([a for a in answers_list if a is not None]),
+            'time_remaining_minutes': int(time_remaining // 60)
         }
+        
+        app.logger.info(f"📊 Ladattu sessio: Kysymys {session_info['current_index']}/{session_info['total']}, "
+                       f"Vastattu: {session_info['answered']}, "
+                       f"Aikaa jäljellä: {session_info['time_remaining_minutes']} min")
     
-    # ✅ KORJATTU: Palauta session_info aina
+    # ============================================
+    # RENDERÖI TEMPLATE
+    # ============================================
     if request.args.get('resume') == 'true' and has_existing_session:
-         app.logger.info(f"Jatketaan simulaatiota. Aikaa jäljellä: {session_info.get('time_remaining_minutes', 0)} min")
-         return render_template('simulation.html', 
-                                session_data=session['simulation'], 
-                                has_existing_session=True,
-                                session_info=session_info)  # ✅ EI TYHJÄ!
-
+        app.logger.info(f"▶️ Jatketaan simulaatiota. Aikaa jäljellä: {session_info.get('time_remaining_minutes', 0)} min")
+        return render_template('simulation.html', 
+                              session_data=session_data, 
+                              has_existing_session=True,
+                              session_info=session_info)
+    
+    # Oletussivu (ei aktiivista koetta)
     return render_template('simulation.html', 
-                           session_data=session.get('simulation', {}), 
-                           has_existing_session=has_existing_session,
-                           session_info=session_info)
+                          session_data=session_data, 
+                          has_existing_session=has_existing_session,
+                          session_info=session_info)
 
 @app.route("/profile")
 @login_required
