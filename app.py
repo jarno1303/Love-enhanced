@@ -759,6 +759,107 @@ def submit_simulation():
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500   
 
+@app.route("/api/questions")
+@login_required
+@limiter.limit("60 per minute")
+def get_questions_api():
+    """Hakee harjoituskysymyksiä valintojen mukaan, tukee myös simulaatiota."""
+    try:
+        # Käytä getlist() hakemaan kaikki valinnat listoina
+        categories = request.args.getlist('categories')
+        difficulties = request.args.getlist('difficulties')
+        limit = int(request.args.get('count', 10))
+        simulation = request.args.get('simulation') == 'true'
+
+        app.logger.info(f"API call: user={current_user.id}, simulation={simulation}, categories={categories}, difficulties={difficulties}, limit={limit}")
+
+        # Varmista, että tyhjät listat käsitellään oikein
+        if not categories:
+            categories = None
+            app.logger.info("No categories provided - using all categories")
+        if not difficulties:
+            difficulties = None
+            app.logger.info("No difficulties provided - using all difficulties")
+
+        # Hae kysymykset
+        if simulation:
+            app.logger.info("Simulation mode: Fetching 50 random questions")
+            questions = db_manager.get_questions(current_user.id, limit=50)  # Ei suodatus
+        else:
+            app.logger.info("Normal mode: Fetching with filters")
+            questions = db_manager.get_questions(
+                user_id=current_user.id,
+                categories=categories,
+                difficulties=difficulties,
+                limit=limit
+            )
+
+        app.logger.info(f"Raw questions fetched: {len(questions)}")
+
+        # Prosessoi kysymykset
+        questions_list = []
+        for q in questions:
+            if q.options and 0 <= q.correct < len(q.options):
+                original_correct_text = q.options[q.correct]
+                random.shuffle(q.options)
+                q.correct = q.options.index(original_correct_text)
+            q_dict = asdict(q)
+            questions_list.append(q_dict)
+
+        if not questions_list:
+            app.logger.warning("No questions returned - returning empty list")
+            return jsonify({'questions': [], 'message': 'Ei kysymyksiä valituilla kriteereillä.'}), 200
+
+        app.logger.info(f"Returning {len(questions_list)} processed questions")
+        return jsonify({'questions': questions_list})
+
+    except ValueError as ve:
+        app.logger.error(f"Invalid parameter: {str(ve)}")
+        return jsonify({'error': 'Virheellinen parametri (esim. count).', 'details': str(ve)}), 400
+    except Exception as e:
+        app.logger.error(f"Virhe /api/questions haussa: {str(e)}")
+        if app.config['DEBUG']:
+            import traceback
+            traceback.print_exc()
+        return jsonify({'error': 'Palvelinvirhe.', 'details': str(e)}), 500
+
+@app.route('/api/simulation/update', methods=['POST'])
+@login_required
+def update_simulation():
+    """Päivitä simulaation tilanne sessioniin."""
+    try:
+        data = request.json
+        
+        if 'simulation' not in session:
+            return jsonify({'error': 'No active simulation'}), 404
+        
+        sim = session['simulation']
+        
+        # ✅ KRIITTINEN: Tallenna time_remaining
+        if 'time_remaining' in data:
+            sim['time_remaining'] = int(data['time_remaining'])
+            app.logger.info(f"💾 Tallennetaan time_remaining: {sim['time_remaining']} sek")
+        
+        # Päivitä muut kentät
+        if 'answers' in data:
+            sim['answers'] = data['answers']
+        
+        if 'current_index' in data:
+            sim['current_index'] = data['current_index']
+        
+        session.modified = True
+        
+        return jsonify({
+            'success': True,
+            'time_remaining': sim.get('time_remaining', 3600)
+        })
+        
+    except Exception as e:
+        app.logger.error(f"❌ ERROR in update_simulation: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+    
 @app.route("/api/stats")
 @login_required
 @limiter.limit("60 per minute")
