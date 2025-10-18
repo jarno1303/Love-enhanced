@@ -223,9 +223,35 @@
 <script>
 let categoryChart, distractorChart, weeklyChart;
 
-// ✅ KORJATTU: loadStats funktio
+// ✅ KORJATTU: Paikalliset funktiot uusilla nimillä (ei konfliktoi base.html:n kanssa)
+function showStatsLoading() {
+    const spinner = document.getElementById('loading-spinner');
+    const emptyState = document.getElementById('empty-state');
+    const statsContent = document.getElementById('stats-content');
+    
+    if (spinner) spinner.style.display = 'block';
+    if (emptyState) emptyState.style.display = 'none';
+    if (statsContent) statsContent.style.display = 'none';
+}
+
+function hideStatsLoading() {
+    const spinner = document.getElementById('loading-spinner');
+    if (spinner) spinner.style.display = 'none';
+}
+
+function showStatsEmptyState() {
+    const spinner = document.getElementById('loading-spinner');
+    const emptyState = document.getElementById('empty-state');
+    const statsContent = document.getElementById('stats-content');
+    
+    if (spinner) spinner.style.display = 'none';
+    if (emptyState) emptyState.style.display = 'block';
+    if (statsContent) statsContent.style.display = 'none';
+}
+
+// ✅ KORJATTU: loadStats käyttää uusia funktioiden nimiä
 async function loadStats() {
-    showLoading();
+    showStatsLoading();
     
     try {
         const response = await fetch('/api/stats');
@@ -238,43 +264,21 @@ async function loadStats() {
         
         console.log('📊 Stats data received:', data);
         
-        // KORJATTU TARKISTUS
         if (!data || !data.general || data.general.answered_questions === 0) {
             console.log('⚠️ No stats data available');
-            showEmptyState();
+            showStatsEmptyState();
             return;
         }
         
-        // ✅ KORJATTU: Kutsu oikeaa funktiota (showStats eikä displayStats)
+        hideStatsLoading();
         showStats(data);
         
     } catch (error) {
         console.error('❌ Error loading stats:', error);
-        showEmptyState();
+        showStatsEmptyState();
     }
 }
 
-function showLoading() {
-    const spinner = document.getElementById('loading-spinner');
-    const emptyState = document.getElementById('empty-state');
-    const statsContent = document.getElementById('stats-content');
-    
-    if (spinner) spinner.style.display = 'block';
-    if (emptyState) emptyState.style.display = 'none';
-    if (statsContent) statsContent.style.display = 'none';
-}
-
-function showEmptyState() {
-    const spinner = document.getElementById('loading-spinner');
-    const emptyState = document.getElementById('empty-state');
-    const statsContent = document.getElementById('stats-content');
-    
-    if (spinner) spinner.style.display = 'none';
-    if (emptyState) emptyState.style.display = 'block';
-    if (statsContent) statsContent.style.display = 'none';
-}
-
-// ✅ KORJATTU: Tee distractorData valinnaiseksi
 function showStats(statsData, distractorData) {
     const spinner = document.getElementById('loading-spinner');
     const emptyState = document.getElementById('empty-state');
@@ -308,21 +312,17 @@ function showStats(statsData, distractorData) {
     updateWeeklyProgress(statsData);
 }
 
-// ✅ KORJATTU: Käytä data.general rakennetta
 function updateGeneralStats(data) {
     const general = data.general;
     
     document.getElementById('total-questions').textContent = general.total_attempts || 0;
     
-    // Backend palauttaa desimaalimuodossa (0.476), kerro 100:lla
     const successRate = Math.round((general.avg_success_rate || 0) * 100);
     document.getElementById('success-rate').textContent = successRate + '%';
     
-    // Backend palauttaa avg_time_per_question
     const avgTime = Math.round(general.avg_time_per_question || 0);
     document.getElementById('avg-time').textContent = avgTime + 's';
     
-    // TODO: Lisää streak kun backend tukee sitä
     document.getElementById('current-streak').textContent = '0';
 }
 
@@ -333,7 +333,6 @@ function updateDistractorStats(data) {
     const avgResponseTime = Math.round((data.avg_response_time || 0) / 1000);
     document.getElementById('distractor-response-time').textContent = avgResponseTime + 's';
     
-    // Kehityssuunta
     const successRate = data.success_rate || 0;
     let improvement = '📊';
     if (successRate >= 80) improvement = '⬆️';
@@ -356,7 +355,6 @@ function updateCharts(statsData, distractorData) {
             data: {
                 labels: categories.map(c => c.category),
                 datasets: [{
-                    // ✅ Backend palauttaa desimaalimuodossa, kerro 100:lla
                     data: categories.map(c => Math.round((c.success_rate || 0) * 100)),
                     backgroundColor: [
                         '#2563eb', '#10b981', '#f59e0b', '#ef4444', 
@@ -384,7 +382,7 @@ function updateCharts(statsData, distractorData) {
         });
     }
     
-    // Häiriötekijäkaavio (vain jos data on olemassa)
+    // Häiriötekijäkaavio
     if (distractorData && distractorData.category_stats && distractorData.category_stats.length > 0) {
         document.getElementById('distractor-chart-card').style.display = 'block';
         
@@ -431,7 +429,6 @@ function updateCharts(statsData, distractorData) {
     }
 }
 
-// ✅ KORJATTU: Kerro success_rate 100:lla
 function updateDifficultyStats(data) {
     const container = document.getElementById('difficulty-stats-container');
     if (!container) return;
@@ -451,7 +448,6 @@ function updateDifficultyStats(data) {
     }
     
     difficulties.forEach(diff => {
-        // ✅ Backend palauttaa desimaalimuodossa (0.45), kerro 100:lla
         const successRate = (diff.success_rate || 0) * 100;
         const barColor = successRate >= 70 ? 'bg-success' : successRate >= 50 ? 'bg-warning' : 'bg-danger';
         const label = difficultyLabels[diff.difficulty] || diff.difficulty;
@@ -472,9 +468,8 @@ function updateDifficultyStats(data) {
     });
 }
 
-// ✅ KORJATTU: Käytä oikeaa rakennetta
 function updateRecentActivities(statsData, distractorData) {
-    // Sessiot - Backend palauttaa recent_sessions (tyhjä tällä hetkellä)
+    // Sessiot
     const sessionsContainer = document.getElementById('recent-sessions-container');
     const sessions = statsData.recent_sessions || [];
     
@@ -509,7 +504,7 @@ function updateRecentActivities(statsData, distractorData) {
         });
     }
     
-    // Häiriötilanteet (vain jos data on olemassa)
+    // Häiriötilanteet
     if (distractorData && distractorData.recent_attempts && distractorData.recent_attempts.length > 0) {
         document.getElementById('recent-distractors-card').style.display = 'block';
         
@@ -546,33 +541,24 @@ function updateRecentActivities(statsData, distractorData) {
     }
 }
 
-// ✅ KORJATTU: Käytä data.weekly_progress
 function updateWeeklyProgress(data) {
     const chartCard = document.getElementById('weekly-progress-card');
     const ctx = document.getElementById('weekly-progress-chart');
     
     if (!ctx) return;
     
-    // Tuhoa vanha kaavio jos olemassa
     if (weeklyChart) weeklyChart.destroy();
     
     const weeklyData = data.weekly_progress || [];
     
-    // Jos ei ole dataa, piilota koko kortti
     if (!weeklyData || weeklyData.length === 0) {
-        if (chartCard) {
-            chartCard.style.display = 'none';
-        }
+        if (chartCard) chartCard.style.display = 'none';
         console.log('⚠️ Weekly progress data not available');
         return;
     }
     
-    // Näytä kortti jos data löytyy
-    if (chartCard) {
-        chartCard.style.display = 'block';
-    }
+    if (chartCard) chartCard.style.display = 'block';
     
-    // Luo kaavio
     const labels = weeklyData.map(d => {
         const date = new Date(d.date);
         return date.toLocaleDateString('fi-FI', { day: 'numeric', month: 'short' });
