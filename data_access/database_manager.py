@@ -144,23 +144,81 @@ class DatabaseManager:
             conn.close()
 
     def migrate_database(self):
-    """Suorittaa tarvittavat tietokantamigraatiot."""
-    try:
-        # Ennestään ollut migraatio
-        self._add_column_if_not_exists('users', 'expires_at', 'TIMESTAMP')
+        """Suorittaa tarvittavat tietokantamigraatiot."""
+        try:
+            # Varmista että taulut on luotu ensin
+            self.init_database()
+            
+            # Ennestään ollut migraatio
+            self._add_column_if_not_exists('users', 'expires_at', 'TIMESTAMP')
 
-        # Uudet lisäykset validointiin
-        self._add_column_if_not_exists('questions', 'status', "TEXT DEFAULT 'needs_review'")
-        self._add_column_if_not_exists('questions', 'validated_by', 'INTEGER')
-        self._add_column_if_not_exists('questions', 'validated_at', 'TIMESTAMP')
+            # Uudet lisäykset validointiin
+            self._add_column_if_not_exists('questions', 'status', "TEXT DEFAULT 'needs_review'")
+            self._add_column_if_not_exists('questions', 'validated_by', 'INTEGER')
+            self._add_column_if_not_exists('questions', 'validated_at', 'TIMESTAMP')
 
-        # Lisää title-sarake users-tauluun
-        self._add_column_if_not_exists('users', 'title', 'TEXT')
-        
-        logger.info("Tietokantamigraatiot tarkistettu onnistuneesti.")
+            # Lisää title-sarake users-tauluun
+            self._add_column_if_not_exists('users', 'title', 'TEXT')
+            
+            # Lisää created_at jos puuttuu
+            self._add_column_if_not_exists('question_attempts', 'created_at', 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP')
+            
+            logger.info("Tietokantamigraatiot tarkistettu onnistuneesti.")
 
-    except Exception as e:
-        logger.warning(f"Migraatiovirhe (voi olla normaali ensiasennuksessa): {e}")
+        except Exception as e:
+            logger.warning(f"Migraatiovirhe (voi olla normaali ensiasennuksessa): {e}")
+
+    def _add_column_if_not_exists(self, table_name, column_name, column_type):
+        """Apufunktio sarakkeen lisäämiseksi, jos sitä ei ole olemassa."""
+        try:
+            conn = self.get_connection()
+            try:
+                with conn.cursor(cursor_factory=DictCursor if self.is_postgres else None) as cur:
+                    # Tarkista sarakkeen olemassaolo
+                    if self.is_postgres:
+                        cur.execute("""
+                            SELECT 1 FROM information_schema.columns 
+                            WHERE table_name = %s AND column_name = %s
+                        """, (table_name, column_name))
+                    else:  # SQLite
+                        cur.execute(f"PRAGMA table_info({table_name})")
+                    
+                    result = cur.fetchall()
+                    
+                    if not result:
+                        # Taulu ei ole olemassa vielä
+                        logger.info(f"Taulua '{table_name}' ei vielä ole, ohitetaan sarakkeen lisäys.")
+                        return
+                    
+                    if self.is_postgres:
+                        # PostgreSQL: jos result on tyhjä, saraketta ei ole
+                        column_exists = len(result) > 0
+                    else:
+                        # SQLite: tarkista onko sarake listassa
+                        columns = [row[1] for row in result]
+                        column_exists = column_name in columns
+                    
+                    if not column_exists:
+                        # Lisää sarake
+                        logger.info(f"Lisätään sarake '{column_name}' tauluun '{table_name}'...")
+                        cur.execute(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type}")
+                        conn.commit()
+                        logger.info(f"Sarake '{column_name}' lisätty tauluun '{table_name}'.")
+                    else:
+                        logger.debug(f"Sarake '{column_name}' on jo taulussa '{table_name}'.")
+            finally:
+                conn.close()
+                    
+        except Exception as e:
+            # Voi epäonnistua jos taulua ei vielä ole, mikä on ok
+            error_msg = str(e).lower()
+            if "no such table" in error_msg or "does not exist" in error_msg:
+                logger.info(f"Taulua '{table_name}' ei vielä ole, ohitetaan sarakkeen lisäys.")
+            else:
+                logger.error(f"Virhe lisättäessä saraketta '{column_name}': {e}")
+                # Ei heitetä exceptionia, jatketaan
+
+    def normalize_question(self, text):
 
 def _add_column_if_not_exists(self, table_name, column_name, column_type):
     """Apufunktio sarakkeen lisäämiseksi, jos sitä ei ole olemassa."""
