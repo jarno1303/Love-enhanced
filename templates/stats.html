@@ -241,7 +241,7 @@ async function loadStats() {
         const distractorData = await distractorResponse.json();
         
         // Tarkista onko dataa
-        if (!statsData.general || statsData.general.total_attempts === 0) {
+        if (!statsData || statsData.total_attempts === 0) {
             showEmptyState();
             return;
         }
@@ -292,12 +292,12 @@ function showStats(statsData, distractorData) {
 }
 
 function updateGeneralStats(data) {
-    document.getElementById('total-questions').textContent = data.general.total_attempts || 0;
+    document.getElementById('total-questions').textContent = data.total_attempts || 0;
     document.getElementById('success-rate').textContent = 
-        Math.round((data.general.avg_success_rate || 0) * 100) + '%';
+        Math.round(data.success_rate || 0) + '%';
     document.getElementById('avg-time').textContent = 
-        (data.general.avg_time_per_question || 0).toFixed(1) + 's';
-    document.getElementById('current-streak').textContent = '0'; // Päivitetään jos streak-data saatavilla
+        Math.round(data.avg_time || 0) + 's';
+    document.getElementById('current-streak').textContent = data.streak || 0;
 }
 
 function updateDistractorStats(data) {
@@ -409,7 +409,7 @@ function updateDifficultyStats(data) {
     };
     
     difficulties.forEach(diff => {
-        const successRate = (diff.success_rate || 0) * 100;
+        const successRate = diff.success_rate || 0;  // ← Poista * 100
         const barColor = successRate >= 70 ? 'bg-success' : successRate >= 50 ? 'bg-warning' : 'bg-danger';
         const label = difficultyLabels[diff.difficulty] || diff.difficulty;
         
@@ -430,33 +430,29 @@ function updateDifficultyStats(data) {
 }
 
 function updateRecentActivities(statsData, distractorData) {
-    // Sessiot
     const sessionsContainer = document.getElementById('recent-sessions-container');
-    const sessions = statsData.recent_sessions || [];
+    const sessions = statsData.recent_activity || [];  // ← Vaihda recent_sessions → recent_activity
     
     if (sessions.length === 0) {
         sessionsContainer.innerHTML = '<p class="text-muted text-center">Ei viimeaikaisia sessioita</p>';
     } else {
         sessionsContainer.innerHTML = '';
         sessions.slice(0, 5).forEach(session => {
-            const date = new Date(session.start_time);
-            const percentage = session.questions_answered > 0 
-                ? Math.round((session.questions_correct / session.questions_answered) * 100) 
-                : 0;
-            const badgeColor = percentage >= 70 ? 'bg-success' : percentage >= 50 ? 'bg-warning' : 'bg-danger';
+            const date = new Date(session.created_at);  // ← Vaihda start_time → created_at
+            const badgeColor = session.correct ? 'bg-success' : 'bg-danger';  // ← Yksinkertaistettu
             
             sessionsContainer.innerHTML += `
                 <div class="card mb-2 border-0 bg-light">
                     <div class="card-body py-2">
                         <div class="d-flex justify-content-between align-items-center">
                             <div>
-                                <strong>${session.session_type || 'Harjoittelu'}</strong>
+                                <strong>${session.question}</strong>
                                 <small class="text-muted ms-2">
                                     ${date.toLocaleDateString('fi-FI')}
                                 </small>
                             </div>
                             <span class="badge ${badgeColor}">
-                                ${session.questions_correct}/${session.questions_answered} (${percentage}%)
+                                ${session.correct ? '✓ Oikein' : '✗ Väärin'}
                             </span>
                         </div>
                     </div>
@@ -465,7 +461,7 @@ function updateRecentActivities(statsData, distractorData) {
         });
     }
     
-    // Häiriötilanteet
+    // Häiriötilanteet (tämä on jo oikein)
     const distractorsContainer = document.getElementById('recent-distractors-container');
     const distractors = distractorData.recent_attempts || [];
     
@@ -501,55 +497,103 @@ function updateRecentActivities(statsData, distractorData) {
 }
 
 function updateWeeklyProgress(data) {
+    const chartContainer = document.querySelector('#weekly-progress-chart').closest('.card');
     const ctx = document.getElementById('weekly-progress-chart').getContext('2d');
+    
+    // Tuhoa vanha kaavio jos olemassa
     if (weeklyChart) weeklyChart.destroy();
     
     const weeklyData = data.weekly_progress || [];
     
-    if (weeklyData.length > 0) {
-        const labels = weeklyData.map(d => {
-            const date = new Date(d.date);
-            return date.toLocaleDateString('fi-FI', { day: 'numeric', month: 'short' });
-        });
-        
-        weeklyChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [
-                    {
-                        label: 'Vastatut kysymykset',
-                        data: weeklyData.map(d => d.questions_answered || 0),
-                        borderColor: 'rgb(90, 103, 216)',
-                        backgroundColor: 'rgba(90, 103, 216, 0.1)',
-                        tension: 0.4,
-                        fill: true
-                    },
-                    {
-                        label: 'Oikeat vastaukset',
-                        data: weeklyData.map(d => d.corrects || 0),
-                        borderColor: 'rgb(40, 167, 69)',
-                        backgroundColor: 'rgba(40, 167, 69, 0.1)',
-                        tension: 0.4,
-                        fill: true
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: { display: true, position: 'top' }
+    // Jos ei ole dataa, piilota koko kortti
+    if (!weeklyData || weeklyData.length === 0) {
+        if (chartContainer) {
+            chartContainer.style.display = 'none';
+        }
+        console.log('⚠️ Weekly progress data not available');
+        return;
+    }
+    
+    // Näytä kortti jos data löytyy
+    if (chartContainer) {
+        chartContainer.style.display = 'block';
+    }
+    
+    // Luo kaavio
+    const labels = weeklyData.map(d => {
+        const date = new Date(d.date);
+        return date.toLocaleDateString('fi-FI', { day: 'numeric', month: 'short' });
+    });
+    
+    weeklyChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Vastatut kysymykset',
+                    data: weeklyData.map(d => d.questions_answered || 0),
+                    borderColor: 'rgb(90, 103, 216)',
+                    backgroundColor: 'rgba(90, 103, 216, 0.1)',
+                    tension: 0.4,
+                    fill: true,
+                    pointRadius: 4,
+                    pointHoverRadius: 6
                 },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: { stepSize: 1 }
+                {
+                    label: 'Oikeat vastaukset',
+                    data: weeklyData.map(d => d.questions_correct || d.corrects || 0),
+                    borderColor: 'rgb(40, 167, 69)',
+                    backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                    tension: 0.4,
+                    fill: true,
+                    pointRadius: 4,
+                    pointHoverRadius: 6
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            interaction: {
+                mode: 'index',
+                intersect: false
+            },
+            plugins: {
+                legend: { 
+                    display: true, 
+                    position: 'top',
+                    labels: {
+                        usePointStyle: true,
+                        padding: 15
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.dataset.label + ': ' + context.parsed.y + ' kpl';
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { 
+                        stepSize: 1,
+                        callback: function(value) {
+                            return value + ' kpl';
+                        }
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
                     }
                 }
             }
-        });
-    }
+        }
+    });
 }
 
 // Event listeners
