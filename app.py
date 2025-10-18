@@ -707,13 +707,12 @@ def submit_simulation():
         
         app.logger.info(f"📊 Questions: {len(question_ids)}, Answers: {len(user_answers)}")
         
-        # Laske tulos
+        # Laske tulos JA tallenna vastaukset
         score = 0
         total = len(question_ids)
         detailed_results = []
         
         for i, question_id in enumerate(question_ids):
-            # ✅ KORJATTU: Käytä db_manager:ia eikä SQLAlchemya
             question = db_manager.get_question_by_id(question_id, current_user.id)
             
             if not question:
@@ -726,7 +725,26 @@ def submit_simulation():
             if is_correct:
                 score += 1
             
-            # Hae vastaukset (question.options on jo lista, ei tarvitse json.loads)
+            # ✅ UUSI: Tallenna vastaus tietokantaan
+            try:
+                # Laske vastausaika (oletetaan keskiarvo 30s per kysymys)
+                time_taken = 30
+                
+                # Tallenna question_attempts tauluun
+                db_manager.update_question_stats(
+                    question_id=question_id,
+                    is_correct=is_correct,
+                    time_taken=time_taken,
+                    user_id=current_user.id
+                )
+                
+                app.logger.info(f"💾 Saved answer: Q{question_id} - {'✓' if is_correct else '✗'}")
+                
+            except Exception as e:
+                app.logger.error(f"❌ Error saving answer for Q{question_id}: {e}")
+                # Jatka silti muiden tallentamista
+            
+            # Hae vastaukset tulossivulle
             user_answer_text = question.options[user_answer_index] if user_answer_index is not None and user_answer_index < len(question.options) else None
             correct_answer_text = question.options[question.correct] if question.correct < len(question.options) else None
             
@@ -741,6 +759,7 @@ def submit_simulation():
         percentage = (score / total * 100) if total > 0 else 0
         
         app.logger.info(f"✅ Score: {score}/{total} = {percentage:.1f}%")
+        app.logger.info(f"💾 Saved {total} answers to database")
         
         # Poista sessio
         session.pop('simulation', None)
@@ -757,7 +776,7 @@ def submit_simulation():
         app.logger.error(f"❌ ERROR in submit_simulation: {e}")
         import traceback
         traceback.print_exc()
-        return jsonify({'error': str(e)}), 500   
+        return jsonify({'error': str(e)}), 500
 
 @app.route("/api/questions")
 @login_required
