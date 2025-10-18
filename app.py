@@ -1741,6 +1741,58 @@ def admin_route():
 
         return redirect(url_for('dashboard_route'))
 
+@app.route("/admin/validation")
+@admin_required
+def admin_validation_route():
+    """Näyttää kaikki kysymykset, jotka odottavat validointia."""
+    try:
+        # Hae kaikki kysymykset, joiden status on 'needs_review'
+        questions_to_validate = db_manager._execute(
+            "SELECT * FROM questions WHERE status = ? ORDER BY category, id",
+            ('needs_review',),
+            fetch='all'
+        )
+
+        # Muunna options-kenttä JSON-stringistä listaksi
+        questions = []
+        if questions_to_validate:
+            for q in questions_to_validate:
+                q_dict = dict(q)
+                try:
+                    q_dict['options'] = json.loads(q_dict['options'])
+                except (json.JSONDecodeError, TypeError):
+                    q_dict['options'] = [] # Jos options on virheellinen, näytä tyhjä lista
+                questions.append(q_dict)
+
+        return render_template("admin_validation.html", questions=questions)
+
+    except Exception as e:
+        flash(f'Virhe validoitavien kysymysten haussa: {e}', 'danger')
+        app.logger.error(f"Validation page error: {e}")
+        return redirect(url_for('admin_route'))
+    
+@app.route("/admin/validate_question/<int:question_id>", methods=['POST'])
+@admin_required
+def admin_validate_question_action(question_id):
+    """Suorittaa kysymyksen validoinnin ja tallentaa tiedot."""
+    try:
+        # Päivitä kysymyksen tila ja validoijan tiedot
+        db_manager._execute(
+            """UPDATE questions 
+               SET status = ?, validated_by = ?, validated_at = ?
+               WHERE id = ?""",
+            ('validated', current_user.id, datetime.now(), question_id),
+            fetch='none'
+        )
+        flash(f'Kysymys #{question_id} on validoitu onnistuneesti!', 'success')
+        app.logger.info(f"Admin {current_user.username} validated question {question_id}")
+
+    except Exception as e:
+        flash(f'Virhe kysymyksen validoinnissa: {e}', 'danger')
+        app.logger.error(f"Question validation action error for ID {question_id}: {e}")
+
+    return redirect(url_for('admin_validation_route'))    
+
 @app.route("/admin/users")
 @admin_required
 def admin_users_route():
