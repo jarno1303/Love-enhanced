@@ -218,151 +218,6 @@ class DatabaseManager:
                 logger.error(f"Virhe lisättäessä saraketta '{column_name}': {e}")
                 # Ei heitetä exceptionia, jatketaan
 
-    def _add_column_if_not_exists(self, table_name, column_name, column_type):
-        """Apufunktio sarakkeen lisäämiseksi, jos sitä ei ole olemassa."""
-        try:
-            conn = self.get_connection()
-            try:
-                with conn.cursor(cursor_factory=DictCursor if self.is_postgres else None) as cur:
-                    # Tarkista sarakkeen olemassaolo
-                    if self.is_postgres:
-                        cur.execute("""
-                            SELECT 1 FROM information_schema.columns 
-                            WHERE table_name = %s AND column_name = %s
-                        """, (table_name, column_name))
-                    else:  # SQLite
-                        cur.execute(f"PRAGMA table_info({table_name})")
-                    
-                    result = cur.fetchall()
-                    
-                    if not result:
-                        # Taulu ei ole olemassa vielä
-                        logger.info(f"Taulua '{table_name}' ei vielä ole, ohitetaan sarakkeen lisäys.")
-                        return
-                    
-                    if self.is_postgres:
-                        # PostgreSQL: jos result on tyhjä, saraketta ei ole
-                        column_exists = len(result) > 0
-                    else:
-                        # SQLite: tarkista onko sarake listassa
-                        columns = [row[1] for row in result]
-                        column_exists = column_name in columns
-                    
-                    if not column_exists:
-                        # Lisää sarake
-                        logger.info(f"Lisätään sarake '{column_name}' tauluun '{table_name}'...")
-                        cur.execute(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type}")
-                        conn.commit()
-                        logger.info(f"Sarake '{column_name}' lisätty tauluun '{table_name}'.")
-                    else:
-                        logger.debug(f"Sarake '{column_name}' on jo taulussa '{table_name}'.")
-            finally:
-                conn.close()
-                    
-        except Exception as e:
-            # Voi epäonnistua jos taulua ei vielä ole, mikä on ok
-            error_msg = str(e).lower()
-            if "no such table" in error_msg or "does not exist" in error_msg:
-                logger.info(f"Taulua '{table_name}' ei vielä ole, ohitetaan sarakkeen lisäys.")
-            else:
-                logger.error(f"Virhe lisättäessä saraketta '{column_name}': {e}")
-                # Ei heitetä exceptionia, jatketaan
-
-    def normalize_question(self, text):
-
-def _add_column_if_not_exists(self, table_name, column_name, column_type):
-    """Apufunktio sarakkeen lisäämiseksi, jos sitä ei ole olemassa."""
-    try:
-        with self.get_connection() as conn:
-            with conn.cursor(cursor_factory=DictCursor if self.is_postgres else None) as cur:
-                # Tarkista sarakkeen olemassaolo
-                if self.is_postgres:
-                    cur.execute("""
-                        SELECT 1 FROM information_schema.columns 
-                        WHERE table_name = %s AND column_name = %s
-                    """, (table_name, column_name))
-                else:  # SQLite
-                    cur.execute(f"PRAGMA table_info({table_name})")
-                
-                result = cur.fetchall()
-                columns = [row['column_name'] if self.is_postgres else row[1] for row in result]
-                
-                if column_name not in columns:
-                    # Lisää sarake, jos sitä ei löytynyt
-                    logger.info(f"Lisätään sarake '{column_name}' tauluun '{table_name}'...")
-                    self._execute(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type}")
-                    logger.info("Sarake lisätty.")
-                
-    except Exception as e:
-        # Voi epäonnistua jos taulua ei vielä ole, mikä on ok
-        if "no such table" in str(e) or "does not exist" in str(e):
-            logger.info(f"Taulua '{table_name}' ei vielä ole, ohitetaan sarakkeen lisäys.")
-        else:
-            logger.error(f"Virhe lisättäessä saraketta '{column_name}': {e}")
-            raise
-
-def _add_column_if_not_exists(self, table_name, column_name, column_type):
-    """Apufunktio sarakkeen lisäämiseksi, jos sitä ei ole olemassa."""
-    try:
-        with self.get_connection() as conn:
-            with conn.cursor(cursor_factory=DictCursor if self.is_postgres else None) as cur:
-                # Tarkista sarakkeen olemassaolo
-                if self.is_postgres:
-                    cur.execute("""
-                        SELECT 1 FROM information_schema.columns 
-                        WHERE table_name = %s AND column_name = %s
-                    """, (table_name, column_name))
-                else:  # SQLite
-                    cur.execute(f"PRAGMA table_info({table_name})")
-                
-                result = cur.fetchall()
-                columns = [row['column_name'] if self.is_postgres else row[1] for row in result]
-                
-                if column_name not in columns:
-                    # Lisää sarake, jos sitä ei löytynyt
-                    logger.info(f"Lisätään sarake '{column_name}' tauluun '{table_name}'...")
-                    self._execute(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type}")
-                    logger.info("Sarake lisätty.")
-                
-    except Exception as e:
-        # Voi epäonnistua jos taulua ei vielä ole, mikä on ok
-        if "no such table" in str(e) or "does not exist" in str(e):
-            logger.info(f"Taulua '{table_name}' ei vielä ole, ohitetaan sarakkeen lisäys.")
-        else:
-            logger.error(f"Virhe lisättäessä saraketta '{column_name}': {e}")
-            raise
-
-def _add_column_if_not_exists(self, table_name, column_name, column_type):
-    """Apufunktio sarakkeen lisäämiseksi, jos sitä ei ole olemassa."""
-    try:
-        with self.get_connection() as conn:
-            with conn.cursor(cursor_factory=DictCursor if self.is_postgres else None) as cur:
-                # Tarkista sarakkeen olemassaolo
-                if self.is_postgres:
-                    cur.execute("""
-                        SELECT 1 FROM information_schema.columns 
-                        WHERE table_name = %s AND column_name = %s
-                    """, (table_name, column_name))
-                else:  # SQLite
-                    cur.execute(f"PRAGMA table_info({table_name})")
-                
-                result = cur.fetchall()
-                columns = [row['column_name'] if self.is_postgres else row[1] for row in result]
-                
-                if column_name not in columns:
-                    # Lisää sarake, jos sitä ei löytynyt
-                    logger.info(f"Lisätään sarake '{column_name}' tauluun '{table_name}'...")
-                    self._execute(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type}")
-                    logger.info("Sarake lisätty.")
-                
-    except Exception as e:
-        # Voi epäonnistua jos taulua ei vielä ole, mikä on ok
-        if "no such table" in str(e) or "does not exist" in str(e):
-            logger.info(f"Taulua '{table_name}' ei vielä ole, ohitetaan sarakkeen lisäys.")
-        else:
-            logger.error(f"Virhe lisättäessä saraketta '{column_name}': {e}")
-            raise
-
     def normalize_question(self, text):
         """Normalisoi kysymystekstin vertailua varten."""
         if not text: 
@@ -417,10 +272,9 @@ def _add_column_if_not_exists(self, table_name, column_name, column_type):
     def get_next_test_user_number(self):
         """Palauttaa seuraavan vapaan testuser-numeron."""
         try:
-            # KORJAUS: Käytetään parametreja oikein PostgreSQL:lle ja SQLite:lle
             test_users = self._execute(
                 "SELECT username FROM users WHERE username LIKE ?", 
-                ('testuser%',),  # ← TÄMÄ ON KRIITTINEN KORJAUS!
+                ('testuser%',),
                 fetch='all'
             )
             
@@ -430,13 +284,10 @@ def _add_column_if_not_exists(self, table_name, column_name, column_type):
             max_num = 0
             for user in test_users:
                 try:
-                    # Yritä ensin dictionary-notaatiota (PostgreSQL DictCursor)
                     username = user['username']
                 except (KeyError, TypeError):
-                    # Jos ei toimi, käytä tuple-indeksointia (SQLite)
                     username = user[0]
                 
-                # Poista 'testuser' alusta ja tarkista onko numero
                 num_part = username.replace('testuser', '')
                 if num_part.isdigit():
                     num = int(num_part)
@@ -449,7 +300,6 @@ def _add_column_if_not_exists(self, table_name, column_name, column_type):
             logger.error(f"Virhe testuser-numeron haussa: {e}")
             import traceback
             traceback.print_exc()
-            # Jos kaikki muut epäonnistuu, palauta satunnainen iso numero
             import random
             return random.randint(1000, 9999)
 
@@ -509,12 +359,10 @@ def _add_column_if_not_exists(self, table_name, column_name, column_type):
     def delete_user_by_id(self, user_id):
         """Poistaa käyttäjän ja kaikki siihen liittyvät tiedot."""
         try:
-            # Poistetaan ensin viiteavaimet
             self._execute("DELETE FROM user_question_progress WHERE user_id = ?", (user_id,))
             self._execute("DELETE FROM question_attempts WHERE user_id = ?", (user_id,))
             self._execute("DELETE FROM active_sessions WHERE user_id = ?", (user_id,))
             self._execute("DELETE FROM user_achievements WHERE user_id = ?", (user_id,))
-            # Poistetaan itse käyttäjä
             self._execute("DELETE FROM users WHERE id = ?", (user_id,))
             return True, None
         except Exception as e:
@@ -571,7 +419,6 @@ def _add_column_if_not_exists(self, table_name, column_name, column_type):
             limit = int(limit)
             logger.info(f"Fetching {limit} questions for user_id={user_id}, categories={categories}, difficulties={difficulties}")
             
-            # --- Vaihe 1: Hae vain suodatusta vastaavien kysymysten ID:t ---
             query_ids = "SELECT id FROM questions"
             params = []
             where_clauses = []
@@ -596,15 +443,12 @@ def _add_column_if_not_exists(self, table_name, column_name, column_type):
                 return []
 
             question_ids = [row['id'] for row in id_rows]
-            
-            # --- Vaihe 2: Sekoita ID:t ja valitse haluttu määrä ---
             random.shuffle(question_ids)
             selected_ids = question_ids[:limit]
 
             if not selected_ids:
                 return []
 
-            # --- Vaihe 3: Hae valittujen ID:iden täydet tiedot ---
             final_query_placeholders = ', '.join([self.param_style] * len(selected_ids))
             final_query = f"""
                 SELECT q.*, 
@@ -630,7 +474,6 @@ def _add_column_if_not_exists(self, table_name, column_name, column_type):
                     except (json.JSONDecodeError, TypeError) as e:
                         logger.error(f"Error processing question data for ID {row.get('id', 'N/A')}: {e}")
             
-            # Sekoita lopullinen lista vielä kerran
             random.shuffle(questions)
             logger.info(f"Successfully fetched and processed {len(questions)} questions.")
             return questions
@@ -712,20 +555,17 @@ def _add_column_if_not_exists(self, table_name, column_name, column_type):
         
         for q_data in questions_data:
             try:
-                # Validoi pakollliset kentät
                 required_fields = ['question', 'explanation', 'options', 'correct', 'category', 'difficulty']
                 if not all(field in q_data for field in required_fields):
                     stats['skipped'] += 1
                     stats['errors'].append(f"Puutteelliset tiedot: {q_data.get('question', 'N/A')[:50]}")
                     continue
                 
-                # Tarkista duplikaatti
                 is_dup, _ = self.check_question_duplicate(q_data['question'])
                 if is_dup:
                     stats['duplicates'] += 1
                     continue
                 
-                # Lisää kysymys
                 normalized = self.normalize_question(q_data['question'])
                 options_json = json.dumps(q_data['options'])
                 
@@ -821,7 +661,6 @@ def _add_column_if_not_exists(self, table_name, column_name, column_type):
                     (new_cat, old_cat)
                 )
             
-            # Laske lopputulema
             categories = self.get_categories()
             category_counts = {}
             for cat in categories:
