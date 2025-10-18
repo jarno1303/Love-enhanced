@@ -258,21 +258,33 @@ async function loadStats() {
 }
 
 function showLoading() {
-    document.getElementById('loading-spinner').style.display = 'block';
-    document.getElementById('empty-state').style.display = 'none';
-    document.getElementById('stats-content').style.display = 'none';
+    const spinner = document.getElementById('loading-spinner');
+    const emptyState = document.getElementById('empty-state');
+    const statsContent = document.getElementById('stats-content');
+    
+    if (spinner) spinner.style.display = 'block';
+    if (emptyState) emptyState.style.display = 'none';
+    if (statsContent) statsContent.style.display = 'none';
 }
 
 function showEmptyState() {
-    document.getElementById('loading-spinner').style.display = 'none';
-    document.getElementById('empty-state').style.display = 'block';
-    document.getElementById('stats-content').style.display = 'none';
+    const spinner = document.getElementById('loading-spinner');
+    const emptyState = document.getElementById('empty-state');
+    const statsContent = document.getElementById('stats-content');
+    
+    if (spinner) spinner.style.display = 'none';
+    if (emptyState) emptyState.style.display = 'block';
+    if (statsContent) statsContent.style.display = 'none';
 }
 
 function showStats(statsData, distractorData) {
-    document.getElementById('loading-spinner').style.display = 'none';
-    document.getElementById('empty-state').style.display = 'none';
-    document.getElementById('stats-content').style.display = 'block';
+    const spinner = document.getElementById('loading-spinner');
+    const emptyState = document.getElementById('empty-state');
+    const statsContent = document.getElementById('stats-content');
+    
+    if (spinner) spinner.style.display = 'none';
+    if (emptyState) emptyState.style.display = 'none';
+    if (statsContent) statsContent.style.display = 'block';
     
     // Päivitä yleiset tilastot
     updateGeneralStats(statsData);
@@ -626,6 +638,8 @@ function updateWeeklyProgress(data) {
 document.getElementById('refresh-stats').addEventListener('click', loadStats);
 
 // Lataa tilastot sivun latautuessa
-document.addEventListener('DOMContentLoaded', loadStats);
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(loadStats, 100);
+});
 </script>
 {% endblock %}
