@@ -287,14 +287,15 @@
     const userDistractorProbability = {{ current_user.distractor_probability|tojson|safe }} / 100.0;
 
     document.addEventListener('DOMContentLoaded', function() {
-        fetchCSRFToken().then(() => {
-            explanationModal = new bootstrap.Modal(document.getElementById('explanationModal'));
-            helperModal = new bootstrap.Modal(document.getElementById('helperModal'));
-            distractorModalInstance = new bootstrap.Modal(document.getElementById('distractorModal'));
-            initCalculator();
-            fetchQuestions();
-        });
+    fetchCSRFToken().then(() => {
+        explanationModal = new bootstrap.Modal(document.getElementById('explanationModal'));
+        helperModal = new bootstrap.Modal(document.getElementById('helperModal'));
+        distractorModalInstance = new bootstrap.Modal(document.getElementById('distractorModal'));
+        initCalculator();
+        initCalculatorDrag(); // ← LISÄÄ TÄMÄ
+        fetchQuestions();
     });
+});
 
     // Calculator functionality
 function initCalculator() {
@@ -302,25 +303,21 @@ function initCalculator() {
     const calculator = document.getElementById('floatingCalculator');
     const toggleBtn = document.getElementById('calculatorToggle');
     const closeBtn = document.getElementById('closeCalculator');
-    const calcHeader = document.querySelector('.calculator-header');
-
-    // Drag variables
-    let isDragging = false;
-    let currentX = 0;
-    let currentY = 0;
-    let initialX = 0;
-    let initialY = 0;
 
     // Toggle calculator
-    toggleBtn?.addEventListener('click', () => {
-        calculator.classList.add('show');
-        toggleBtn.style.display = 'none';
-    });
+    if (toggleBtn) {
+        toggleBtn.addEventListener('click', () => {
+            calculator.classList.add('show');
+            toggleBtn.style.display = 'none';
+        });
+    }
 
-    closeBtn?.addEventListener('click', () => {
-        calculator.classList.remove('show');
-        toggleBtn.style.display = 'block';
-    });
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+            calculator.classList.remove('show');
+            toggleBtn.style.display = 'block';
+        });
+    }
 
     // Calculator buttons
     document.querySelectorAll('.calc-btn').forEach(btn => {
@@ -336,23 +333,45 @@ function initCalculator() {
     });
 
     // Clear
-    document.getElementById('calcClear')?.addEventListener('click', () => {
-        calcValue = '0';
-        calcDisplay.value = calcValue;
-    });
+    const clearBtn = document.getElementById('calcClear');
+    if (clearBtn) {
+        clearBtn.addEventListener('click', () => {
+            calcValue = '0';
+            calcDisplay.value = calcValue;
+        });
+    }
 
     // Calculate
-    document.getElementById('calcEquals')?.addEventListener('click', () => {
-        try {
-            calcValue = eval(calcValue).toString();
-            calcDisplay.value = calcValue;
-        } catch (e) {
-            calcDisplay.value = 'Virhe';
-            calcValue = '0';
-        }
-    });
+    const equalsBtn = document.getElementById('calcEquals');
+    if (equalsBtn) {
+        equalsBtn.addEventListener('click', () => {
+            try {
+                calcValue = eval(calcValue).toString();
+                calcDisplay.value = calcValue;
+            } catch (e) {
+                calcDisplay.value = 'Virhe';
+                calcValue = '0';
+            }
+        });
+    }
+}
 
-    // ✅ UUSI: Drag functionality
+// Drag functionality (separate function)
+function initCalculatorDrag() {
+    const calculator = document.getElementById('floatingCalculator');
+    const calcHeader = document.querySelector('.calculator-header');
+    
+    if (!calculator || !calcHeader) {
+        console.log('Calculator elements not found for drag functionality');
+        return;
+    }
+
+    let isDragging = false;
+    let currentX = 0;
+    let currentY = 0;
+    let initialX = 0;
+    let initialY = 0;
+
     function dragStart(e) {
         if (e.type === "touchstart") {
             initialX = e.touches[0].clientX - currentX;
@@ -398,6 +417,17 @@ function initCalculator() {
             calculator.style.transition = '';
         }
     }
+
+    // Mouse events
+    calcHeader.addEventListener('mousedown', dragStart);
+    document.addEventListener('mousemove', drag);
+    document.addEventListener('mouseup', dragEnd);
+
+    // Touch events (mobiili)
+    calcHeader.addEventListener('touchstart', dragStart, { passive: false });
+    document.addEventListener('touchmove', drag, { passive: false });
+    document.addEventListener('touchend', dragEnd);
+}
 
     // Mouse events
     calcHeader?.addEventListener('mousedown', dragStart);
