@@ -297,35 +297,118 @@
     });
 
     // Calculator functionality
-    function initCalculator() {
-        const calcDisplay = document.getElementById('calcDisplay');
-        const calculator = document.getElementById('floatingCalculator');
-        const toggleBtn = document.getElementById('calculatorToggle');
-        const closeBtn = document.getElementById('closeCalculator');
+function initCalculator() {
+    const calcDisplay = document.getElementById('calcDisplay');
+    const calculator = document.getElementById('floatingCalculator');
+    const toggleBtn = document.getElementById('calculatorToggle');
+    const closeBtn = document.getElementById('closeCalculator');
+    const calcHeader = document.querySelector('.calculator-header');
 
-        // Toggle calculator
-        toggleBtn?.addEventListener('click', () => {
-            calculator.classList.add('show');
-            toggleBtn.style.display = 'none';
-        });
+    // Drag variables
+    let isDragging = false;
+    let currentX = 0;
+    let currentY = 0;
+    let initialX = 0;
+    let initialY = 0;
 
-        closeBtn?.addEventListener('click', () => {
-            calculator.classList.remove('show');
-            toggleBtn.style.display = 'block';
-        });
+    // Toggle calculator
+    toggleBtn?.addEventListener('click', () => {
+        calculator.classList.add('show');
+        toggleBtn.style.display = 'none';
+    });
 
-        // Calculator buttons
-        document.querySelectorAll('.calc-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const value = this.dataset.value;
-                if (calcValue === '0' && value !== '.') {
-                    calcValue = value;
-                } else {
-                    calcValue += value;
-                }
-                calcDisplay.value = calcValue;
-            });
+    closeBtn?.addEventListener('click', () => {
+        calculator.classList.remove('show');
+        toggleBtn.style.display = 'block';
+    });
+
+    // Calculator buttons
+    document.querySelectorAll('.calc-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const value = this.dataset.value;
+            if (calcValue === '0' && value !== '.') {
+                calcValue = value;
+            } else {
+                calcValue += value;
+            }
+            calcDisplay.value = calcValue;
         });
+    });
+
+    // Clear
+    document.getElementById('calcClear')?.addEventListener('click', () => {
+        calcValue = '0';
+        calcDisplay.value = calcValue;
+    });
+
+    // Calculate
+    document.getElementById('calcEquals')?.addEventListener('click', () => {
+        try {
+            calcValue = eval(calcValue).toString();
+            calcDisplay.value = calcValue;
+        } catch (e) {
+            calcDisplay.value = 'Virhe';
+            calcValue = '0';
+        }
+    });
+
+    // ✅ UUSI: Drag functionality
+    function dragStart(e) {
+        if (e.type === "touchstart") {
+            initialX = e.touches[0].clientX - currentX;
+            initialY = e.touches[0].clientY - currentY;
+        } else {
+            initialX = e.clientX - currentX;
+            initialY = e.clientY - currentY;
+        }
+
+        if (e.target === calcHeader || calcHeader.contains(e.target)) {
+            isDragging = true;
+            calculator.style.transition = 'none';
+        }
+    }
+
+    function drag(e) {
+        if (isDragging) {
+            e.preventDefault();
+            
+            let clientX, clientY;
+            if (e.type === "touchmove") {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            } else {
+                clientX = e.clientX;
+                clientY = e.clientY;
+            }
+
+            currentX = clientX - initialX;
+            currentY = clientY - initialY;
+
+            // Vaihda fixed positioning
+            calculator.style.right = 'auto';
+            calculator.style.bottom = 'auto';
+            calculator.style.left = currentX + 'px';
+            calculator.style.top = currentY + 'px';
+        }
+    }
+
+    function dragEnd() {
+        if (isDragging) {
+            isDragging = false;
+            calculator.style.transition = '';
+        }
+    }
+
+    // Mouse events
+    calcHeader?.addEventListener('mousedown', dragStart);
+    document.addEventListener('mousemove', drag);
+    document.addEventListener('mouseup', dragEnd);
+
+    // Touch events (mobiili)
+    calcHeader?.addEventListener('touchstart', dragStart, { passive: false });
+    document.addEventListener('touchmove', drag, { passive: false });
+    document.addEventListener('touchend', dragEnd);
+}
 
         // Clear
         document.getElementById('calcClear')?.addEventListener('click', () => {
