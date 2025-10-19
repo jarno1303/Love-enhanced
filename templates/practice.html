@@ -128,48 +128,6 @@
     </div>
 </div>
 
-<button id="floating-calculator-btn" class="btn btn-primary rounded-circle shadow-lg" 
-        onclick="toggleCalculator()" 
-        title="Avaa laskin"
-        style="position: fixed; bottom: 20px; right: 20px; width: 60px; height: 60px; z-index: 1000;">
-    <i class="fas fa-calculator fa-lg"></i>
-</button>
-
-<div id="calculator-modal" style="display: none; position: fixed; bottom: 90px; right: 20px; z-index: 1001; width: 300px;">
-    <div class="card shadow-lg">
-        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center" 
-             id="calc-header" 
-             style="cursor: move;">
-            <span><i class="fas fa-calculator me-2"></i>Laskin</span>
-            <button class="btn btn-sm btn-outline-light" onclick="toggleCalculator()">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-        <div class="card-body p-3">
-            <input type="text" id="calc-display" class="form-control form-control-lg text-end mb-3" readonly value="0">
-            <div class="d-grid gap-2" style="grid-template-columns: repeat(4, 1fr);">
-                <button class="btn btn-outline-secondary" onclick="calcInput('7')">7</button>
-                <button class="btn btn-outline-secondary" onclick="calcInput('8')">8</button>
-                <button class="btn btn-outline-secondary" onclick="calcInput('9')">9</button>
-                <button class="btn btn-warning" onclick="calcInput('/')">/</button>
-                <button class="btn btn-outline-secondary" onclick="calcInput('4')">4</button>
-                <button class="btn btn-outline-secondary" onclick="calcInput('5')">5</button>
-                <button class="btn btn-outline-secondary" onclick="calcInput('6')">6</button>
-                <button class="btn btn-warning" onclick="calcInput('*')">×</button>
-                <button class="btn btn-outline-secondary" onclick="calcInput('1')">1</button>
-                <button class="btn btn-outline-secondary" onclick="calcInput('2')">2</button>
-                <button class="btn btn-outline-secondary" onclick="calcInput('3')">3</button>
-                <button class="btn btn-warning" onclick="calcInput('-')">−</button>
-                <button class="btn btn-outline-secondary" onclick="calcInput('0')">0</button>
-                <button class="btn btn-outline-secondary" onclick="calcInput('.')">.</button>
-                <button class="btn btn-success" onclick="calcEqual()">=</button>
-                <button class="btn btn-warning" onclick="calcInput('+')">+</button>
-                <button class="btn btn-danger" onclick="calcClear()" style="grid-column: span 4;">C</button>
-            </div>
-        </div>
-    </div>
-</div>
-
 <div class="modal fade" id="explanationModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -269,6 +227,45 @@
     </div>
 </div>
 
+<!-- Floating Calculator -->
+<div id="floatingCalculator" class="floating-calculator">
+    <div class="calculator-header">
+        <span>🧮 Laskin</span>
+        <button id="closeCalculator" class="btn-close btn-close-white btn-sm"></button>
+    </div>
+    <div class="calculator-body">
+        <input type="text" id="calcDisplay" class="calculator-display" readonly value="0">
+        <div class="calculator-buttons">
+            <button class="calc-btn" data-value="7">7</button>
+            <button class="calc-btn" data-value="8">8</button>
+            <button class="calc-btn" data-value="9">9</button>
+            <button class="calc-btn calc-operator" data-value="/">÷</button>
+            
+            <button class="calc-btn" data-value="4">4</button>
+            <button class="calc-btn" data-value="5">5</button>
+            <button class="calc-btn" data-value="6">6</button>
+            <button class="calc-btn calc-operator" data-value="*">×</button>
+            
+            <button class="calc-btn" data-value="1">1</button>
+            <button class="calc-btn" data-value="2">2</button>
+            <button class="calc-btn" data-value="3">3</button>
+            <button class="calc-btn calc-operator" data-value="-">−</button>
+            
+            <button class="calc-btn" data-value="0">0</button>
+            <button class="calc-btn" data-value=".">.</button>
+            <button class="calc-btn calc-equals" id="calcEquals">=</button>
+            <button class="calc-btn calc-operator" data-value="+">+</button>
+            
+            <button class="calc-clear" id="calcClear">Tyhjennä</button>
+        </div>
+    </div>
+</div>
+
+<!-- Calculator Toggle Button -->
+<button id="calculatorToggle" class="floating-calculator-toggle">
+    <i class="fas fa-calculator"></i> Laskin
+</button>
+
 <script>
     let questions = [];
     let currentQuestionIndex = 0;
@@ -280,26 +277,74 @@
     let helperModal = null;
     let currentDistractor = null;
     let distractorModalInstance = null;
-    let calcCurrentValue = '0', calcOperator = '', calcPreviousValue = '';
-    let isDragging = false, xOffset = 0, yOffset = 0;
     let csrfToken = '';
+    
+    // Calculator state
+    let calcValue = '0';
 
     const DISTRACTORS = {{ constants.DISTRACTORS|tojson|safe }};
     const userDistractorsEnabled = {{ current_user.distractors_enabled|tojson|safe }};
     const userDistractorProbability = {{ current_user.distractor_probability|tojson|safe }} / 100.0;
 
     document.addEventListener('DOMContentLoaded', function() {
-        // Hae CSRF-token ensin
         fetchCSRFToken().then(() => {
             explanationModal = new bootstrap.Modal(document.getElementById('explanationModal'));
             helperModal = new bootstrap.Modal(document.getElementById('helperModal'));
             distractorModalInstance = new bootstrap.Modal(document.getElementById('distractorModal'));
-            initCalculatorDrag();
+            initCalculator();
             fetchQuestions();
         });
     });
 
-    // Uusi funktio CSRF-tokenin hakemiseksi
+    // Calculator functionality
+    function initCalculator() {
+        const calcDisplay = document.getElementById('calcDisplay');
+        const calculator = document.getElementById('floatingCalculator');
+        const toggleBtn = document.getElementById('calculatorToggle');
+        const closeBtn = document.getElementById('closeCalculator');
+
+        // Toggle calculator
+        toggleBtn?.addEventListener('click', () => {
+            calculator.classList.add('show');
+            toggleBtn.style.display = 'none';
+        });
+
+        closeBtn?.addEventListener('click', () => {
+            calculator.classList.remove('show');
+            toggleBtn.style.display = 'block';
+        });
+
+        // Calculator buttons
+        document.querySelectorAll('.calc-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const value = this.dataset.value;
+                if (calcValue === '0' && value !== '.') {
+                    calcValue = value;
+                } else {
+                    calcValue += value;
+                }
+                calcDisplay.value = calcValue;
+            });
+        });
+
+        // Clear
+        document.getElementById('calcClear')?.addEventListener('click', () => {
+            calcValue = '0';
+            calcDisplay.value = calcValue;
+        });
+
+        // Calculate
+        document.getElementById('calcEquals')?.addEventListener('click', () => {
+            try {
+                calcValue = eval(calcValue).toString();
+                calcDisplay.value = calcValue;
+            } catch (e) {
+                calcDisplay.value = 'Virhe';
+                calcValue = '0';
+            }
+        });
+    }
+
     async function fetchCSRFToken() {
         try {
             const response = await fetch('/api/csrf-token');
@@ -308,7 +353,6 @@
             console.log('CSRF-token haettu onnistuneesti');
         } catch (error) {
             console.error('CSRF-tokenin haku epäonnistui:', error);
-            // Yritä uudelleen 2 sekunnin kuluttua
             setTimeout(fetchCSRFToken, 2000);
         }
     }
@@ -446,7 +490,6 @@
         const responseTime = Math.floor((Date.now() - distractorStartTime) / 1000);
         
         try {
-            // Varmista että CSRF-token on saatavilla
             if (!csrfToken) {
                 await fetchCSRFToken();
             }
@@ -550,7 +593,6 @@
         const timeTaken = Math.floor((Date.now() - startTime) / 1000);
         
         try {
-            // Varmista että CSRF-token on saatavilla
             if (!csrfToken) {
                 await fetchCSRFToken();
             }
@@ -582,11 +624,9 @@
         } catch (error) {
             console.error('Virhe vastauksen lähetyksessä:', error);
             
-            // Jos CSRF-virhe, yritä hakea uusi token ja lähetä uudelleen
             if (error.message.includes('CSRF') || error.message.includes('token')) {
                 console.log('CSRF-virhe, yritetään uudelleen...');
                 await fetchCSRFToken();
-                // Yritä uudelleen heti
                 setTimeout(submitAnswer, 100);
             } else {
                 alert(`Vastauksen lähetys epäonnistui: ${error.message}`);
@@ -646,95 +686,6 @@
         showScreen('results');
     }
 
-    function toggleCalculator() {
-        document.getElementById('calculator-modal').style.display = document.getElementById('calculator-modal').style.display === 'none' ? 'block' : 'none';
-    }
-
-    function calcInput(value) {
-        const display = document.getElementById('calc-display');
-        if (['+', '-', '*', '/'].includes(value)) {
-            calcOperator = value;
-            calcPreviousValue = calcCurrentValue;
-            calcCurrentValue = '0';
-        } else if (value === '.') {
-            if (!calcCurrentValue.includes('.')) calcCurrentValue += '.';
-        } else {
-            calcCurrentValue = calcCurrentValue === '0' ? value : calcCurrentValue + value;
-        }
-        display.value = calcCurrentValue;
-    }
-
-    function calcEqual() {
-        const display = document.getElementById('calc-display');
-        let result = 0;
-        const prev = parseFloat(calcPreviousValue), curr = parseFloat(calcCurrentValue);
-        switch(calcOperator) {
-            case '+': result = prev + curr; break;
-            case '-': result = prev - curr; break;
-            case '*': result = prev * curr; break;
-            case '/': result = prev / curr; break;
-            default: return;
-        }
-        calcCurrentValue = result.toString();
-        calcOperator = ''; calcPreviousValue = '';
-        display.value = calcCurrentValue;
-    }
-
-    function calcClear() {
-        calcCurrentValue = '0'; calcOperator = ''; calcPreviousValue = '';
-        document.getElementById('calc-display').value = '0';
-    }
-
-    function initCalculatorDrag() {
-        const calcHeader = document.getElementById('calc-header');
-        const calcModal = document.getElementById('calculator-modal');
-        if (!calcHeader || !calcModal) return;
-
-        calcHeader.addEventListener('mousedown', dragStart);
-        document.addEventListener('mouseup', dragEnd);
-        document.addEventListener('mousemove', drag);
-
-        calcHeader.addEventListener('touchstart', dragStart, { passive: false });
-        document.addEventListener('touchend', dragEnd);
-        document.addEventListener('touchmove', drag, { passive: false });
-    }
-
-    function dragStart(e) {
-        const calcModal = document.getElementById('calculator-modal');
-        isDragging = true;
-        
-        const clientX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
-        const clientY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY;
-
-        const rect = calcModal.getBoundingClientRect();
-        
-        if (calcModal.style.right || calcModal.style.bottom) {
-            calcModal.style.right = 'auto';
-            calcModal.style.bottom = 'auto';
-            calcModal.style.top = rect.top + 'px';
-            calcModal.style.left = rect.left + 'px';
-        }
-
-        xOffset = clientX - calcModal.offsetLeft;
-        yOffset = clientY - calcModal.offsetTop;
-    }
-
-    function drag(e) {
-        if (isDragging) {
-            e.preventDefault();
-            const calcModal = document.getElementById('calculator-modal');
-            const clientX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
-            const clientY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY;
-            
-            calcModal.style.left = (clientX - xOffset) + 'px';
-            calcModal.style.top = (clientY - yOffset) + 'px';
-        }
-    }
-
-    function dragEnd() {
-        isDragging = false;
-    }
-
     function identifyQuestionType(question) {
         const text = question.question.toLowerCase();
         const category = (question.category || '').toLowerCase();
@@ -780,12 +731,138 @@
     #question-progress-info.alert-success { border-left-color: #28a745; }
     #question-progress-info.alert-warning { border-left-color: #ffc107; }
     #question-progress-info.alert-danger { border-left-color: #dc3545; }
-    #floating-calculator-btn { transition: all 0.3s ease; }
-    #floating-calculator-btn:hover { transform: scale(1.1); box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important; }
-    #calculator-modal .btn { padding: 12px; font-size: 1.1rem; font-weight: bold; }
-    #calc-header { user-select: none; }
-    #calc-header:active { cursor: grabbing !important; }
     .distractor-option { transition: all 0.2s ease; }
     .distractor-option:hover { background-color: #f8f9fa; transform: translateX(5px); }
+    
+    /* Floating Calculator Styles */
+    .floating-calculator {
+        position: fixed;
+        right: 20px;
+        bottom: 80px;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+        z-index: 1000;
+        width: 280px;
+        display: none;
+    }
+
+    .floating-calculator.show {
+        display: block;
+        animation: slideIn 0.3s ease;
+    }
+
+    @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+
+    .calculator-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 12px 16px;
+        border-radius: 12px 12px 0 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-weight: 600;
+    }
+
+    .calculator-body {
+        padding: 16px;
+    }
+
+    .calculator-display {
+        width: 100%;
+        padding: 16px;
+        font-size: 24px;
+        text-align: right;
+        border: 2px solid #e2e8f0;
+        border-radius: 8px;
+        margin-bottom: 16px;
+        background: #f7fafc;
+        font-weight: 600;
+    }
+
+    .calculator-buttons {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+    }
+
+    .calc-btn {
+        padding: 16px;
+        font-size: 18px;
+        border: none;
+        border-radius: 8px;
+        background: #e2e8f0;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-weight: 600;
+    }
+
+    .calc-btn:hover {
+        background: #cbd5e0;
+        transform: translateY(-2px);
+    }
+
+    .calc-operator {
+        background: #fbbf24;
+        color: white;
+    }
+
+    .calc-operator:hover {
+        background: #f59e0b;
+    }
+
+    .calc-equals {
+        background: #10b981;
+        color: white;
+    }
+
+    .calc-equals:hover {
+        background: #059669;
+    }
+
+    .calc-clear {
+        grid-column: span 4;
+        padding: 12px;
+        background: #ef4444;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: all 0.2s;
+    }
+
+    .calc-clear:hover {
+        background: #dc2626;
+    }
+
+    .floating-calculator-toggle {
+        position: fixed;
+        right: 20px;
+        bottom: 20px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 50px;
+        cursor: pointer;
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        font-weight: 600;
+        z-index: 999;
+        transition: all 0.3s;
+    }
+
+    .floating-calculator-toggle:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+    }
+
+    .floating-calculator-toggle i {
+        margin-right: 8px;
+    }
 </style>
 {% endblock %}

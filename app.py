@@ -187,7 +187,7 @@ def init_distractor_table():
         app.logger.error(f"Virhe häiriötekijätaulun luomisessa: {e}")
 
 # Kutsu taulun luontifunktio sovelluksen käynnistyessä
-init_distractor_table()
+# init_distractor_table()
 
 # HUOM: Sarakkeiden lisäysfunktiot (add_distractor_probability_column ja 
 # add_user_expiration_column) on POISTETTU, koska DatabaseManager hoitaa 
@@ -1170,13 +1170,10 @@ def simulation_route():
     if has_existing_session:
         sim = session['simulation']
         
-        # ✅ KRIITTINEN KORJAUS: Käytä tallennettua time_remaining jos olemassa
         if 'time_remaining' in sim and sim['time_remaining'] is not None:
-            # Käytä tallennettua aikaa (kun sessio on keskeytetty)
             time_remaining = max(0, int(sim['time_remaining']))
-            app.logger.info(f"✅ Käytetään tallennettua time_remaining: {time_remaining} sek = {time_remaining//60} min")
         else:
-            # Fallback: Laske start_time perusteella (vain vanhalle sessiolle jossa ei ole time_remaining)
+            # ⚠️ UUSI: Jos ei ole tallennettua aikaa, laske oikein
             try:
                 start_time = datetime.fromisoformat(sim.get('start_time'))
                 if start_time.tzinfo is None:
@@ -1184,13 +1181,11 @@ def simulation_route():
                 
                 elapsed_seconds = (datetime.now(timezone.utc) - start_time).total_seconds()
                 time_remaining = max(0, 3600 - int(elapsed_seconds))
-                
-                app.logger.info(f"⚠️ Lasketaan start_time perusteella: {time_remaining} sek")
             except Exception as e:
                 app.logger.error(f"❌ Time calculation error: {e}")
                 time_remaining = 3600
-        
-        # ✅ Päivitä time_remaining sessioniin (tärkeää!)
+
+        # ✅ UUSI: Tallenna time_remaining AINA kun ladataan sessio
         sim['time_remaining'] = time_remaining
         session.modified = True
         
