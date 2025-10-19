@@ -296,24 +296,29 @@
     });
 });
 
-    // Calculator functionality
-    function initCalculator() {
+// Calculator functionality
+function initCalculator() {
     const calcDisplay = document.getElementById('calcDisplay');
     const calculator = document.getElementById('floatingCalculator');
     const toggleBtn = document.getElementById('calculatorToggle');
     const closeBtn = document.getElementById('closeCalculator');
 
-    // Toggle calculator
-    if (toggleBtn) {
-        toggleBtn.addEventListener('click', () => {
-            calculator.classList.add('show');
-            toggleBtn.style.display = 'none';
-            
-            // ✅ UUSI: Alusta drag vasta nyt kun laskin on näkyvissä
-            setTimeout(() => initCalculatorDrag(), 100);
-        });
+    // Safety check
+    if (!calculator || !toggleBtn || !calcDisplay) {
+        console.error('Calculator elements not found');
+        return;
     }
 
+    // Toggle calculator
+    toggleBtn.addEventListener('click', () => {
+        calculator.classList.add('show');
+        toggleBtn.style.display = 'none';
+        
+        // Initialize drag after calculator is visible
+        setTimeout(() => initCalculatorDrag(), 100);
+    });
+
+    // Close calculator
     if (closeBtn) {
         closeBtn.addEventListener('click', () => {
             calculator.classList.remove('show');
@@ -334,7 +339,7 @@
         });
     });
 
-    // Clear
+    // Clear button
     const clearBtn = document.getElementById('calcClear');
     if (clearBtn) {
         clearBtn.addEventListener('click', () => {
@@ -343,7 +348,7 @@
         });
     }
 
-    // Calculate
+    // Equals button
     const equalsBtn = document.getElementById('calcEquals');
     if (equalsBtn) {
         equalsBtn.addEventListener('click', () => {
@@ -358,10 +363,10 @@
     }
 }
 
-// Drag functionality (separate function)
+// Drag functionality (called after calculator is shown)
 function initCalculatorDrag() {
     const calculator = document.getElementById('floatingCalculator');
-    const calcHeader = document.querySelector('.calculator-header');
+    const calcHeader = calculator?.querySelector('.calculator-header');
     
     if (!calculator || !calcHeader) {
         console.log('Calculator elements not found for drag functionality');
@@ -405,7 +410,7 @@ function initCalculatorDrag() {
             currentX = clientX - initialX;
             currentY = clientY - initialY;
 
-            // Vaihda fixed positioning
+            // Change to absolute positioning
             calculator.style.right = 'auto';
             calculator.style.bottom = 'auto';
             calculator.style.left = currentX + 'px';
@@ -425,40 +430,11 @@ function initCalculatorDrag() {
     document.addEventListener('mousemove', drag);
     document.addEventListener('mouseup', dragEnd);
 
-    // Touch events (mobiili)
+    // Touch events (mobile)
     calcHeader.addEventListener('touchstart', dragStart, { passive: false });
     document.addEventListener('touchmove', drag, { passive: false });
     document.addEventListener('touchend', dragEnd);
-}
-
-    // Mouse events
-    calcHeader?.addEventListener('mousedown', dragStart);
-    document.addEventListener('mousemove', drag);
-    document.addEventListener('mouseup', dragEnd);
-
-    // Touch events (mobiili)
-    calcHeader?.addEventListener('touchstart', dragStart, { passive: false });
-    document.addEventListener('touchmove', drag, { passive: false });
-    document.addEventListener('touchend', dragEnd);
-}
-
-        // Clear
-        document.getElementById('calcClear')?.addEventListener('click', () => {
-            calcValue = '0';
-            calcDisplay.value = calcValue;
-        });
-
-        // Calculate
-        document.getElementById('calcEquals')?.addEventListener('click', () => {
-            try {
-                calcValue = eval(calcValue).toString();
-                calcDisplay.value = calcValue;
-            } catch (e) {
-                calcDisplay.value = 'Virhe';
-                calcValue = '0';
-            }
-        });
-    }
+}    
 
     async function fetchCSRFToken() {
         try {
@@ -873,15 +849,21 @@ function initCalculatorDrag() {
     }
 
     .calculator-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 12px 16px;
-        border-radius: 12px 12px 0 0;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        font-weight: 600;
-    }
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 12px 16px;
+    border-radius: 12px 12px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 600;
+    cursor: move; /* ← LISÄÄ */
+    user-select: none; /* ← LISÄÄ */
+}
+
+.calculator-header:active {
+    cursor: grabbing; /* ← LISÄÄ KOKO BLOKKI */
+}
 
     .calculator-body {
         padding: 16px;
