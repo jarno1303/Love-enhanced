@@ -29,22 +29,24 @@ class User(UserMixin):
 
 @dataclass
 class Question:
-    """Kysymysmalli."""
     id: int
     question: str
-    options: List[str]
+    options: list
     correct: int
     explanation: str
     category: str
     difficulty: str
     times_shown: int = 0
     times_correct: int = 0
-    last_shown: Optional[str] = None
+    last_shown: datetime = None
     ease_factor: float = 2.5
     interval: int = 1
-    hint_type: Optional[str] = None
-    created_at: Optional[str] = None
-    question_normalized: Optional[str] = None
+    status: str = 'needs_review'          # ← UUSI
+    validated_by: int = None              # ← UUSI
+    validated_at: datetime = None         # ← UUSI
+    question_normalized: str = None       # ← UUSI
+    created_at: datetime = None           # ← UUSI
+    hint_type: str = None                 # ← UUSI
 
 @dataclass
 class QuestionAttempt:
