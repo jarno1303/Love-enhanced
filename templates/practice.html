@@ -292,7 +292,6 @@
         helperModal = new bootstrap.Modal(document.getElementById('helperModal'));
         distractorModalInstance = new bootstrap.Modal(document.getElementById('distractorModal'));
         initCalculator();
-        initCalculatorDrag(); // ← LISÄÄ TÄMÄ
         fetchQuestions();
     });
 });
@@ -309,6 +308,9 @@ function initCalculator() {
         toggleBtn.addEventListener('click', () => {
             calculator.classList.add('show');
             toggleBtn.style.display = 'none';
+            
+            // ✅ UUSI: Alusta drag vasta nyt kun laskin on näkyvissä
+            setTimeout(() => initCalculatorDrag(), 100);
         });
     }
 
