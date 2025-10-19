@@ -229,7 +229,7 @@
 
 <!-- Floating Calculator -->
 <div id="floatingCalculator" class="floating-calculator">
-    <div class="calculator-header">
+    <div class="calculator-header" id="calcHeader">
         <span>🧮 Laskin</span>
         <button id="closeCalculator" class="btn-close btn-close-white btn-sm"></button>
     </div>
@@ -278,163 +278,196 @@
     let currentDistractor = null;
     let distractorModalInstance = null;
     let csrfToken = '';
-    
-    // Calculator state
-    let calcValue = '0';
 
     const DISTRACTORS = {{ constants.DISTRACTORS|tojson|safe }};
     const userDistractorsEnabled = {{ current_user.distractors_enabled|tojson|safe }};
     const userDistractorProbability = {{ current_user.distractor_probability|tojson|safe }} / 100.0;
 
     document.addEventListener('DOMContentLoaded', function() {
-    fetchCSRFToken().then(() => {
-        explanationModal = new bootstrap.Modal(document.getElementById('explanationModal'));
-        helperModal = new bootstrap.Modal(document.getElementById('helperModal'));
-        distractorModalInstance = new bootstrap.Modal(document.getElementById('distractorModal'));
-        initCalculator();
-        fetchQuestions();
-    });
-});
-
-// Calculator functionality
-function initCalculator() {
-    const calcDisplay = document.getElementById('calcDisplay');
-    const calculator = document.getElementById('floatingCalculator');
-    const toggleBtn = document.getElementById('calculatorToggle');
-    const closeBtn = document.getElementById('closeCalculator');
-
-    // Safety check
-    if (!calculator || !toggleBtn || !calcDisplay) {
-        console.error('Calculator elements not found');
-        return;
-    }
-
-    // Toggle calculator
-    toggleBtn.addEventListener('click', () => {
-        calculator.classList.add('show');
-        toggleBtn.style.display = 'none';
-        
-        // Initialize drag after calculator is visible
-        setTimeout(() => initCalculatorDrag(), 100);
-    });
-
-    // Close calculator
-    if (closeBtn) {
-        closeBtn.addEventListener('click', () => {
-            calculator.classList.remove('show');
-            toggleBtn.style.display = 'block';
-        });
-    }
-
-    // Calculator buttons
-    document.querySelectorAll('.calc-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const value = this.dataset.value;
-            if (calcValue === '0' && value !== '.') {
-                calcValue = value;
-            } else {
-                calcValue += value;
-            }
-            calcDisplay.value = calcValue;
+        fetchCSRFToken().then(() => {
+            explanationModal = new bootstrap.Modal(document.getElementById('explanationModal'));
+            helperModal = new bootstrap.Modal(document.getElementById('helperModal'));
+            distractorModalInstance = new bootstrap.Modal(document.getElementById('distractorModal'));
+            initCalculator();
+            fetchQuestions();
         });
     });
 
-    // Clear button
-    const clearBtn = document.getElementById('calcClear');
-    if (clearBtn) {
-        clearBtn.addEventListener('click', () => {
-            calcValue = '0';
-            calcDisplay.value = calcValue;
-        });
-    }
+    // Calculator functionality - WORKING VERSION from simulation.html
+    function initCalculator() {
+        const calcDisplay = document.getElementById('calcDisplay');
+        const calculator = document.getElementById('floatingCalculator');
+        const toggleBtn = document.getElementById('calculatorToggle');
+        const closeBtn = document.getElementById('closeCalculator');
+        const calcHeader = document.getElementById('calcHeader');
 
-    // Equals button
-    const equalsBtn = document.getElementById('calcEquals');
-    if (equalsBtn) {
-        equalsBtn.addEventListener('click', () => {
+        if (!calculator || !toggleBtn || !calcDisplay) {
+            console.error('Calculator elements not found');
+            return;
+        }
+
+        // Calculator state
+        let currentValue = '0';
+        let previousValue = '';
+        let operation = null;
+        let shouldResetDisplay = false;
+
+        // Drag state
+        let isDragging = false;
+        let currentX = 0;
+        let currentY = 0;
+        let initialX = 0;
+        let initialY = 0;
+
+        // Toggle calculator
+        toggleBtn.addEventListener('click', () => {
+            calculator.classList.add('show');
+            toggleBtn.style.display = 'none';
+        });
+
+        // Close calculator
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+                calculator.classList.remove('show');
+                toggleBtn.style.display = 'block';
+            });
+        }
+
+        // Calculator buttons
+        document.querySelectorAll('.calc-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const value = this.dataset.value;
+                
+                if (['+', '-', '*', '/'].includes(value)) {
+                    // Operator clicked
+                    if (operation !== null && !shouldResetDisplay) {
+                        calculateResult();
+                    }
+                    previousValue = currentValue;
+                    operation = value;
+                    shouldResetDisplay = true;
+                } else if (value === '.') {
+                    if (!currentValue.includes('.')) {
+                        currentValue += '.';
+                        calcDisplay.value = currentValue;
+                    }
+                } else {
+                    // Number clicked
+                    if (shouldResetDisplay) {
+                        currentValue = value;
+                        shouldResetDisplay = false;
+                    } else {
+                        currentValue = currentValue === '0' ? value : currentValue + value;
+                    }
+                    calcDisplay.value = currentValue;
+                }
+            });
+        });
+
+        // Clear button
+        const clearBtn = document.getElementById('calcClear');
+        if (clearBtn) {
+            clearBtn.addEventListener('click', () => {
+                currentValue = '0';
+                previousValue = '';
+                operation = null;
+                shouldResetDisplay = false;
+                calcDisplay.value = currentValue;
+            });
+        }
+
+        // Equals button
+        const equalsBtn = document.getElementById('calcEquals');
+        if (equalsBtn) {
+            equalsBtn.addEventListener('click', () => {
+                calculateResult();
+            });
+        }
+
+        function calculateResult() {
+            if (operation === null || previousValue === '') return;
+            
             try {
-                calcValue = eval(calcValue).toString();
-                calcDisplay.value = calcValue;
+                const prev = parseFloat(previousValue);
+                const current = parseFloat(currentValue);
+                let result = 0;
+
+                switch(operation) {
+                    case '+': result = prev + current; break;
+                    case '-': result = prev - current; break;
+                    case '*': result = prev * current; break;
+                    case '/': result = prev / current; break;
+                }
+
+                currentValue = result.toString();
+                calcDisplay.value = currentValue;
+                operation = null;
+                previousValue = '';
+                shouldResetDisplay = true;
             } catch (e) {
                 calcDisplay.value = 'Virhe';
-                calcValue = '0';
+                currentValue = '0';
+                operation = null;
+                previousValue = '';
             }
-        });
-    }
-}
-
-// Drag functionality (called after calculator is shown)
-function initCalculatorDrag() {
-    const calculator = document.getElementById('floatingCalculator');
-    const calcHeader = calculator?.querySelector('.calculator-header');
-    
-    if (!calculator || !calcHeader) {
-        console.log('Calculator elements not found for drag functionality');
-        return;
-    }
-
-    let isDragging = false;
-    let currentX = 0;
-    let currentY = 0;
-    let initialX = 0;
-    let initialY = 0;
-
-    function dragStart(e) {
-        if (e.type === "touchstart") {
-            initialX = e.touches[0].clientX - currentX;
-            initialY = e.touches[0].clientY - currentY;
-        } else {
-            initialX = e.clientX - currentX;
-            initialY = e.clientY - currentY;
         }
 
-        if (e.target === calcHeader || calcHeader.contains(e.target)) {
-            isDragging = true;
-            calculator.style.transition = 'none';
-        }
-    }
+        // DRAG FUNCTIONALITY
+        if (!calcHeader) return;
 
-    function drag(e) {
-        if (isDragging) {
-            e.preventDefault();
-            
-            let clientX, clientY;
-            if (e.type === "touchmove") {
-                clientX = e.touches[0].clientX;
-                clientY = e.touches[0].clientY;
-            } else {
-                clientX = e.clientX;
-                clientY = e.clientY;
+        function dragStart(e) {
+            if (e.target === calcHeader || calcHeader.contains(e.target)) {
+                if (e.target.classList.contains('btn-close')) return;
+                
+                isDragging = true;
+                
+                if (e.type === "touchstart") {
+                    initialX = e.touches[0].clientX - currentX;
+                    initialY = e.touches[0].clientY - currentY;
+                } else {
+                    initialX = e.clientX - currentX;
+                    initialY = e.clientY - currentY;
+                }
+                
+                calculator.style.transition = 'none';
             }
-
-            currentX = clientX - initialX;
-            currentY = clientY - initialY;
-
-            // Change to absolute positioning
-            calculator.style.right = 'auto';
-            calculator.style.bottom = 'auto';
-            calculator.style.left = currentX + 'px';
-            calculator.style.top = currentY + 'px';
         }
-    }
 
-    function dragEnd() {
-        if (isDragging) {
+        function drag(e) {
+            if (isDragging) {
+                e.preventDefault();
+                
+                let clientX, clientY;
+                if (e.type === "touchmove") {
+                    clientX = e.touches[0].clientX;
+                    clientY = e.touches[0].clientY;
+                } else {
+                    clientX = e.clientX;
+                    clientY = e.clientY;
+                }
+
+                currentX = clientX - initialX;
+                currentY = clientY - initialY;
+
+                calculator.style.transform = `translate(${currentX}px, ${currentY}px)`;
+            }
+        }
+
+        function dragEnd() {
             isDragging = false;
             calculator.style.transition = '';
         }
+
+        // Mouse events
+        calcHeader.addEventListener('mousedown', dragStart);
+        document.addEventListener('mousemove', drag);
+        document.addEventListener('mouseup', dragEnd);
+
+        // Touch events
+        calcHeader.addEventListener('touchstart', dragStart, { passive: false });
+        document.addEventListener('touchmove', drag, { passive: false });
+        document.addEventListener('touchend', dragEnd);
     }
-
-    // Mouse events
-    calcHeader.addEventListener('mousedown', dragStart);
-    document.addEventListener('mousemove', drag);
-    document.addEventListener('mouseup', dragEnd);
-
-    // Touch events (mobile)
-    calcHeader.addEventListener('touchstart', dragStart, { passive: false });
-    document.addEventListener('touchmove', drag, { passive: false });
-    document.addEventListener('touchend', dragEnd);
-}    
 
     async function fetchCSRFToken() {
         try {
@@ -849,21 +882,21 @@ function initCalculatorDrag() {
     }
 
     .calculator-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 12px 16px;
-    border-radius: 12px 12px 0 0;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-weight: 600;
-    cursor: move; /* ← LISÄÄ */
-    user-select: none; /* ← LISÄÄ */
-}
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 12px 16px;
+        border-radius: 12px 12px 0 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-weight: 600;
+        cursor: move;
+        user-select: none;
+    }
 
-.calculator-header:active {
-    cursor: grabbing; /* ← LISÄÄ KOKO BLOKKI */
-}
+    .calculator-header:active {
+        cursor: grabbing;
+    }
 
     .calculator-body {
         padding: 16px;
