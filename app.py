@@ -1739,54 +1739,159 @@ def admin_route():
 @app.route("/admin/validation")
 @admin_required
 def admin_validation_route():
-    """Näyttää kaikki kysymykset, jotka odottavat validointia."""
+    """Näyttää kysymykset validointia varten - kaksi välilehteä."""
     try:
-        # Hae kaikki kysymykset, joiden status on 'needs_review'
-        questions_to_validate = db_manager._execute(
+        # Hae odottavat kysymykset
+        pending_questions = db_manager._execute(
             "SELECT * FROM questions WHERE status = ? ORDER BY category, id",
             ('needs_review',),
             fetch='all'
         )
 
-        # Muunna options-kenttä JSON-stringistä listaksi
-        questions = []
-        if questions_to_validate:
-            for q in questions_to_validate:
+        # Hae validoidut kysymykset
+        validated_questions = db_manager._execute("""
+            SELECT q.*, u.username as validator_name
+            FROM questions q
+            LEFT JOIN users u ON q.validated_by = u.id
+            WHERE q.status = ?
+            ORDER BY q.validated_at DESC
+            LIMIT 100
+        """, ('validated',), fetch='all')
+
+        # Muunna options JSON-stringistä listaksi
+        pending_list = []
+        if pending_questions:
+            for q in pending_questions:
                 q_dict = dict(q)
                 try:
                     q_dict['options'] = json.loads(q_dict['options'])
                 except (json.JSONDecodeError, TypeError):
-                    q_dict['options'] = [] # Jos options on virheellinen, näytä tyhjä lista
-                questions.append(q_dict)
+                    q_dict['options'] = []
+                pending_list.append(q_dict)
 
-        return render_template("admin_validation.html", questions=questions)
+        validated_list = []
+        if validated_questions:
+            for q in validated_questions:
+                q_dict = dict(q)
+                try:
+                    q_dict['options'] = json.loads(q_dict['options'])
+                except (json.JSONDecodeError, TypeError):
+                    q_dict['options'] = []
+                validated_list.append(q_dict)
+
+        return render_template("admin_validation.html", 
+                             pending_questions=pending_list,
+                             validated_questions=validated_list,
+                             pending_count=len(pending_list),
+                             validated_count=len(validated_list))
 
     except Exception as e:
-        flash(f'Virhe validoitavien kysymysten haussa: {e}', 'danger')
+        flash(f'Virhe kysymysten haussa: {e}', 'danger')
         app.logger.error(f"Validation page error: {e}")
         return redirect(url_for('admin_route'))
-    
+
 @app.route("/admin/validate_question/<int:question_id>", methods=['POST'])
 @admin_required
-def admin_validate_question_action(question_id):
-    """Suorittaa kysymyksen validoinnin ja tallentaa tiedot."""
+def admin_validate_question_route(question_id):
+    """Validoi kysymys (yksittäin tai bulk)."""
     try:
-        # Päivitä kysymyksen tila ja validoijan tiedot
-        db_manager._execute(
-            """UPDATE questions 
-               SET status = ?, validated_by = ?, validated_at = ?
-               WHERE id = ?""",
-            ('validated', current_user.id, datetime.now(), question_id),
-            fetch='none'
-        )
-        flash(f'Kysymys #{question_id} on validoitu onnistuneesti!', 'success')
+        comment = request.form.get('comment', '').strip()
+        
+        db_manager._execute("""
+            UPDATE questions 
+            SET status = ?, 
+                validated_by = ?, 
+                validated_at = ?,
+                validation_comment = ?
+            WHERE id = ?
+        """, ('validated', current_user.id, datetime.now(), comment if comment else None, question_id), 
+        fetch='none')
+        
         app.logger.info(f"Admin {current_user.username} validated question {question_id}")
+        
+        # Jos AJAX-pyyntö, palauta JSON
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'success': True, 'message': 'Kysymys validoitu!'})
+        
+        flash(f'Kysymys #{question_id} validoitu!', 'success')
+        return redirect(url_for('admin_validation_route'))
 
     except Exception as e:
-        flash(f'Virhe kysymyksen validoinnissa: {e}', 'danger')
-        app.logger.error(f"Question validation action error for ID {question_id}: {e}")
+        app.logger.error(f"Question validation error for ID {question_id}: {e}")
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'success': False, 'error': str(e)}), 500
+        flash(f'Virhe validoinnissa: {e}', 'danger')
+        return redirect(url_for('admin_validation_route'))
 
-    return redirect(url_for('admin_validation_route'))    
+@app.route("/admin/bulk_validate", methods=['POST'])
+@admin_required
+def admin_bulk_validate_route():
+    """Validoi useita kysymyksiä kerralla."""
+    try:
+        question_ids = request.form.get('question_ids', '').strip()
+        comment = request.form.get('bulk_comment', '').strip()
+        
+        if not question_ids:
+            flash('Ei kysymyksiä valittuna.', 'warning')
+            return redirect(url_for('admin_validation_route'))
+        
+        # Parsitaan ID:t
+        ids = [int(qid.strip()) for qid in question_ids.split(',') if qid.strip()]
+        
+        if not ids:
+            flash('Virheelliset kysymys-ID:t.', 'danger')
+            return redirect(url_for('admin_validation_route'))
+        
+        # Validoidaan kaikki
+        validated_count = 0
+        for question_id in ids:
+            try:
+                db_manager._execute("""
+                    UPDATE questions 
+                    SET status = ?, 
+                        validated_by = ?, 
+                        validated_at = ?,
+                        validation_comment = ?
+                    WHERE id = ?
+                """, ('validated', current_user.id, datetime.now(), comment if comment else None, question_id), 
+                fetch='none')
+                validated_count += 1
+            except Exception as e:
+                app.logger.error(f"Bulk validate error for question {question_id}: {e}")
+        
+        flash(f'✅ Validoitu {validated_count} kysymystä onnistuneesti!', 'success')
+        app.logger.info(f"Admin {current_user.username} bulk validated {validated_count} questions")
+        
+        return redirect(url_for('admin_validation_route'))
+        
+    except Exception as e:
+        flash(f'Virhe bulk-validoinnissa: {str(e)}', 'danger')
+        app.logger.error(f"Bulk validation error: {e}")
+        return redirect(url_for('admin_validation_route'))
+
+@app.route("/admin/unvalidate/<int:question_id>", methods=['POST'])
+@admin_required
+def admin_unvalidate_question_route(question_id):
+    """Poista validointi kysymykseltä."""
+    try:
+        db_manager._execute("""
+            UPDATE questions 
+            SET status = ?, 
+                validated_by = NULL, 
+                validated_at = NULL,
+                validation_comment = NULL
+            WHERE id = ?
+        """, ('needs_review', question_id), fetch='none')
+        
+        flash(f'Validointi poistettu kysymykseltä #{question_id}', 'info')
+        app.logger.info(f"Admin {current_user.username} removed validation from question {question_id}")
+        
+        return redirect(url_for('admin_validation_route'))
+        
+    except Exception as e:
+        flash(f'Virhe validoinnin poistossa: {e}', 'danger')
+        app.logger.error(f"Unvalidate error for ID {question_id}: {e}")
+        return redirect(url_for('admin_validation_route'))    
 
 @app.route("/admin/users")
 @admin_required
