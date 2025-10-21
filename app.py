@@ -2020,6 +2020,60 @@ def admin_create_test_users_route():
     
     return redirect(url_for('admin_users_route'))    
 
+@app.route('/admin/create_single_user', methods=['POST'])
+@admin_required
+def admin_create_single_user_route():
+    """Luo yhden personoidun käyttäjän admin-paneelista."""
+    try:
+        username = request.form.get('username', '').strip()
+        email = request.form.get('email', '').strip()
+        role = request.form.get('role', 'user')
+        expiration_days = request.form.get('expiration_days')
+
+        if not username or not email:
+            flash('Käyttäjänimi ja sähköposti ovat pakollisia.', 'danger')
+            return redirect(url_for('admin_users_route'))
+
+        # Luo turvallinen, satunnainen salasana
+        password = generate_secure_password(12)
+        hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
+
+        # Käsittele vanhenemispäivä
+        expires_at = None
+        if expiration_days and expiration_days.isdigit() and int(expiration_days) > 0:
+            expires_at = datetime.now() + timedelta(days=int(expiration_days))
+
+        # Luo käyttäjä (rooli on aluksi 'user')
+        success, error = db_manager.create_user(
+            username=username,
+            email=email,
+            hashed_password=hashed_password,
+            expires_at=expires_at
+        )
+
+        if not success:
+            flash(f'Käyttäjän luonti epäonnistui: {error}', 'danger')
+            return redirect(url_for('admin_users_route'))
+
+        # Jos rooliksi valittiin admin, päivitä se erikseen
+        if role == 'admin':
+            user = db_manager.get_user_by_username(username)
+            if user:
+                db_manager.update_user_role(user['id'], 'admin')
+
+        # Näytä onnistumisilmoitus, jossa on luotu salasana
+        flash(f"""
+            ✅ Käyttäjä '{username}' luotu onnistuneesti!
+            <br><strong>Salasana:</strong> <code>{password}</code>
+            <br><small>Kopioi salasana talteen ja toimita se käyttäjälle turvallisesti.</small>
+        """, 'success')
+
+    except Exception as e:
+        app.logger.error(f"Virhe yksittäisen käyttäjän luonnissa: {e}")
+        flash(f'Odottamaton virhe käyttäjän luonnissa: {str(e)}', 'danger')
+    
+    return redirect(url_for('admin_users_route'))
+
 @app.route("/admin/stats")
 @admin_required
 def admin_stats_route():
