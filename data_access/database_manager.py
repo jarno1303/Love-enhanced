@@ -362,18 +362,24 @@ class DatabaseManager:
             logger.error(f"Virhe preferenssien tallennuksessa: {e}")
             return False, str(e)
 
-    def delete_user_by_id(self, user_id):
-        """Poistaa käyttäjän ja kaikki siihen liittyvät tiedot."""
-        try:
-            self._execute("DELETE FROM user_question_progress WHERE user_id = ?", (user_id,))
-            self._execute("DELETE FROM question_attempts WHERE user_id = ?", (user_id,))
-            self._execute("DELETE FROM active_sessions WHERE user_id = ?", (user_id,))
-            self._execute("DELETE FROM user_achievements WHERE user_id = ?", (user_id,))
-            self._execute("DELETE FROM users WHERE id = ?", (user_id,))
-            return True, None
-        except Exception as e:
-            logger.error(f"Virhe käyttäjän poistossa: {e}")
-            return False, str(e)
+    # UUSI KOODI database_manager.py-tiedostoon
+def delete_user_by_id(self, user_id):
+    """Poistaa käyttäjän ja kaikki hänen tietonsa."""
+    try:
+        # Poistetaan viittaukset kaikista liitostauluista ENNEN itse käyttäjän poistoa
+        self._execute("DELETE FROM user_question_progress WHERE user_id = ?", (user_id,))
+        self._execute("DELETE FROM question_attempts WHERE user_id = ?", (user_id,))
+        self._execute("DELETE FROM active_sessions WHERE user_id = ?", (user_id,))
+        self._execute("DELETE FROM user_achievements WHERE user_id = ?", (user_id,))
+        self._execute("DELETE FROM distractor_attempts WHERE user_id = ?", (user_id,)) # <-- LISÄÄ TÄMÄ RIVI
+        
+        # Viimeisenä poistetaan itse käyttäjä
+        self._execute("DELETE FROM users WHERE id = ?", (user_id,))
+        
+        return True, None
+    except Exception as e:
+        logger.error(f"Virhe käyttäjän poistossa: {e}")
+        return False, str(e)
         
     def get_all_question_ids(self):
         """Hakee kaikkien kysymysten ID:t listana."""
