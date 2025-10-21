@@ -481,47 +481,55 @@
         }
     }
 
-    async function fetchQuestions() {
-        try {
-            const urlParams = new URLSearchParams(window.location.search);
-            const categories = urlParams.getAll('categories');
-            const difficulties = urlParams.getAll('difficulties');
-            const limit = urlParams.get('count') || '10';
+    // practice.html - sisällä <script> tagia
 
-            const limitNum = parseInt(limit);
+async function fetchQuestions() {
+    try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const categories = urlParams.getAll('categories');
+        const difficulties = urlParams.getAll('difficulties');
+        const limit = urlParams.get('count') || '10';
+        const source = urlParams.get('source'); // <-- LISÄTTY: Luetaan lähde-parametri
+
+        const limitNum = parseInt(limit);
+
+        // KORJATTU: Tarkistetaan rajoitus vain, jos lähde EI OLE 'mistakes'
+        if (source !== 'mistakes') {
             if (isNaN(limitNum) || limitNum < 1 || limitNum > 100) {
                 throw new Error('Kysymysten määrän tulee olla 1-100 välillä');
             }
-            
-            const apiUrl = new URL('/api/questions', window.location.origin);
-            apiUrl.searchParams.append('count', limit);
-            categories.forEach(cat => apiUrl.searchParams.append('categories', cat));
-            difficulties.forEach(diff => apiUrl.searchParams.append('difficulties', diff));
-            
-            const response = await fetch(apiUrl);
-            
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
-            }
-            
-            const data = await response.json();
-            
-            if (!data.questions || !Array.isArray(data.questions) || data.questions.length === 0) {
-                throw new Error('Ei kysymyksiä saatavilla valituilla kriteereillä.');
-            }
-            
-            questions = data.questions;
-            startTime = Date.now();
-            showScreen('question');
-            displayCurrentQuestion();
-        } catch (error) {
-            let userMessage = error.message.includes('NetworkError') || error.message.includes('Failed to fetch') 
-                ? 'Verkkovirhe. Tarkista internet-yhteytesi ja yritä uudelleen.'
-                : error.message || 'Kysymysten lataaminen epäonnistui.';
-            showScreen('error', userMessage);
         }
+        
+        const apiUrl = new URL('/api/questions', window.location.origin);
+        // Huom: Vaikka ohitamme rajoituksen tässä, lähetämme silti oikean määrän API:lle
+        apiUrl.searchParams.append('count', limitNum); 
+        categories.forEach(cat => apiUrl.searchParams.append('categories', cat));
+        difficulties.forEach(diff => apiUrl.searchParams.append('difficulties', diff));
+        
+        const response = await fetch(apiUrl);
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        
+        if (!data.questions || !Array.isArray(data.questions) || data.questions.length === 0) {
+            throw new Error('Ei kysymyksiä saatavilla valituilla kriteereillä.');
+        }
+        
+        questions = data.questions;
+        startTime = Date.now();
+        showScreen('question');
+        displayCurrentQuestion();
+    } catch (error) {
+        let userMessage = error.message.includes('NetworkError') || error.message.includes('Failed to fetch') 
+            ? 'Verkkovirhe. Tarkista internet-yhteytesi ja yritä uudelleen.'
+            : error.message || 'Kysymysten lataaminen epäonnistui.';
+        showScreen('error', userMessage);
     }
+}
 
     function continueToNext() {
         explanationModal.hide();

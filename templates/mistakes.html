@@ -400,7 +400,8 @@ function startReviewAll() {
     const params = new URLSearchParams();
     categories.forEach(cat => params.append('categories', cat));
     params.append('count', questionsToReview.length);
-    
+    params.append('source', 'mistakes');
+
     window.location.href = '/practice?' + params.toString();
 }
 </script>
