@@ -405,35 +405,66 @@ def get_simulation_question_api(index):
 def get_csrf_token():
     return jsonify({'csrf_token': generate_csrf()})
 
+# app.py
+
 @app.route("/api/incorrect_questions")
 @login_required
 @limiter.limit("60 per minute")
 def get_incorrect_questions_api():
-    """Hakee kysymykset joihin käyttäjä on vastannut väärin."""
+    """Hakee kysymykset joihin käyttäjä on vastannut väärin, piilottaen kuitatut."""
     try:
         incorrect_questions = execute_query("""
             SELECT 
-                q.id,
-                q.question,
-                q.category,
-                q.difficulty,
-                q.explanation,
-                p.times_shown,
-                p.times_correct,
-                p.last_shown,
+                q.id, q.question, q.category, q.difficulty, q.explanation,
+                p.times_shown, p.times_correct, p.last_shown,
                 ROUND((p.times_correct * 100.0) / NULLIF(p.times_shown, 0), 1) as success_rate
             FROM questions q
             INNER JOIN user_question_progress p ON q.id = p.question_id
             WHERE p.user_id = ?
                 AND p.times_correct < p.times_shown
+                AND (p.mistake_acknowledged IS NULL OR p.mistake_acknowledged = ?) -- LISÄTTY TÄMÄ RIVI
             ORDER BY success_rate ASC NULLS FIRST, p.times_shown DESC
-        """, (current_user.id,), fetch='all')
+        """, (current_user.id, False), fetch='all') # LISÄTTY 'False' PARAMETRI
         
         return jsonify({'questions': [dict(q) for q in incorrect_questions] if incorrect_questions else []})
             
     except Exception as e:
         app.logger.error(f"Virhe väärien vastausten haussa: {e}")
         return jsonify({'error': str(e)}), 500
+
+#
+# --- TÄMÄ ON UUSI REITTI ---
+#
+@app.route("/api/mistakes/acknowledge", methods=['POST'])
+@login_required
+def acknowledge_mistakes_api():
+    """Merkitsee yhden tai useamman kehityskohteen kuitatuksi."""
+    data = request.get_json()
+    question_ids = data.get('question_ids')
+
+    if not isinstance(question_ids, list) or not question_ids:
+        return jsonify({'success': False, 'error': 'question_ids-lista puuttuu'}), 400
+
+    try:
+        # Muutettu boolean-arvo Postgre-yhteensopivaksi
+        true_val = True if db_manager.is_postgres else 1
+        
+        placeholders = ','.join('?' * len(question_ids))
+        query = f"""
+            UPDATE user_question_progress
+            SET mistake_acknowledged = ?
+            WHERE user_id = ? AND question_id IN ({placeholders})
+        """
+        params = [true_val, current_user.id] + question_ids
+        
+        execute_query(query, tuple(params), fetch='none')
+        
+        app.logger.info(f"User {current_user.id} acknowledged {len(question_ids)} mistakes.")
+        return jsonify({'success': True, 'acknowledged_count': len(question_ids)})
+
+    except Exception as e:
+        app.logger.error(f"Virhe kehityskohteiden kuittauksessa: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route("/api/question_progress/<int:question_id>")
 @login_required
