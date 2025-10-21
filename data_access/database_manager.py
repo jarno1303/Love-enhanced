@@ -1,4 +1,4 @@
-# TARKISTUSKOMMENTTI 14.10. KLO 10:00
+# PAKOTETAAN REDEPLOY 21.10 KL0 19:00
 # -*- coding: utf-8 -*-
 # data_access/database_manager.py
 import sqlite3
