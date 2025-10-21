@@ -1087,15 +1087,19 @@ def dashboard_route():
     if strong_categories:
         strength_pick = max(strong_categories, key=lambda x: x['success_rate'])
 
-    # Hae virheiden määrä
+    # KYSYMYSTEN HAKU MISTAKES KORJATTU
     try:
+        false_val = False if db_manager.is_postgres else 0
         result = execute_query("""
-            SELECT COUNT(DISTINCT question_id) as count FROM question_attempts 
-            WHERE user_id = ? AND correct = ?
-        """, (current_user.id, False if db_manager.is_postgres else 0), fetch='one')
+            SELECT COUNT(*) as count 
+            FROM user_question_progress
+            WHERE user_id = ? 
+              AND times_correct < times_shown 
+              AND (mistake_acknowledged IS NULL OR mistake_acknowledged = ?)
+        """, (current_user.id, false_val), fetch='one')
         mistake_count = result['count'] if result else 0
     except Exception as e:
-        app.logger.error(f"Virhe virheiden määrän haussa: {e}")
+        app.logger.error(f"Virhe kehityskohteiden määrän haussa: {e}")
         mistake_count = 0
 
     # Vanhat toiminnot säilyvät ennallaan
