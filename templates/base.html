@@ -876,20 +876,26 @@ body.dark-mode .navbar {
                             break;
                     }
                     
-                    Toastify({
-                        text: `${icon} ${message}`,
-                        duration: 4000,
-                        gravity: "top",
-                        position: "right",
-                        stopOnFocus: true,
-                        style: {
-                            background: backgroundColor,
-                            borderRadius: "12px",
-                            boxShadow: "0 10px 25px rgba(0,0,0,0.2)",
-                            fontWeight: "500",
-                            fontSize: "0.95rem"
-                        }
-                    }).showToast();
+                    // base.html
+
+const messageNode = document.createElement('div');
+messageNode.innerHTML = `${icon} ${message}`;
+
+Toastify({
+    node: messageNode, // Käytetään node-elementtiä tekstin sijaan
+    duration: 10000,   // Pidennetään kestoa, jotta salasanan ehtii kopioida
+    gravity: "top",
+    position: "right",
+    stopOnFocus: true,
+    escapeMarkup: false, // TÄRKEÄ: Sallii HTML-koodin
+    style: {
+        background: backgroundColor,
+        borderRadius: "12px",
+        boxShadow: "0 10px 25px rgba(0,0,0,0.2)",
+        fontWeight: "500",
+        fontSize: "0.95rem"
+    }
+}).showToast();
                 });
             }
         });
@@ -921,6 +927,24 @@ body.dark-mode .navbar {
                     borderRadius: "12px"
                 }
             }).showToast();
+        }
+
+        // base.html - <script>-osion sisään
+
+        function copyPasswordFromToast(element) {
+            const password = element.dataset.password;
+            navigator.clipboard.writeText(password).then(() => {
+                element.textContent = '✅ Kopioitu!';
+                element.disabled = true;
+                setTimeout(() => {
+                    // Palauta nappi ennalleen, jos tarpeen
+                    element.textContent = 'Kopioi';
+                    element.disabled = false;
+                }, 3000);
+            }).catch(err => {
+                console.error('Salasanan kopiointi epäonnistui:', err);
+                element.textContent = 'Virhe';
+            });
         }
         
         // Säilytetty vanha updateCardColors funktio
