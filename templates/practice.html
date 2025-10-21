@@ -557,36 +557,38 @@ async function fetchQuestions() {
     }
 
     function displayCurrentQuestion() {
-        if (currentQuestionIndex >= questions.length) {
-            showResults();
-            return;
-        }
-        const question = questions[currentQuestionIndex];
-        selectedOption = null;
-        document.getElementById('progressBar').style.width = `${((currentQuestionIndex + 1) / questions.length) * 100}%`;
-        document.getElementById('progressText').textContent = `${currentQuestionIndex + 1}/${questions.length}`;
-        loadQuestionProgress(question.id);
-        document.getElementById('questionText').textContent = question.question;
-        const optionsContainer = document.getElementById('optionsContainer');
-        optionsContainer.innerHTML = '';
-        question.options.forEach((option, index) => {
-            const optionDiv = document.createElement('div');
-            optionDiv.className = 'form-check p-3 mb-2 border rounded option-item';
-            optionDiv.style.cursor = 'pointer';
-            optionDiv.onclick = () => selectOption(index);
-            optionDiv.innerHTML = `
-                <input class="form-check-input" type="radio" name="answer" id="option${index}" value="${index}">
-                <label class="form-check-label w-100" for="option${index}" style="cursor: pointer;">${String.fromCharCode(65 + index)}. ${option}</label>
-            `;
-            optionsContainer.appendChild(optionDiv);
-        });
-        document.getElementById('submitBtn').style.display = 'inline-block';
-        document.getElementById('nextBtn').style.display = 'none';
-        
-        if (currentQuestionIndex > 0 && userDistractorsEnabled && Math.random() < userDistractorProbability) {
-            showDistractor();
-        }
+    if (currentQuestionIndex >= questions.length) {
+        showResults();
+        return;
     }
+    const question = questions[currentQuestionIndex];
+    selectedOption = null;
+    document.getElementById('progressBar').style.width = `${((currentQuestionIndex + 1) / questions.length) * 100}%`;
+    document.getElementById('progressText').textContent = `${currentQuestionIndex + 1}/${questions.length}`;
+    loadQuestionProgress(question.id);
+    document.getElementById('questionText').textContent = question.question;
+    const optionsContainer = document.getElementById('optionsContainer');
+    optionsContainer.innerHTML = '';
+    question.options.forEach((option, index) => {
+        const optionDiv = document.createElement('div');
+        optionDiv.className = 'form-check p-3 mb-2 border rounded option-item';
+        optionDiv.style.cursor = 'pointer';
+        optionDiv.onclick = () => selectOption(index);
+        optionDiv.innerHTML = `
+            <input class="form-check-input" type="radio" name="answer" id="option${index}" value="${index}">
+            <label class="form-check-label w-100" for="option${index}" style="cursor: pointer;">${String.fromCharCode(65 + index)}. ${option}</label>
+        `;
+        optionsContainer.appendChild(optionDiv);
+    });
+
+    // KORJAUS TÄSSÄ: Varmistetaan, että oikeat napit näkyvät uuden kysymyksen alussa
+    document.getElementById('submitBtn').style.display = 'inline-block'; // <-- TÄMÄ RIVI LISÄTTIIN
+    document.getElementById('nextBtn').style.display = 'none'; // <-- TÄMÄ RIVI LISÄTTIIN
+    
+    if (currentQuestionIndex > 0 && userDistractorsEnabled && Math.random() < userDistractorProbability) {
+        showDistractor();
+    }
+}
     
     function showDistractor() {
         distractorStartTime = Date.now();
@@ -717,54 +719,57 @@ async function fetchQuestions() {
     }
 
     async function submitAnswer() {
-        if (selectedOption === null) {
-            alert('Valitse vastaus ensin!');
-            return;
+    if (selectedOption === null) {
+        alert('Valitse vastaus ensin!');
+        return;
+    }
+    const question = questions[currentQuestionIndex];
+    const timeTaken = Math.floor((Date.now() - startTime) / 1000);
+    
+    try {
+        if (!csrfToken) {
+            await fetchCSRFToken();
         }
-        const question = questions[currentQuestionIndex];
-        const timeTaken = Math.floor((Date.now() - startTime) / 1000);
         
-        try {
-            if (!csrfToken) {
-                await fetchCSRFToken();
-            }
-            
-            const response = await fetch('/api/submit_answer', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': csrfToken
-                },
-                body: JSON.stringify({
-                    question_id: question.id,
-                    selected_option_text: question.options[selectedOption],
-                    time_taken: timeTaken
-                })
-            });
-            
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Vastauksen lähetys epäonnistui');
-            }
-            
-            const data = await response.json();
-            if (data.correct) correctAnswers++;
-            showAnswerFeedback(data.correct, data.correct_answer_index);
-            showExplanation(data.explanation, data.correct);
-            document.getElementById('submitBtn').style.display = 'none';
-            
-        } catch (error) {
-            console.error('Virhe vastauksen lähetyksessä:', error);
-            
-            if (error.message.includes('CSRF') || error.message.includes('token')) {
-                console.log('CSRF-virhe, yritetään uudelleen...');
-                await fetchCSRFToken();
-                setTimeout(submitAnswer, 100);
-            } else {
-                alert(`Vastauksen lähetys epäonnistui: ${error.message}`);
-            }
+        const response = await fetch('/api/submit_answer', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({
+                question_id: question.id,
+                selected_option_text: question.options[selectedOption],
+                time_taken: timeTaken
+            })
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Vastauksen lähetys epäonnistui');
+        }
+        
+        const data = await response.json();
+        if (data.correct) correctAnswers++;
+        showAnswerFeedback(data.correct, data.correct_answer_index);
+        showExplanation(data.explanation, data.correct);
+        
+        // KORJAUS TÄSSÄ: Piilota 'Vastaa'-nappi ja näytä 'Seuraava'-nappi
+        document.getElementById('submitBtn').style.display = 'none';
+        document.getElementById('nextBtn').style.display = 'inline-block'; // <-- TÄMÄ RIVI LISÄTTIIN
+        
+    } catch (error) {
+        console.error('Virhe vastauksen lähetyksessä:', error);
+        
+        if (error.message.includes('CSRF') || error.message.includes('token')) {
+            console.log('CSRF-virhe, yritetään uudelleen...');
+            await fetchCSRFToken();
+            setTimeout(submitAnswer, 100);
+        } else {
+            alert(`Vastauksen lähetys epäonnistui: ${error.message}`);
         }
     }
+}
 
     function showAnswerFeedback(isCorrect, correctIndex) {
         document.querySelectorAll('.option-item').forEach((item, index) => {
