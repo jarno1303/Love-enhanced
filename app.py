@@ -2062,17 +2062,16 @@ def admin_create_single_user_route():
                 db_manager.update_user_role(user['id'], 'admin')
 
         # Näytä onnistumisilmoitus, jossa on luotu salasana
-        # UUSI KOODI app.py-tiedostoon
-flash(f"""
-    Käyttäjä '{username}' luotu onnistuneesti!
-    <br><strong>Salasana:</strong> <code>{password}</code>
-    <button
-        onclick="copyPasswordFromToast(this)"
-        data-password="{password}"
-        style="margin-left: 10px; padding: 2px 8px; border-radius: 5px; border: 1px solid white; background: rgba(255,255,255,0.2); color: white; cursor: pointer;">
-        Kopioi
-    </button>
-""", 'success')
+        flash(f"""
+            Käyttäjä '{username}' luotu onnistuneesti!
+            <br><strong>Salasana:</strong> <code>{password}</code>
+            <button
+                onclick="copyPasswordFromToast(this)"
+                data-password="{password}"
+                style="margin-left: 10px; padding: 2px 8px; border-radius: 5px; border: 1px solid white; background: rgba(255,255,255,0.2); color: white; cursor: pointer;">
+                Kopioi
+            </button>
+        """, 'success')
 
     except Exception as e:
         app.logger.error(f"Virhe yksittäisen käyttäjän luonnissa: {e}")
