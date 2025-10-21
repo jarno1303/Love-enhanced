@@ -44,6 +44,7 @@ class Question:
     status: str = 'needs_review'          # ← UUSI
     validated_by: int = None              # ← UUSI
     validated_at: datetime = None         # ← UUSI
+    validation_comment: Options(str) = None #Uusin lisäys
     question_normalized: str = None       # ← UUSI
     created_at: datetime = None           # ← UUSI
     hint_type: str = None                 # ← UUSI
