@@ -421,9 +421,14 @@ def delete_user_by_id(self, user_id):
         )
     
     def get_categories(self):
-        """Hakee kaikki kategoriat tietokannasta."""
-        rows = self._execute("SELECT DISTINCT category FROM questions ORDER BY category", fetch='all')
-        return [row['category'] for row in rows] if rows else []
+        """Hakee kaikki uniikit kategoriat tietokannasta."""
+        query = "SELECT DISTINCT category FROM questions ORDER BY category"
+        try:
+            rows = self._execute(query, fetch='all')
+            return [row['category'] for row in rows] if rows else []
+        except Exception as e:
+            logger.error(f"Virhe kategorioiden haussa: {e}")
+            return []
 
     def get_questions(self, user_id, categories=None, difficulties=None, limit=10):
         """Hakee satunnaisia kysymyksiä tehokkaasti annettujen suodattimien perusteella."""
