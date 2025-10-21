@@ -41,13 +41,13 @@ class Question:
     last_shown: datetime = None
     ease_factor: float = 2.5
     interval: int = 1
-    status: str = 'needs_review'          # ← UUSI
-    validated_by: int = None              # ← UUSI
-    validated_at: datetime = None         # ← UUSI
-    validation_comment: Optional(str) = None #Uusin lisäys
-    question_normalized: str = None       # ← UUSI
-    created_at: datetime = None           # ← UUSI
-    hint_type: str = None                 # ← UUSI
+    status: str = 'needs_review'             # ← UUSI
+    validated_by: int = None                # ← UUSI
+    validated_at: datetime = None           # ← UUSI
+    validation_comment: Optional[str] = None #Uusin lisäys
+    question_normalized: str = None         # ← UUSI
+    created_at: datetime = None             # ← UUSI
+    hint_type: str = None                   # ← UUSI
 
 @dataclass
 class QuestionAttempt:
