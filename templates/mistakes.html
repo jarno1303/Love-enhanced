@@ -169,6 +169,7 @@ async function loadIncorrectQuestions() {
         }
         
         allIncorrectQuestions = data.questions;
+        document.getElementById('total-mistakes').textContent = allIncorrectQuestions.length;
         createCategoryFilters();
         displayQuestions();
         
