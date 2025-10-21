@@ -58,14 +58,18 @@
 
         <div class="card shadow-sm">
             <div class="card-header bg-light p-3">
-                <div class="row g-2 align-items-center">
+                <div class="row g-3 align-items-center">
                     <div class="col-lg-4">
                         <input type="text" id="search-input" class="form-control" placeholder="🔍 Etsi kysymyksistä...">
                     </div>
                     <div class="col-lg-8">
-                        <div id="category-filters" class="d-flex flex-wrap gap-2"></div>
+                        <div class="d-flex align-items-center">
+                            <small class="text-muted me-3 flex-shrink-0">Suodata:</small>
+                            <div id="category-filters" class="d-flex flex-wrap gap-2"></div>
+                        </div>
                     </div>
                 </div>
+                <div id="results-counter" class="text-muted small mt-2"></div>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
@@ -90,24 +94,7 @@
     </div>
 </div>
 
-<div class="modal fade" id="explanationModal" tabindex="-1">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header bg-info text-white">
-                <h5 class="modal-title"><i class="fas fa-lightbulb me-2"></i>Selitys</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <h6 class="mb-3" id="modal-question"></h6>
-                <div id="modal-explanation"></div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Sulje</button>
-            </div>
-        </div>
-    </div>
-</div>
-
+{% include 'explanation_modal.html' %}
 <div class="modal fade" id="resetAllModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-danger">
@@ -170,6 +157,7 @@ async function loadIncorrectQuestions() {
         
         allIncorrectQuestions = data.questions;
         document.getElementById('total-mistakes').textContent = allIncorrectQuestions.length;
+        
         createCategoryFilters();
         displayQuestions();
         
@@ -182,7 +170,7 @@ async function loadIncorrectQuestions() {
     }
 }
 
-// PÄIVITETTY displayQuestions-funktio: suodattaa, lajittelee ja näyttää datan
+// PÄIVITETTY displayQuestions: suodattaa, lajittelee ja näyttää datan
 function displayQuestions() {
     const tbody = document.getElementById('questions-tbody');
     tbody.innerHTML = '';
@@ -194,10 +182,15 @@ function displayQuestions() {
         return matchesCategory && matchesSearch;
     });
 
+    // UUSI: Päivitä tuloslaskuri
+    const counter = document.getElementById('results-counter');
+    counter.textContent = `Näytetään ${filteredQuestions.length} / ${allIncorrectQuestions.length} tulosta.`;
+
     // 2. Lajittele (Sort)
     filteredQuestions.sort((a, b) => {
-        const valA = a[currentSort.column];
-        const valB = b[currentSort.column];
+        let valA = a[currentSort.column] ?? (currentSort.direction === 'asc' ? Infinity : -Infinity);
+        let valB = b[currentSort.column] ?? (currentSort.direction === 'asc' ? Infinity : -Infinity);
+        
         let comparison = 0;
         if (valA > valB) {
             comparison = 1;
@@ -264,28 +257,28 @@ function handleSearch(event) {
 
 // MUOKATTU: Kategoriapainikkeet toimivat nyt suodattimina
 function createCategoryFilters() {
+    const filterContainer = document.getElementById('category-filters');
+    if (!filterContainer) return;
+    
     const categoryCounts = allIncorrectQuestions.reduce((acc, q) => {
         acc[q.category] = (acc[q.category] || 0) + 1;
         return acc;
     }, {});
     
-    const filterContainer = document.getElementById('category-filters');
-    filterContainer.innerHTML = `<button class="btn btn-sm btn-light active" data-category="all">Kaikki (${allIncorrectQuestions.length})</button>`;
+    filterContainer.innerHTML = `<button class="btn btn-sm btn-dark" data-category="all">Kaikki</button>`;
     
     Object.entries(categoryCounts).sort().forEach(([category, count]) => {
         const btn = document.createElement('button');
-        btn.className = 'btn btn-sm btn-outline-light';
+        btn.className = 'btn btn-sm btn-outline-dark';
         btn.dataset.category = category;
-        btn.textContent = `${category} (${count})`;
+        btn.textContent = `${category}`;
         filterContainer.appendChild(btn);
     });
     
     filterContainer.addEventListener('click', (event) => {
         if (event.target.tagName === 'BUTTON') {
-            filterContainer.querySelector('.active').classList.remove('active', 'btn-light');
-            filterContainer.querySelector('.active')?.classList.add('btn-outline-light');
-            event.target.classList.add('active', 'btn-light');
-            event.target.classList.remove('btn-outline-light');
+            filterContainer.querySelector('.btn-dark')?.classList.replace('btn-dark', 'btn-outline-dark');
+            event.target.classList.replace('btn-outline-dark', 'btn-dark');
             
             currentCategoryFilter = event.target.dataset.category;
             displayQuestions();
@@ -349,7 +342,7 @@ async function acknowledgeSingle(questionId) {
         if (allIncorrectQuestions.length === 0) {
             showEmptyState();
         } else {
-            displayQuestions();
+            displayQuestions(); // Päivittää näkymän
         }
     }
 }
@@ -368,14 +361,14 @@ async function acknowledgeSelected() {
         if (allIncorrectQuestions.length === 0) {
             showEmptyState();
         } else {
-            displayQuestions();
+            displayQuestions(); // Päivittää näkymän
         }
     }
 }
 
 function validateResetConfirmation() {
     const input = document.getElementById('reset-confirm-input').value;
-    document.getElementById('reset-confirm-btn').disabled = input !== 'OLEN VARMA';
+    document.getElementById('reset-confirm-btn').disabled = input.toUpperCase() !== 'OLEN VARMA';
 }
 
 async function executeResetAll() {
@@ -415,7 +408,8 @@ function startReview() {
     .question-checkbox, #select-all-checkbox { cursor: pointer; transform: scale(1.3); }
     .table-hover tbody tr:hover { background-color: #f8f9fa; }
     .table thead th { position: sticky; top: 0; background-color: #f8f9fa; z-index: 10; }
-    th[data-sort] i { margin-left: 5px; color: #aaa; }
+    th[data-sort] i { margin-left: 5px; color: #aaa; transition: color 0.2s; }
     th[data-sort]:hover i { color: #333; }
+    #category-filters .btn { font-size: 0.8rem; padding: 0.25rem 0.75rem; }
 </style>
 {% endblock %}
