@@ -1618,6 +1618,46 @@ def admin_add_question_route():
 
     return render_template("add_question.html", categories=categories)
 
+@app.route("/admin/questions")
+@admin_required
+def admin_questions_route():
+    """Näyttää kaikki kysymykset ylläpitäjälle."""
+    try:
+        # Hae kaikki kysymykset tietokannasta
+        questions = db_manager._execute(
+            """
+            SELECT id, question, category, difficulty, status, created_at,
+                   validated_by, validated_at, validation_comment
+            FROM questions
+            ORDER BY category, id
+            """,
+            fetch='all'
+        )
+
+        # Muunna options JSON-stringistä listaksi, jos tarpeen näyttää ne
+        questions_list = []
+        if questions:
+            for q in questions:
+                q_dict = dict(q)
+                try:
+                    # Käytä olemassa olevaa funktiota optionsin hakemiseen, jos tarvitaan
+                    question_data = db_manager.get_single_question_for_edit(q['id'])
+                    q_dict['options'] = json.loads(question_data['options']) if question_data and question_data['options'] else []
+                except (json.JSONDecodeError, TypeError) as e:
+                    app.logger.warning(f"Error parsing options for question {q['id']}: {e}")
+                    q_dict['options'] = []
+                questions_list.append(q_dict)
+
+        return render_template(
+            "admin_questions.html",
+            questions=questions_list,
+            question_count=len(questions_list)
+        )
+    except Exception as e:
+        flash(f'Virhe kysymysten haussa: {str(e)}', 'danger')
+        app.logger.error(f"Admin questions fetch error: {e}")
+        return redirect(url_for('admin_route'))
+
 @app.route("/admin/bulk_upload", methods=['POST'])
 @admin_required
 def admin_bulk_upload_route():
