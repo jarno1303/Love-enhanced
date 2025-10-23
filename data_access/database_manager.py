@@ -152,34 +152,48 @@ class DatabaseManager:
         self._add_column_if_not_exists('questions', 'validated_at', 'TIMESTAMP')
         self._add_column_if_not_exists('questions', 'validation_comment', 'TEXT')
 
+    # data_access/database_manager.py
+
     def _add_column_if_not_exists(self, table_name, column_name, column_type):
         """Apufunktio sarakkeen lisäämiseksi, jos sitä ei ole olemassa."""
         try:
             with self.get_connection() as conn:
                 with conn.cursor(cursor_factory=DictCursor if self.is_postgres else None) as cur:
+                    column_exists = False
+                    
+                    # --- TÄMÄ LOGIIKKA ON KORJATTU ---
                     if self.is_postgres:
+                        # PostgreSQL: Tarkista, palauttaako kysely rivin.
                         cur.execute("""
                             SELECT 1 FROM information_schema.columns 
                             WHERE table_name = %s AND column_name = %s
-                        """, (table_name, column_name))
+                        """, (table_name.lower(), column_name.lower()))
+                        if cur.fetchone():
+                            column_exists = True
                     else:
+                        # SQLite: Tarkista sarakkeet PRAGMA-lauseella.
                         cur.execute(f"PRAGMA table_info({table_name})")
-                    
-                    result = cur.fetchall()
-                    columns = [row['column_name'] if self.is_postgres else row[1] for row in result]
-                    
-                    if column_name not in columns:
+                        columns = [row[1] for row in cur.fetchall()]
+                        if column_name in columns:
+                            column_exists = True
+                    # --- KORJAUKSEN LOPPU ---
+
+                    # Suorita lisäys vain, jos saraketta ei ole olemassa
+                    if not column_exists:
                         logger.info(f"Lisätään sarake '{column_name}' tauluun '{table_name}'...")
-                        # Käytetään _execute-metodia, joka hoitaa param_stylen
+                        # Käytetään _execute-metodia, joka hoitaa ?-/%s muunnoksen
                         self._execute(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type}")
-                        logger.info("Sarake lisätty.")
-                        
+                        logger.info(f"Sarake '{column_name}' lisätty onnistuneesti.")
+                    else:
+                        logger.debug(f"Sarake '{column_name}' on jo olemassa taulussa '{table_name}'.")
+
         except Exception as e:
+            # Voi epäonnistua, jos taulua ei vielä ole, mikä on ok alustusvaiheessa
             if "no such table" in str(e).lower() or "does not exist" in str(e).lower():
                 logger.info(f"Taulua '{table_name}' ei vielä ole, ohitetaan sarakkeen lisäys.")
             else:
                 logger.error(f"Virhe lisättäessä saraketta '{column_name}': {e}")
-                raise
+                raise # Heitetään virhe eteenpäin, jotta käynnistys pysähtyy selkeästi
 
     def normalize_question(self, text):
         """Normalisoi kysymystekstin vertailua varten."""
