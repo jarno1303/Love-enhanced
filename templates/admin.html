@@ -22,7 +22,6 @@
         background: var(--admin-light-bg);
     }
 
-    /* Dashboard Header */
     .dashboard-header {
         background: white;
         border-bottom: 1px solid #e5e7eb;
@@ -45,7 +44,6 @@
         margin-top: 0.5rem;
     }
 
-    /* KPI Cards */
     .kpi-card {
         background: white;
         border-radius: 12px;
@@ -85,7 +83,6 @@
         margin-top: 0.25rem;
     }
 
-    /* Tab Navigation */
     .tab-navigation {
         background: white;
         border-radius: 12px;
@@ -122,7 +119,6 @@
         color: white;
     }
 
-    /* Content Card */
     .content-card {
         background: white;
         border-radius: 12px;
@@ -150,7 +146,6 @@
         gap: 0.75rem;
     }
 
-    /* Quick Actions */
     .quick-actions {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -178,13 +173,13 @@
         background: #faf5ff;
         color: var(--admin-primary);
         transform: translateY(-2px);
+        text-decoration: none;
     }
 
     .quick-action-icon {
         font-size: 2rem;
     }
 
-    /* Modern Button Styles */
     .btn-modern {
         padding: 0.75rem 1.5rem;
         border-radius: 8px;
@@ -195,6 +190,7 @@
         display: inline-flex;
         align-items: center;
         gap: 0.5rem;
+        text-decoration: none;
     }
 
     .btn-modern-primary {
@@ -204,6 +200,8 @@
 
     .btn-modern-primary:hover {
         background: var(--admin-secondary);
+        color: white;
+        text-decoration: none;
     }
 
     .btn-modern-success {
@@ -216,7 +214,6 @@
         color: white;
     }
 
-    /* Tab Content Panes */
     .tab-content-pane {
         display: none;
     }
@@ -225,7 +222,6 @@
         display: block;
     }
 
-    /* Form Styling */
     .modern-form-group {
         margin-bottom: 1.5rem;
     }
@@ -252,7 +248,6 @@
         box-shadow: 0 0 0 3px rgba(91, 33, 182, 0.1);
     }
 
-    /* Upload Area */
     .upload-area {
         border: 2px dashed #d1d5db;
         border-radius: 12px;
@@ -274,7 +269,6 @@
         transform: scale(1.02);
     }
 
-    /* Loading state for export buttons */
     .btn-export-loading {
         position: relative;
         pointer-events: none;
@@ -350,9 +344,10 @@
         <button class="tab-btn" data-tab="actions"><i class="fas fa-cogs"></i> Toiminnot</button>
     </div>
 
+    <!-- KYSYMYKSET-VÄLILEHTI -->
     <div class="tab-content-pane active" id="tab-questions">
         
-        <!-- QUICK ACTIONS SECTION - UUSI! -->
+        <!-- PIKAVALINTA - KORJATTU! -->
         <div class="content-card mb-4">
             <div class="content-card-header">
                 <h3 class="content-card-title">
@@ -360,27 +355,27 @@
                 </h3>
             </div>
             <div class="quick-actions">
-                <a href="{{ url_for('admin_add_question_route') }}" class="quick-action-btn">
+                <a href="/admin/add_question" class="quick-action-btn">
                     <span class="quick-action-icon">➕</span>
                     <strong>Lisää kysymys</strong>
                     <small class="text-muted">Luo uusi kysymys</small>
                 </a>
-                <a href="{{ url_for('admin_questions_route') }}" class="quick-action-btn">
+                <a href="/admin/questions" class="quick-action-btn">
                     <span class="quick-action-icon">📋</span>
                     <strong>Kaikki kysymykset</strong>
                     <small class="text-muted">Selaa ja muokkaa</small>
                 </a>
-                <a href="{{ url_for('admin_validation_route') }}" class="quick-action-btn">
+                <a href="/admin/validation" class="quick-action-btn">
                     <span class="quick-action-icon">✅</span>
                     <strong>Validoi kysymyksiä</strong>
                     <small class="text-muted">Tarkista kysymykset</small>
                 </a>
-                <a href="{{ url_for('admin_export_questions_document_route') }}" class="quick-action-btn">
+                <a href="/admin/export_questions_document" class="quick-action-btn">
                     <span class="quick-action-icon">📄</span>
                     <strong>Vie dokumenttiin</strong>
                     <small class="text-muted">PDF tai Word</small>
                 </a>
-                <a href="{{ url_for('admin_find_duplicates_route') }}" class="quick-action-btn">
+                <a href="/admin/find_duplicates" class="quick-action-btn">
                     <span class="quick-action-icon">🔍</span>
                     <strong>Etsi duplikaatit</strong>
                     <small class="text-muted">Poista kaksoiskappaleet</small>
@@ -421,18 +416,46 @@
         </div>
     </div>
 
+    <!-- KÄYTTÄJÄT-VÄLILEHTI - KORJATTU! -->
     <div class="tab-content-pane" id="tab-users">
+        
+        <!-- KÄYTTÄJIEN PIKAVALINTA -->
+        <div class="content-card mb-4">
+            <div class="content-card-header">
+                <h3 class="content-card-title">
+                    <i class="fas fa-bolt"></i> Käyttäjien hallintatoiminnot
+                </h3>
+            </div>
+            <div class="quick-actions">
+                <a href="/admin/users" class="quick-action-btn">
+                    <span class="quick-action-icon">👥</span>
+                    <strong>Käyttäjähallinta</strong>
+                    <small class="text-muted">Hallinnoi käyttäjiä</small>
+                </a>
+                <div class="quick-action-btn" style="cursor: default; border-style: solid;">
+                    <span class="quick-action-icon">🔧</span>
+                    <strong>Luo testikäyttäjiä</strong>
+                    <small class="text-muted">Kehityskäyttöön</small>
+                </div>
+            </div>
+        </div>
+
         <div class="content-card">
             <div class="content-card-header">
                 <h3 class="content-card-title"><i class="fas fa-users"></i> Käyttäjien hallinta</h3>
-                <a href="{{ url_for('admin_users_route') }}" class="btn-modern btn-modern-primary btn-sm">Avaa yksityiskohtainen käyttäjähallinta</a>
             </div>
-            <p class="text-muted">Luo testikäyttäjiä, muokkaa olemassa olevia käyttäjiä ja hallinnoi heidän oikeuksiaan yksityiskohtaisessa näkymässä.</p>
+            <p class="text-muted mb-4">
+                Käyttäjähallinnassa voit tarkastella kaikkia rekisteröityneitä käyttäjiä, 
+                muokata heidän tietojaan ja hallita oikeuksiaan.
+            </p>
+            <a href="/admin/users" class="btn-modern btn-modern-primary">
+                <i class="fas fa-arrow-right me-2"></i>Avaa käyttäjähallinta
+            </a>
         </div>
     </div>
 
+    <!-- TOIMINNOT-VÄLILEHTI -->
     <div class="tab-content-pane" id="tab-actions">
-        <!-- EXPORT CARDS - Enhanced from long version -->
         <div class="content-card">
             <div class="content-card-header">
                 <h3 class="content-card-title">
@@ -447,7 +470,6 @@
             </p>
 
             <div class="row g-4">
-                <!-- PDF Export -->
                 <div class="col-md-4">
                     <div class="card h-100 border-0 shadow-sm">
                         <div class="card-body text-center d-flex flex-column">
@@ -468,7 +490,6 @@
                     </div>
                 </div>
 
-                <!-- Word Export -->
                 <div class="col-md-4">
                     <div class="card h-100 border-0 shadow-sm">
                         <div class="card-body text-center d-flex flex-column">
@@ -489,7 +510,6 @@
                     </div>
                 </div>
 
-                <!-- JSON Export -->
                 <div class="col-md-4">
                     <div class="card h-100 border-0 shadow-sm">
                         <div class="card-body text-center d-flex flex-column">
@@ -528,7 +548,6 @@
             </div>
         </div>
 
-        <!-- DANGEROUS ACTIONS - Enhanced from short version -->
         <div class="content-card border-danger">
             <div class="content-card-header">
                 <h3 class="content-card-title text-danger">
@@ -563,7 +582,7 @@
     </div>
 </div>
 
-<!-- JSON Upload Progress Modal - UUSI! -->
+<!-- Upload Progress Modal -->
 <div class="modal fade" id="uploadProgressModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -623,9 +642,7 @@
                                 <i class="fas fa-exclamation-triangle me-2"></i>
                                 Virheelliset rivit:
                             </h6>
-                            <div id="upload-errors-list" class="small" style="max-height: 200px; overflow-y: auto;">
-                                <!-- Virheet lisätään tähän -->
-                            </div>
+                            <div id="upload-errors-list" class="small" style="max-height: 200px; overflow-y: auto;"></div>
                         </div>
                     </div>
                     
@@ -647,7 +664,7 @@
     </div>
 </div>
 
-<!-- Toast Container for Export Notifications - UUSI! -->
+<!-- Toast Container -->
 <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
     <div id="exportToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
         <div class="toast-header">
@@ -667,9 +684,11 @@
 {{ super() }}
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    // Tab switching functionality
+    // Tab switching
     document.querySelectorAll('.tab-btn').forEach(button => {
-        button.addEventListener('click', function() { showTab(this.dataset.tab); });
+        button.addEventListener('click', function() { 
+            showTab(this.dataset.tab); 
+        });
     });
 
     function showTab(tabName) {
@@ -683,7 +702,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // JSON Upload functionality with ENHANCED PROGRESS MODAL
+    // JSON Upload
     const uploadForm = document.getElementById('upload-form');
     if (uploadForm) {
         const fileInput = document.getElementById('json-file-input');
@@ -714,7 +733,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            // Näytä modal
             const modal = new bootstrap.Modal(document.getElementById('uploadProgressModal'));
             modal.show();
 
@@ -727,30 +745,24 @@ document.addEventListener('DOMContentLoaded', () => {
             fetch(uploadForm.action, {
                 method: 'POST',
                 body: formData,
-                headers: {
-                    'X-CSRFToken': formData.get('csrf_token')
-                }
+                headers: { 'X-CSRFToken': formData.get('csrf_token') }
             })
             .then(response => {
-                // Tarkistetaan onko vastaus JSON vai redirect
                 const contentType = response.headers.get('content-type');
                 if (contentType && contentType.includes('application/json')) {
                     return response.json();
                 } else {
-                    // Jos redirect, käsittele se
                     if (response.redirected) {
                         window.location.href = response.url;
                         return null;
                     }
-                    // Muuten lataa sivu uudelleen
                     window.location.reload();
                     return null;
                 }
             })
             .then(data => {
-                if (!data) return; // Jos redirect tai reload
+                if (!data) return;
 
-                // Päivitä modal tiedoilla
                 document.getElementById('upload-spinner').style.display = 'none';
                 document.getElementById('upload-progress-content').style.display = 'block';
 
@@ -781,7 +793,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     document.getElementById('upload-success-message').style.display = 'block';
                 }
 
-                // Aktivoi sulkemis- ja päivitysnapp it
                 document.getElementById('upload-close-btn').disabled = false;
                 document.getElementById('upload-reload-btn').style.display = 'inline-block';
 
@@ -793,7 +804,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error('Latausvirhe:', error);
                 alert('Tiedoston latauksessa tapahtui virhe: ' + error.message);
                 
-                // Sulje modal
                 const modal = bootstrap.Modal.getInstance(document.getElementById('uploadProgressModal'));
                 if (modal) modal.hide();
 
@@ -804,30 +814,27 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Export buttons with loading state and toast notifications - UUSI!
+    // Export buttons
     document.querySelectorAll('.export-btn').forEach(btn => {
         btn.addEventListener('click', function(e) {
             const format = this.dataset.format;
             const originalHtml = this.innerHTML;
             
-            // Lisää loading-tila
             this.classList.add('btn-export-loading');
             this.innerHTML = `<i class="fas fa-spinner fa-spin me-2"></i>Luodaan ${format}...`;
             
-            // Simuloi latauksen kesto ja näytä toast
             setTimeout(() => {
                 const toast = new bootstrap.Toast(document.getElementById('exportToast'));
                 document.getElementById('exportToastBody').textContent = `${format}-tiedosto ladattu onnistuneesti!`;
                 toast.show();
                 
-                // Palauta nappi alkuperäiseen tilaan
                 this.classList.remove('btn-export-loading');
                 this.innerHTML = originalHtml;
             }, 1500);
         });
     });
 
-    // Enhanced dangerous action confirmation for clearing the database
+    // Clear database
     const clearDbButton = document.getElementById('clear-db-button');
     if(clearDbButton) {
         clearDbButton.addEventListener('click', function() {
