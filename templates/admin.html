@@ -204,7 +204,6 @@
 
     .btn-modern-primary:hover {
         background: var(--admin-secondary);
-        transform: translateY(-1px);
     }
 
     .btn-modern-success {
@@ -217,7 +216,7 @@
         color: white;
     }
 
-    /* Tab Content */
+    /* Tab Content Panes */
     .tab-content-pane {
         display: none;
     }
@@ -226,7 +225,7 @@
         display: block;
     }
 
-    /* Form Styles */
+    /* Form Styling */
     .modern-form-group {
         margin-bottom: 1.5rem;
     }
@@ -273,6 +272,31 @@
         border-color: var(--admin-primary);
         background: #faf5ff;
         transform: scale(1.02);
+    }
+
+    /* Loading state for export buttons */
+    .btn-export-loading {
+        position: relative;
+        pointer-events: none;
+        opacity: 0.6;
+    }
+
+    .btn-export-loading::after {
+        content: '';
+        position: absolute;
+        width: 16px;
+        height: 16px;
+        top: 50%;
+        right: 10px;
+        margin-top: -8px;
+        border: 2px solid white;
+        border-radius: 50%;
+        border-top-color: transparent;
+        animation: spinner 0.6s linear infinite;
+    }
+
+    @keyframes spinner {
+        to { transform: rotate(360deg); }
     }
 </style>
 {% endblock %}
@@ -327,6 +351,42 @@
     </div>
 
     <div class="tab-content-pane active" id="tab-questions">
+        
+        <!-- QUICK ACTIONS SECTION - UUSI! -->
+        <div class="content-card mb-4">
+            <div class="content-card-header">
+                <h3 class="content-card-title">
+                    <i class="fas fa-bolt"></i> Pikavalinta
+                </h3>
+            </div>
+            <div class="quick-actions">
+                <a href="{{ url_for('admin_add_question_route') }}" class="quick-action-btn">
+                    <span class="quick-action-icon">➕</span>
+                    <strong>Lisää kysymys</strong>
+                    <small class="text-muted">Luo uusi kysymys</small>
+                </a>
+                <a href="{{ url_for('admin_questions_route') }}" class="quick-action-btn">
+                    <span class="quick-action-icon">📋</span>
+                    <strong>Kaikki kysymykset</strong>
+                    <small class="text-muted">Selaa ja muokkaa</small>
+                </a>
+                <a href="{{ url_for('admin_validation_route') }}" class="quick-action-btn">
+                    <span class="quick-action-icon">✅</span>
+                    <strong>Validoi kysymyksiä</strong>
+                    <small class="text-muted">Tarkista kysymykset</small>
+                </a>
+                <a href="{{ url_for('admin_export_questions_document_route') }}" class="quick-action-btn">
+                    <span class="quick-action-icon">📄</span>
+                    <strong>Vie dokumenttiin</strong>
+                    <small class="text-muted">PDF tai Word</small>
+                </a>
+                <a href="{{ url_for('admin_find_duplicates_route') }}" class="quick-action-btn">
+                    <span class="quick-action-icon">🔍</span>
+                    <strong>Etsi duplikaatit</strong>
+                    <small class="text-muted">Poista kaksoiskappaleet</small>
+                </a>
+            </div>
+        </div>
         
         <div class="content-card" id="upload-json-section">
             <div class="content-card-header">
@@ -401,7 +461,7 @@
                             <div class="mt-3">
                                 <span class="badge bg-secondary mb-2">{{ question_count }} kysymystä</span>
                             </div>
-                            <a href="/admin/export_pdf" class="btn btn-danger w-100 mt-auto">
+                            <a href="/admin/export_pdf" class="btn btn-danger w-100 mt-auto export-btn" data-format="PDF">
                                 <i class="fas fa-file-pdf me-2"></i>Lataa PDF
                             </a>
                         </div>
@@ -422,7 +482,7 @@
                             <div class="mt-3">
                                 <span class="badge bg-secondary mb-2">{{ question_count }} kysymystä</span>
                             </div>
-                            <a href="/admin/export_word" class="btn btn-primary w-100 mt-auto">
+                            <a href="/admin/export_word" class="btn btn-primary w-100 mt-auto export-btn" data-format="Word">
                                 <i class="fas fa-file-word me-2"></i>Lataa Word
                             </a>
                         </div>
@@ -443,7 +503,7 @@
                             <div class="mt-3">
                                 <span class="badge bg-secondary mb-2">{{ question_count }} kysymystä</span>
                             </div>
-                            <a href="/admin/export_json" class="btn btn-success w-100 mt-auto">
+                            <a href="/admin/export_json" class="btn btn-success w-100 mt-auto export-btn" data-format="JSON">
                                 <i class="fas fa-file-code me-2"></i>Lataa JSON
                             </a>
                         </div>
@@ -503,6 +563,104 @@
     </div>
 </div>
 
+<!-- JSON Upload Progress Modal - UUSI! -->
+<div class="modal fade" id="uploadProgressModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-cloud-upload-alt me-2"></i>
+                    Ladataan kysymyksiä
+                </h5>
+            </div>
+            <div class="modal-body">
+                <div class="text-center mb-4" id="upload-spinner">
+                    <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
+                        <span class="visually-hidden">Ladataan...</span>
+                    </div>
+                    <p class="mt-3 text-muted">Käsitellään tiedostoa...</p>
+                </div>
+                
+                <div id="upload-progress-content" style="display: none;">
+                    <div class="alert alert-info mb-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span><i class="fas fa-file-code me-2"></i>Tiedosto käsitelty</span>
+                            <span class="badge bg-info" id="upload-total-count">0</span>
+                        </div>
+                    </div>
+                    
+                    <div class="progress mb-3" style="height: 25px;">
+                        <div id="upload-progress-bar" class="progress-bar progress-bar-striped progress-bar-animated bg-success" 
+                             role="progressbar" style="width: 0%">
+                            <strong id="upload-progress-text">0%</strong>
+                        </div>
+                    </div>
+                    
+                    <div class="row text-center mb-3">
+                        <div class="col-4">
+                            <div class="border rounded p-2">
+                                <div class="text-success fs-3" id="upload-added-count">0</div>
+                                <small class="text-muted">Lisätty</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="border rounded p-2">
+                                <div class="text-warning fs-3" id="upload-duplicate-count">0</div>
+                                <small class="text-muted">Duplikaatit</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="border rounded p-2">
+                                <div class="text-danger fs-3" id="upload-error-count">0</div>
+                                <small class="text-muted">Virheet</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="upload-errors-container" style="display: none;">
+                        <div class="alert alert-warning">
+                            <h6 class="alert-heading">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                Virheelliset rivit:
+                            </h6>
+                            <div id="upload-errors-list" class="small" style="max-height: 200px; overflow-y: auto;">
+                                <!-- Virheet lisätään tähän -->
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="upload-success-message" class="alert alert-success mt-3" style="display: none;">
+                        <i class="fas fa-check-circle me-2"></i>
+                        <strong>Valmis!</strong> Kysymykset on lisätty tietokantaan.
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="upload-close-btn" disabled>
+                    Sulje
+                </button>
+                <button type="button" class="btn btn-primary" onclick="window.location.reload()" id="upload-reload-btn" style="display: none;">
+                    <i class="fas fa-sync me-2"></i>Päivitä sivu
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Container for Export Notifications - UUSI! -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+    <div id="exportToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header">
+            <i class="fas fa-download me-2 text-success"></i>
+            <strong class="me-auto">Vienti onnistui</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body" id="exportToastBody">
+            Tiedosto on ladattu onnistuneesti!
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
@@ -525,7 +683,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // JSON Upload functionality with enhanced error handling
+    // JSON Upload functionality with ENHANCED PROGRESS MODAL
     const uploadForm = document.getElementById('upload-form');
     if (uploadForm) {
         const fileInput = document.getElementById('json-file-input');
@@ -556,6 +714,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
+            // Näytä modal
+            const modal = new bootstrap.Modal(document.getElementById('uploadProgressModal'));
+            modal.show();
+
             uploadButton.disabled = true;
             uploadButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Ladataan...';
             loadingSpinner.style.display = 'block';
@@ -566,34 +728,104 @@ document.addEventListener('DOMContentLoaded', () => {
                 method: 'POST',
                 body: formData,
                 headers: {
-                    // CSRF-tokenin lisääminen manuaalisesti AJAX-pyynnössä
                     'X-CSRFToken': formData.get('csrf_token')
                 }
             })
             .then(response => {
-                if (response.redirected) {
-                    // Jos palvelin tekee uudelleenohjauksen, seuraa sitä
-                    window.location.href = response.url;
-                } else if (!response.ok) {
-                    // Jos tulee virhe, yritä näyttää se
-                    return response.text().then(text => { 
-                        throw new Error('Palvelinvirhe: ' + (text || response.statusText));
-                    });
+                // Tarkistetaan onko vastaus JSON vai redirect
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    return response.json();
                 } else {
-                    // Jos ei uudelleenohjausta, ladataan sivu uudelleen
+                    // Jos redirect, käsittele se
+                    if (response.redirected) {
+                        window.location.href = response.url;
+                        return null;
+                    }
+                    // Muuten lataa sivu uudelleen
                     window.location.reload();
+                    return null;
                 }
+            })
+            .then(data => {
+                if (!data) return; // Jos redirect tai reload
+
+                // Päivitä modal tiedoilla
+                document.getElementById('upload-spinner').style.display = 'none';
+                document.getElementById('upload-progress-content').style.display = 'block';
+
+                const total = data.added + data.duplicates + data.skipped;
+                const percentage = total > 0 ? Math.round(((data.added + data.duplicates) / total) * 100) : 100;
+
+                document.getElementById('upload-total-count').textContent = total;
+                document.getElementById('upload-added-count').textContent = data.added;
+                document.getElementById('upload-duplicate-count').textContent = data.duplicates;
+                document.getElementById('upload-error-count').textContent = data.skipped;
+
+                const progressBar = document.getElementById('upload-progress-bar');
+                progressBar.style.width = percentage + '%';
+                document.getElementById('upload-progress-text').textContent = percentage + '%';
+
+                if (data.errors && data.errors.length > 0) {
+                    document.getElementById('upload-errors-container').style.display = 'block';
+                    const errorsList = document.getElementById('upload-errors-list');
+                    errorsList.innerHTML = data.errors.slice(0, 10).map(err => 
+                        `<div class="mb-1">• ${err}</div>`
+                    ).join('');
+                    if (data.errors.length > 10) {
+                        errorsList.innerHTML += `<div class="mt-2 text-muted">...ja ${data.errors.length - 10} muuta virhettä</div>`;
+                    }
+                }
+
+                if (data.added > 0 || data.duplicates > 0) {
+                    document.getElementById('upload-success-message').style.display = 'block';
+                }
+
+                // Aktivoi sulkemis- ja päivitysnapp it
+                document.getElementById('upload-close-btn').disabled = false;
+                document.getElementById('upload-reload-btn').style.display = 'inline-block';
+
+                uploadButton.disabled = false;
+                uploadButton.innerHTML = '<i class="fas fa-upload"></i> Lataa JSON';
+                loadingSpinner.style.display = 'none';
             })
             .catch(error => {
                 console.error('Latausvirhe:', error);
                 alert('Tiedoston latauksessa tapahtui virhe: ' + error.message);
                 
+                // Sulje modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('uploadProgressModal'));
+                if (modal) modal.hide();
+
                 uploadButton.disabled = false;
                 uploadButton.innerHTML = '<i class="fas fa-upload"></i> Lataa JSON';
                 loadingSpinner.style.display = 'none';
             });
         });
     }
+
+    // Export buttons with loading state and toast notifications - UUSI!
+    document.querySelectorAll('.export-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            const format = this.dataset.format;
+            const originalHtml = this.innerHTML;
+            
+            // Lisää loading-tila
+            this.classList.add('btn-export-loading');
+            this.innerHTML = `<i class="fas fa-spinner fa-spin me-2"></i>Luodaan ${format}...`;
+            
+            // Simuloi latauksen kesto ja näytä toast
+            setTimeout(() => {
+                const toast = new bootstrap.Toast(document.getElementById('exportToast'));
+                document.getElementById('exportToastBody').textContent = `${format}-tiedosto ladattu onnistuneesti!`;
+                toast.show();
+                
+                // Palauta nappi alkuperäiseen tilaan
+                this.classList.remove('btn-export-loading');
+                this.innerHTML = originalHtml;
+            }, 1500);
+        });
+    });
 
     // Enhanced dangerous action confirmation for clearing the database
     const clearDbButton = document.getElementById('clear-db-button');

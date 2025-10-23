@@ -1658,20 +1658,37 @@ def admin_questions_route():
         app.logger.error(f"Admin questions fetch error: {e}")
         return redirect(url_for('admin_route'))
 
+# Tämä on korjattu versio admin_bulk_upload_route-funktiosta
+# Lisää app.py tiedostoon rivi 1661 alkaen (korvaa vanha funktio)
+
 @app.route("/admin/bulk_upload", methods=['POST'])
 @admin_required
 def admin_bulk_upload_route():
+    """
+    Bulk upload JSON questions with AJAX support.
+    Returns JSON response for AJAX requests, redirects for normal form submissions.
+    """
+    # Tarkista onko AJAX-pyyntö
+    is_ajax = request.headers.get('X-CSRFToken') is not None or \
+              'application/json' in request.headers.get('Accept', '')
+    
     if 'json_file' not in request.files:
+        if is_ajax:
+            return jsonify({'success': False, 'error': 'Tiedostoa ei valittu.'}), 400
         flash('Tiedostoa ei valittu.', 'danger')
         return redirect(url_for('admin_route'))
     
     file = request.files['json_file']
     
     if file.filename == '':
+        if is_ajax:
+            return jsonify({'success': False, 'error': 'Tiedostoa ei valittu.'}), 400
         flash('Tiedostoa ei valittu.', 'danger')
         return redirect(url_for('admin_route'))
     
     if not file.filename.endswith('.json'):
+        if is_ajax:
+            return jsonify({'success': False, 'error': 'Tiedoston tulee olla JSON-muotoinen (.json).'}), 400
         flash('Tiedoston tulee olla JSON-muotoinen (.json).', 'danger')
         return redirect(url_for('admin_route'))
     
@@ -1680,10 +1697,14 @@ def admin_bulk_upload_route():
         questions_data = json.loads(content)
         
         if not isinstance(questions_data, list):
+            if is_ajax:
+                return jsonify({'success': False, 'error': 'JSON-tiedoston tulee sisältää lista kysymyksiä.'}), 400
             flash('JSON-tiedoston tulee sisältää lista kysymyksiä.', 'danger')
             return redirect(url_for('admin_route'))
         
         if len(questions_data) == 0:
+            if is_ajax:
+                return jsonify({'success': False, 'error': 'JSON-tiedosto on tyhjä.'}), 400
             flash('JSON-tiedosto on tyhjä.', 'warning')
             return redirect(url_for('admin_route'))
         
@@ -1691,6 +1712,21 @@ def admin_bulk_upload_route():
         
         if success:
             stats = result
+            
+            # Lokita onnistunut lataus
+            app.logger.info(f"Admin {current_user.username} uploaded {stats['added']} questions from JSON")
+            
+            # Jos AJAX-pyyntö, palauta JSON
+            if is_ajax:
+                return jsonify({
+                    'success': True,
+                    'added': stats.get('added', 0),
+                    'duplicates': stats.get('duplicates', 0),
+                    'skipped': stats.get('skipped', 0),
+                    'errors': stats.get('errors', [])
+                }), 200
+            
+            # Muuten flash-viestit ja redirect (vanha tapa)
             if stats['added'] > 0:
                 flash(f"✅ Lisättiin {stats['added']} kysymystä onnistuneesti!", 'success')
             if stats['duplicates'] > 0:
@@ -1702,18 +1738,25 @@ def admin_bulk_upload_route():
                 if len(stats['errors']) > 10:
                     error_msg += f"\n... ja {len(stats['errors']) - 10} muuta"
                 flash(error_msg, 'info')
-            
-            app.logger.info(f"Admin {current_user.username} uploaded {stats['added']} questions from JSON")
         else:
+            if is_ajax:
+                return jsonify({'success': False, 'error': f'Virhe kysymysten lataamisessa: {result}'}), 500
             flash(f'Virhe kysymysten lataamisessa: {result}', 'danger')
             app.logger.error(f"Bulk upload error: {result}")
     
     except json.JSONDecodeError as e:
-        flash(f'Virheellinen JSON-tiedosto: {str(e)}', 'danger')
+        error_msg = f'Virheellinen JSON-tiedosto: {str(e)}'
         app.logger.error(f"JSON decode error in bulk upload: {e}")
+        if is_ajax:
+            return jsonify({'success': False, 'error': error_msg}), 400
+        flash(error_msg, 'danger')
+        
     except Exception as e:
-        flash(f'Odottamaton virhe: {str(e)}', 'danger')
+        error_msg = f'Odottamaton virhe: {str(e)}'
         app.logger.error(f"Unexpected error in bulk upload: {e}")
+        if is_ajax:
+            return jsonify({'success': False, 'error': error_msg}), 500
+        flash(error_msg, 'danger')
     
     return redirect(url_for('admin_route'))
 
