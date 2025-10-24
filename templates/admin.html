@@ -25,29 +25,29 @@
     .dashboard-header {
         background: white;
         border-bottom: 1px solid #e5e7eb;
-        padding: 2rem 0;
-        margin-bottom: 2rem;
+        padding: 1.5rem 0;
+        margin-bottom: 1.5rem;
         border-radius: 12px;
         box-shadow: var(--card-shadow);
     }
 
     .dashboard-title {
         color: var(--admin-dark);
-        font-size: 2rem;
+        font-size: 1.75rem;
         font-weight: 700;
         margin: 0;
     }
 
     .dashboard-subtitle {
         color: #6b7280;
-        font-size: 0.95rem;
-        margin-top: 0.5rem;
+        font-size: 0.9rem;
+        margin-top: 0.25rem;
     }
 
     .kpi-card {
         background: white;
         border-radius: 12px;
-        padding: 1.5rem;
+        padding: 1.25rem;
         box-shadow: var(--card-shadow);
         transition: all 0.3s ease;
         border: 1px solid #e5e7eb;
@@ -60,18 +60,18 @@
     }
 
     .kpi-icon {
-        width: 48px;
-        height: 48px;
+        width: 44px;
+        height: 44px;
         border-radius: 10px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 1.5rem;
-        margin-bottom: 1rem;
+        font-size: 1.3rem;
+        margin-bottom: 0.75rem;
     }
 
     .kpi-value {
-        font-size: 2rem;
+        font-size: 1.75rem;
         font-weight: 700;
         color: var(--admin-dark);
         margin: 0;
@@ -79,44 +79,29 @@
 
     .kpi-label {
         color: #6b7280;
-        font-size: 0.9rem;
+        font-size: 0.85rem;
         margin-top: 0.25rem;
     }
 
-    .tab-navigation {
-        background: white;
-        border-radius: 12px;
-        padding: 0.5rem;
-        box-shadow: var(--card-shadow);
-        margin-bottom: 2rem;
-        display: flex;
-        gap: 0.5rem;
-        overflow-x: auto;
-    }
-
-    .tab-btn {
-        padding: 0.75rem 1.5rem;
-        border: none;
-        background: transparent;
-        color: #6b7280;
-        font-weight: 500;
-        border-radius: 8px;
-        cursor: pointer;
-        transition: all 0.2s;
-        white-space: nowrap;
+    .section-header {
         display: flex;
         align-items: center;
-        gap: 0.5rem;
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 2px solid #e5e7eb;
     }
 
-    .tab-btn:hover {
-        background: var(--admin-light-bg);
+    .section-title {
+        font-size: 1.25rem;
+        font-weight: 600;
         color: var(--admin-dark);
+        margin: 0;
     }
 
-    .tab-btn.active {
-        background: var(--admin-primary);
-        color: white;
+    .section-icon {
+        font-size: 1.5rem;
+        color: var(--admin-primary);
     }
 
     .content-card {
@@ -131,29 +116,29 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 1.5rem;
-        padding-bottom: 1rem;
+        margin-bottom: 1.25rem;
+        padding-bottom: 0.75rem;
         border-bottom: 1px solid #e5e7eb;
     }
 
     .content-card-title {
-        font-size: 1.25rem;
+        font-size: 1.1rem;
         font-weight: 600;
         color: var(--admin-dark);
         margin: 0;
         display: flex;
         align-items: center;
-        gap: 0.75rem;
+        gap: 0.5rem;
     }
 
     .quick-actions {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
         gap: 1rem;
     }
 
     .quick-action-btn {
-        padding: 1.25rem;
+        padding: 1rem;
         border: 2px dashed #d1d5db;
         border-radius: 10px;
         background: white;
@@ -165,7 +150,7 @@
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 0.5rem;
+        gap: 0.4rem;
     }
 
     .quick-action-btn:hover {
@@ -177,11 +162,73 @@
     }
 
     .quick-action-icon {
-        font-size: 2rem;
+        font-size: 1.75rem;
+    }
+
+    .quick-action-title {
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+
+    .quick-action-subtitle {
+        font-size: 0.75rem;
+        color: #9ca3af;
+    }
+
+    .export-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+    }
+
+    .export-card {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 1.25rem;
+        text-align: center;
+        transition: all 0.3s;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+    }
+
+    .export-card:hover {
+        box-shadow: var(--card-shadow-hover);
+        transform: translateY(-2px);
+    }
+
+    .export-icon {
+        font-size: 3rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .export-title {
+        font-weight: 600;
+        font-size: 1rem;
+        margin-bottom: 0.5rem;
+        color: var(--admin-dark);
+    }
+
+    .export-description {
+        font-size: 0.8rem;
+        color: #6b7280;
+        margin-bottom: 0.75rem;
+        flex-grow: 1;
+    }
+
+    .export-badge {
+        display: inline-block;
+        background: #e5e7eb;
+        color: #4b5563;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        margin-bottom: 0.75rem;
     }
 
     .btn-modern {
-        padding: 0.75rem 1.5rem;
+        padding: 0.625rem 1.25rem;
         border-radius: 8px;
         font-weight: 500;
         border: none;
@@ -189,8 +236,11 @@
         transition: all 0.2s;
         display: inline-flex;
         align-items: center;
+        justify-content: center;
         gap: 0.5rem;
         text-decoration: none;
+        width: 100%;
+        font-size: 0.9rem;
     }
 
     .btn-modern-primary {
@@ -209,49 +259,45 @@
         color: white;
     }
 
+    .btn-modern-success:hover {
+        background: #059669;
+        color: white;
+    }
+
     .btn-modern-danger {
         background: var(--admin-danger);
         color: white;
     }
 
-    .tab-content-pane {
-        display: none;
+    .btn-modern-danger:hover {
+        background: #dc2626;
+        color: white;
     }
 
-    .tab-content-pane.active {
-        display: block;
+    .btn-modern-info {
+        background: var(--admin-info);
+        color: white;
     }
 
-    .modern-form-group {
-        margin-bottom: 1.5rem;
+    .btn-modern-info:hover {
+        background: #2563eb;
+        color: white;
     }
 
-    .modern-form-label {
-        display: block;
-        font-weight: 500;
-        color: var(--admin-dark);
-        margin-bottom: 0.5rem;
+    .btn-modern-warning {
+        background: var(--admin-warning);
+        color: white;
     }
 
-    .modern-form-input {
-        width: 100%;
-        padding: 0.75rem 1rem;
-        border: 1px solid #d1d5db;
-        border-radius: 8px;
-        font-size: 1rem;
-        transition: all 0.2s;
-    }
-
-    .modern-form-input:focus {
-        outline: none;
-        border-color: var(--admin-primary);
-        box-shadow: 0 0 0 3px rgba(91, 33, 182, 0.1);
+    .btn-modern-warning:hover {
+        background: #d97706;
+        color: white;
     }
 
     .upload-area {
         border: 2px dashed #d1d5db;
         border-radius: 12px;
-        padding: 3rem 2rem;
+        padding: 2rem 1.5rem;
         text-align: center;
         cursor: pointer;
         transition: all 0.3s;
@@ -275,18 +321,51 @@
         opacity: 0.6;
     }
 
-    .btn-export-loading::after {
-        content: '';
-        position: absolute;
-        width: 16px;
-        height: 16px;
-        top: 50%;
-        right: 10px;
-        margin-top: -8px;
-        border: 2px solid white;
-        border-radius: 50%;
-        border-top-color: transparent;
-        animation: spinner 0.6s linear infinite;
+    .danger-zone {
+        background: #fef2f2;
+        border: 2px solid #fecaca;
+        border-radius: 12px;
+        padding: 1.5rem;
+    }
+
+    .danger-zone-header {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+        color: var(--admin-danger);
+    }
+
+    .danger-zone-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin: 0;
+    }
+
+    .danger-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        margin-top: 1rem;
+    }
+
+    /* Responsive optimizations */
+    @media (max-width: 768px) {
+        .dashboard-title {
+            font-size: 1.5rem;
+        }
+        
+        .kpi-value {
+            font-size: 1.5rem;
+        }
+        
+        .quick-actions {
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        }
+        
+        .export-grid {
+            grid-template-columns: 1fr;
+        }
     }
 
     @keyframes spinner {
@@ -296,291 +375,194 @@
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
+<div class="container-fluid py-3">
+    <!-- Header -->
     <div class="dashboard-header">
         <div class="container">
             <h1 class="dashboard-title">
-                <i class="fas fa-tachometer-alt me-3" style="color: var(--admin-primary);"></i>
+                <i class="fas fa-tachometer-alt me-2" style="color: var(--admin-primary);"></i>
                 Admin Dashboard
             </h1>
-            <p class="dashboard-subtitle">Hallinnoi kysymyksiä, käyttäjiä ja järjestelmän asetuksia</p>
+            <p class="dashboard-subtitle">Hallinnoi kysymyksiä ja järjestelmän asetuksia</p>
         </div>
     </div>
 
-    <div class="row g-4 mb-4">
-        <div class="col-12 col-sm-6 col-xl-3">
+    <!-- KPI Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
             <div class="kpi-card">
-                <div class="kpi-icon" style="background: #ddd6fe; color: #5b21b6;"><i class="fas fa-question-circle"></i></div>
+                <div class="kpi-icon" style="background: #ddd6fe; color: #5b21b6;">
+                    <i class="fas fa-question-circle"></i>
+                </div>
                 <h2 class="kpi-value">{{ question_count }}</h2>
                 <p class="kpi-label">Kysymystä tietokannassa</p>
             </div>
         </div>
-        <div class="col-12 col-sm-6 col-xl-3">
+        <div class="col-6 col-md-3">
             <div class="kpi-card">
-                <div class="kpi-icon" style="background: #d1fae5; color: #065f46;"><i class="fas fa-users"></i></div>
+                <div class="kpi-icon" style="background: #d1fae5; color: #065f46;">
+                    <i class="fas fa-users"></i>
+                </div>
                 <h2 class="kpi-value">{{ user_count }}</h2>
                 <p class="kpi-label">Rekisteröitynyttä käyttäjää</p>
             </div>
         </div>
-        <div class="col-12 col-sm-6 col-xl-3">
+        <div class="col-6 col-md-3">
             <div class="kpi-card">
-                <div class="kpi-icon" style="background: #fef3c7; color: #92400e;"><i class="fas fa-folder"></i></div>
+                <div class="kpi-icon" style="background: #fef3c7; color: #92400e;">
+                    <i class="fas fa-folder"></i>
+                </div>
                 <h2 class="kpi-value">{{ category_count }}</h2>
                 <p class="kpi-label">Kategoriaa käytössä</p>
             </div>
         </div>
-        <div class="col-12 col-sm-6 col-xl-3">
+        <div class="col-6 col-md-3">
             <div class="kpi-card">
-                <div class="kpi-icon" style="background: #dbeafe; color: #1d4ed8;"><i class="fas fa-chart-line"></i></div>
+                <div class="kpi-icon" style="background: #dbeafe; color: #1d4ed8;">
+                    <i class="fas fa-chart-line"></i>
+                </div>
                 <h2 class="kpi-value">{{ attempt_count }}</h2>
                 <p class="kpi-label">Kysymysyritystä yhteensä</p>
             </div>
         </div>
     </div>
 
-    <div class="tab-navigation">
-        <button class="tab-btn active" data-tab="questions"><i class="fas fa-question-circle"></i> Kysymykset</button>
-        <button class="tab-btn" data-tab="users"><i class="fas fa-users"></i> Käyttäjät</button>
-        <button class="tab-btn" data-tab="actions"><i class="fas fa-cogs"></i> Toiminnot</button>
-    </div>
-
-    <!-- KYSYMYKSET-VÄLILEHTI -->
-    <div class="tab-content-pane active" id="tab-questions">
-        
-        <!-- PIKAVALINTA - KORJATTU JA PÄIVITETTY! -->
-        <div class="content-card mb-4">
-            <div class="content-card-header">
-                <h3 class="content-card-title">
-                    <i class="fas fa-bolt"></i> Pikavalinta
-                </h3>
-            </div>
-            <div class="quick-actions">
-                <a href="/admin/add_question" class="quick-action-btn">
-                    <span class="quick-action-icon">➕</span>
-                    <strong>Lisää kysymys</strong>
-                    <small class="text-muted">Luo uusi kysymys</small>
-                </a>
-                <a href="/admin/questions" class="quick-action-btn">
-                    <span class="quick-action-icon">📋</span>
-                    <strong>Kaikki kysymykset</strong>
-                    <small class="text-muted">Selaa ja muokkaa</small>
-                </a>
-                <a href="/admin/validation" class="quick-action-btn">
-                    <span class="quick-action-icon">✅</span>
-                    <strong>Validoi kysymyksiä</strong>
-                    <small class="text-muted">Tarkista kysymykset</small>
-                </a>
-                <!-- ✨ UUSI NAPPI: Käyttäjähallinta -->
-                <a href="/admin/users" class="quick-action-btn">
-                    <span class="quick-action-icon">👥</span>
-                    <strong>Käyttäjähallinta</strong>
-                    <small class="text-muted">Hallinnoi käyttäjiä</small>
-                </a>
-                <a href="/admin/export_questions_document" class="quick-action-btn">
-                    <span class="quick-action-icon">📄</span>
-                    <strong>Vie dokumenttiin</strong>
-                    <small class="text-muted">PDF tai Word</small>
-                </a>
-                <a href="/admin/find_duplicates" class="quick-action-btn">
-                    <span class="quick-action-icon">🔍</span>
-                    <strong>Etsi duplikaatit</strong>
-                    <small class="text-muted">Poista kaksoiskappaleet</small>
-                </a>
-            </div>
+    <!-- Quick Actions -->
+    <div class="content-card">
+        <div class="section-header">
+            <i class="fas fa-bolt section-icon"></i>
+            <h3 class="section-title">Pikavalinta</h3>
         </div>
-        
-        <div class="content-card" id="upload-json-section">
-            <div class="content-card-header">
-                <h3 class="content-card-title"><i class="fas fa-file-upload"></i> Lataa kysymyksiä JSON-tiedostosta</h3>
-            </div>
-            
-            <form id="upload-form" action="{{ url_for('admin_bulk_upload_route') }}" method="POST" enctype="multipart/form-data">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <div class="upload-area" onclick="document.getElementById('json-file-input').click()">
-                    <i class="fas fa-cloud-upload-alt" style="font-size: 3rem; color: var(--admin-primary);"></i>
-                    <h4 id="file-name-display" class="mt-3">Raahaa tiedosto tähän tai klikkaa valitaksesi</h4>
-                    <p class="text-muted">Tuetut formaatit: JSON</p>
-                    <input type="file" id="json-file-input" name="json_file" accept=".json" style="display: none;">
-                </div>
-                <div class="d-flex align-items-center mt-3">
-                    <button type="submit" id="upload-button" class="btn-modern btn-modern-primary">
-                        <i class="fas fa-upload"></i> Lataa JSON
-                    </button>
-                    <div id="loading-spinner" class="spinner-border text-primary ms-3" role="status" style="display: none;">
-                        <span class="visually-hidden">Ladataan...</span>
-                    </div>
-                </div>
-            </form>
-        </div>
-
-        <div class="content-card">
-            <div class="content-card-header">
-                <h3 class="content-card-title"><i class="fas fa-list"></i> Kysymysten hallinta</h3>
-                <a href="{{ url_for('admin_route') }}" class="btn-modern btn-modern-primary btn-sm">Päivitä näkymä</a>
-            </div>
-            <p class="text-muted">Hallinnoi kaikkia tietokannan kysymyksiä yksityiskohtaisemmassa näkymässä.</p>
-        </div>
-    </div>
-
-    <!-- KÄYTTÄJÄT-VÄLILEHTI -->
-    <div class="tab-content-pane" id="tab-users">
-        
-        <!-- KÄYTTÄJIEN PIKAVALINTA -->
-        <div class="content-card mb-4">
-            <div class="content-card-header">
-                <h3 class="content-card-title">
-                    <i class="fas fa-bolt"></i> Käyttäjien hallintatoiminnot
-                </h3>
-            </div>
-            <div class="quick-actions">
-                <a href="/admin/users" class="quick-action-btn">
-                    <span class="quick-action-icon">👥</span>
-                    <strong>Käyttäjähallinta</strong>
-                    <small class="text-muted">Hallinnoi käyttäjiä</small>
-                </a>
-                <div class="quick-action-btn" style="cursor: default; border-style: solid;">
-                    <span class="quick-action-icon">🔧</span>
-                    <strong>Luo testikäyttäjiä</strong>
-                    <small class="text-muted">Kehityskäyttöön</small>
-                </div>
-            </div>
-        </div>
-
-        <div class="content-card">
-            <div class="content-card-header">
-                <h3 class="content-card-title"><i class="fas fa-users"></i> Käyttäjien hallinta</h3>
-            </div>
-            <p class="text-muted mb-4">
-                Käyttäjähallinnassa voit tarkastella kaikkia rekisteröityneitä käyttäjiä, 
-                muokata heidän tietojaan ja hallita oikeuksiaan.
-            </p>
-            <a href="/admin/users" class="btn-modern btn-modern-primary">
-                <i class="fas fa-arrow-right me-2"></i>Avaa käyttäjähallinta
+        <div class="quick-actions">
+            <a href="/admin/add_question" class="quick-action-btn">
+                <span class="quick-action-icon">➕</span>
+                <strong class="quick-action-title">Lisää kysymys</strong>
+                <small class="quick-action-subtitle">Luo uusi kysymys</small>
+            </a>
+            <a href="/admin/questions" class="quick-action-btn">
+                <span class="quick-action-icon">📋</span>
+                <strong class="quick-action-title">Kaikki kysymykset</strong>
+                <small class="quick-action-subtitle">Selaa ja muokkaa</small>
+            </a>
+            <a href="/admin/validation" class="quick-action-btn">
+                <span class="quick-action-icon">✅</span>
+                <strong class="quick-action-title">Validoi kysymyksiä</strong>
+                <small class="quick-action-subtitle">Tarkista kysymykset</small>
+            </a>
+            <a href="/admin/users" class="quick-action-btn">
+                <span class="quick-action-icon">👥</span>
+                <strong class="quick-action-title">Käyttäjähallinta</strong>
+                <small class="quick-action-subtitle">Hallinnoi käyttäjiä</small>
+            </a>
+            <a href="/admin/find_duplicates" class="quick-action-btn">
+                <span class="quick-action-icon">🔍</span>
+                <strong class="quick-action-title">Etsi duplikaatit</strong>
+                <small class="quick-action-subtitle">Poista kaksoiskappaleet</small>
             </a>
         </div>
     </div>
 
-    <!-- TOIMINNOT-VÄLILEHTI -->
-    <div class="tab-content-pane" id="tab-actions">
-        <div class="content-card">
-            <div class="content-card-header">
-                <h3 class="content-card-title">
-                    <i class="fas fa-download"></i>
-                    Vie kysymykset
-                </h3>
+    <!-- JSON Upload -->
+    <div class="content-card">
+        <div class="content-card-header">
+            <h3 class="content-card-title">
+                <i class="fas fa-file-upload"></i> 
+                Lataa kysymyksiä JSON-tiedostosta
+            </h3>
+        </div>
+        
+        <form id="upload-form" action="{{ url_for('admin_bulk_upload_route') }}" method="POST" enctype="multipart/form-data">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="upload-area" onclick="document.getElementById('json-file-input').click()">
+                <i class="fas fa-cloud-upload-alt" style="font-size: 2.5rem; color: var(--admin-primary);"></i>
+                <p class="mt-2 mb-1" style="font-weight: 600; color: var(--admin-dark);">
+                    <span id="file-name-display">Raahaa tiedosto tähän tai klikkaa valitaksesi</span>
+                </p>
+                <p class="text-muted small mb-0">Tuetut tiedostot: .json</p>
             </div>
+            <input type="file" id="json-file-input" name="json_file" accept=".json" style="display: none;">
             
-            <p class="text-muted mb-4">
-                Lataa kaikki kysymykset tietokannasta eri formaateissa. 
-                Tiedostot sisältävät kaikki kysymykset, vastausvaihtoehdot, oikeat vastaukset ja selitykset.
-            </p>
-
-            <div class="row g-4">
-                <div class="col-md-4">
-                    <div class="card h-100 border-0 shadow-sm">
-                        <div class="card-body text-center d-flex flex-column">
-                            <div class="mb-3">
-                                <i class="fas fa-file-pdf" style="font-size: 4rem; color: #dc2626;"></i>
-                            </div>
-                            <h5 class="card-title mb-2">PDF-dokumentti</h5>
-                            <p class="card-text text-muted small flex-grow-1">
-                                Ammattimainen tulostettava dokumentti kategorisoituna ja selityksin.
-                            </p>
-                            <div class="mt-3">
-                                <span class="badge bg-secondary mb-2">{{ question_count }} kysymystä</span>
-                            </div>
-                            <a href="/admin/export_pdf" class="btn btn-danger w-100 mt-auto export-btn" data-format="PDF">
-                                <i class="fas fa-file-pdf me-2"></i>Lataa PDF
-                            </a>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-md-4">
-                    <div class="card h-100 border-0 shadow-sm">
-                        <div class="card-body text-center d-flex flex-column">
-                            <div class="mb-3">
-                                <i class="fas fa-file-word" style="font-size: 4rem; color: #2563eb;"></i>
-                            </div>
-                            <h5 class="card-title mb-2">Word-dokumentti</h5>
-                            <p class="card-text text-muted small flex-grow-1">
-                                Muokattava Word-tiedosto (.docx) jota voit editoida vapaasti.
-                            </p>
-                            <div class="mt-3">
-                                <span class="badge bg-secondary mb-2">{{ question_count }} kysymystä</span>
-                            </div>
-                            <a href="/admin/export_word" class="btn btn-primary w-100 mt-auto export-btn" data-format="Word">
-                                <i class="fas fa-file-word me-2"></i>Lataa Word
-                            </a>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-md-4">
-                    <div class="card h-100 border-0 shadow-sm">
-                        <div class="card-body text-center d-flex flex-column">
-                            <div class="mb-3">
-                                <i class="fas fa-file-code" style="font-size: 4rem; color: #059669;"></i>
-                            </div>
-                            <h5 class="card-title mb-2">JSON-data</h5>
-                            <p class="card-text text-muted small flex-grow-1">
-                                Strukturoitu data. Sopii varmuuskopiointiin ja datan siirtoon.
-                            </p>
-                            <div class="mt-3">
-                                <span class="badge bg-secondary mb-2">{{ question_count }} kysymystä</span>
-                            </div>
-                            <a href="/admin/export_json" class="btn btn-success w-100 mt-auto export-btn" data-format="JSON">
-                                <i class="fas fa-file-code me-2"></i>Lataa JSON
-                            </a>
-                        </div>
-                    </div>
+            <div class="d-flex justify-content-end mt-3">
+                <button type="submit" id="upload-button" class="btn-modern btn-modern-primary" style="width: auto;">
+                    <i class="fas fa-upload"></i> Lataa JSON
+                </button>
+            </div>
+            <div id="loading-spinner" class="text-center mt-3" style="display: none;">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Ladataan...</span>
                 </div>
             </div>
+        </form>
+    </div>
 
-            <div class="alert alert-info mt-4 mb-0">
-                <div class="d-flex align-items-start">
-                    <i class="fas fa-info-circle me-3 mt-1" style="font-size: 1.5rem;"></i>
-                    <div>
-                        <strong>Tiedoston sisältö:</strong>
-                        <ul class="mb-0 mt-2">
-                            <li>Kaikki kysymykset kategorisoituna</li>
-                            <li>Vastausvaihtoehdot A-D</li>
-                            <li>Oikeat vastaukset merkitty</li>
-                            <li>Yksityiskohtaiset selitykset</li>
-                            <li>Vaikeustaso ja metatiedot</li>
-                        </ul>
-                    </div>
-                </div>
+    <!-- Export Section -->
+    <div class="content-card">
+        <div class="section-header">
+            <i class="fas fa-download section-icon"></i>
+            <h3 class="section-title">Vie kysymykset</h3>
+        </div>
+        <p class="text-muted mb-3" style="font-size: 0.9rem;">
+            Lataa kaikki kysymykset tietokannasta eri formaateissa. Tiedostot sisältävät kaikki kysymykset, vastausvaihtoehdot ja selitykset.
+        </p>
+
+        <div class="export-grid">
+            <div class="export-card">
+                <i class="fas fa-file-pdf export-icon" style="color: #dc2626;"></i>
+                <h5 class="export-title">PDF-dokumentti</h5>
+                <p class="export-description">Ammattimainen tulostettava dokumentti kategorisoituna ja selityksin.</p>
+                <span class="export-badge">{{ question_count }} kysymystä</span>
+                <a href="/admin/export_pdf" class="btn-modern btn-modern-danger export-btn" data-format="PDF">
+                    <i class="fas fa-file-pdf"></i>Lataa PDF
+                </a>
+            </div>
+
+            <div class="export-card">
+                <i class="fas fa-file-word export-icon" style="color: #2563eb;"></i>
+                <h5 class="export-title">Word-dokumentti</h5>
+                <p class="export-description">Muokattava Word-tiedosto (.docx) jota voit editoida vapaasti.</p>
+                <span class="export-badge">{{ question_count }} kysymystä</span>
+                <a href="/admin/export_word" class="btn-modern btn-modern-info export-btn" data-format="Word">
+                    <i class="fas fa-file-word"></i>Lataa Word
+                </a>
+            </div>
+
+            <div class="export-card">
+                <i class="fas fa-file-code export-icon" style="color: #059669;"></i>
+                <h5 class="export-title">JSON-data</h5>
+                <p class="export-description">Strukturoitu data. Sopii varmuuskopiointiin ja datan siirtoon.</p>
+                <span class="export-badge">{{ question_count }} kysymystä</span>
+                <a href="/admin/export_json" class="btn-modern btn-modern-success export-btn" data-format="JSON">
+                    <i class="fas fa-file-code"></i>Lataa JSON
+                </a>
             </div>
         </div>
+    </div>
 
-        <div class="content-card border-danger">
-            <div class="content-card-header">
-                <h3 class="content-card-title text-danger">
-                    <i class="fas fa-exclamation-triangle"></i> 
-                    Vaaralliset toiminnot
-                </h3>
+    <!-- Danger Zone -->
+    <div class="content-card" style="padding: 0; overflow: hidden;">
+        <div class="danger-zone">
+            <div class="danger-zone-header">
+                <i class="fas fa-exclamation-triangle" style="font-size: 1.5rem;"></i>
+                <h3 class="danger-zone-title">Vaaralliset toiminnot</h3>
             </div>
-            <div class="alert alert-danger">
+            <div class="alert alert-danger mb-3" style="font-size: 0.9rem;">
                 <strong><i class="fas fa-warning me-2"></i>Varoitus!</strong> 
                 Nämä toiminnot ovat peruuttamattomia. Varmista että tiedät mitä teet!
             </div>
             
-            <div class="d-flex flex-wrap gap-3">
+            <div class="danger-actions">
                 <form action="{{ url_for('admin_merge_categories_route') }}" method="POST" onsubmit="return confirm('Oletko varma? Tämä yhdistää kaikki samankaltaiset kategoriat standardimuotoon.')">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn btn-warning">
-                        <i class="fas fa-sync me-2"></i>Yhdistä kategoriat
+                    <button type="submit" class="btn-modern btn-modern-warning" style="width: auto;">
+                        <i class="fas fa-sync"></i>Yhdistä kategoriat
                     </button>
                 </form>
-                <a href="{{ url_for('admin_find_duplicates_route') }}" class="btn btn-info">
-                    <i class="fas fa-search me-2"></i>Etsi duplikaatteja
-                </a>
+                
                 <form id="clear-db-form" action="{{ url_for('admin_clear_database_route') }}" method="POST">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="confirmation" id="clear-db-confirmation">
-                    <button type="button" id="clear-db-button" class="btn btn-danger">
-                        <i class="fas fa-trash me-2"></i>Tyhjennä kysymykset
+                    <button type="button" id="clear-db-button" class="btn-modern btn-modern-danger" style="width: auto;">
+                        <i class="fas fa-trash"></i>Tyhjennä kysymykset
                     </button>
                 </form>
             </div>
@@ -621,7 +603,7 @@
                         </div>
                     </div>
                     
-                    <div class="row text-center mb-3">
+                    <div class="row g-2 mb-3">
                         <div class="col-4">
                             <div class="border rounded p-2">
                                 <div class="text-success fs-3" id="upload-added-count">0</div>
@@ -690,24 +672,6 @@
 {{ super() }}
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    // Tab switching
-    document.querySelectorAll('.tab-btn').forEach(button => {
-        button.addEventListener('click', function() { 
-            showTab(this.dataset.tab); 
-        });
-    });
-
-    function showTab(tabName) {
-        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-        document.querySelectorAll('.tab-content-pane').forEach(pane => pane.classList.remove('active'));
-        const tabBtn = document.querySelector(`[data-tab="${tabName}"]`);
-        const tabPane = document.getElementById(`tab-${tabName}`);
-        if (tabBtn && tabPane) {
-            tabBtn.classList.add('active');
-            tabPane.classList.add('active');
-        }
-    }
-
     // JSON Upload
     const uploadForm = document.getElementById('upload-form');
     if (uploadForm) {
