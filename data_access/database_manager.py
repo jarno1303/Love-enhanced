@@ -239,28 +239,29 @@ class DatabaseManager:
             return False, str(e)
 
     def delete_user(self, user_id):
-    """Poistaa käyttäjän ja siihen liittyvät tiedot."""
-    try:
-        # Poistetaan ensin kaikki käyttäjään liittyvät tiedot
-        self._execute("DELETE FROM distractor_attempts WHERE user_id = ?", (user_id,))
-        self._execute("DELETE FROM user_question_progress WHERE user_id = ?", (user_id,))
-        self._execute("DELETE FROM question_attempts WHERE user_id = ?", (user_id,))
-        self._execute("DELETE FROM active_sessions WHERE user_id = ?", (user_id,))
-        self._execute("DELETE FROM user_achievements WHERE user_id = ?", (user_id,))
-        
-        # Jos on test_sessions ja test_results taulut, poista nekin
+        """Poistaa käyttäjän ja siihen liittyvät tiedot."""
         try:
-            self._execute("DELETE FROM test_results WHERE user_id = ?", (user_id,))
-            self._execute("DELETE FROM test_sessions WHERE user_id = ?", (user_id,))
-        except:
-            pass  # Taulut ei ehkä vielä olemassa
-        
-        # Lopuksi poistetaan itse käyttäjä
-        self._execute("DELETE FROM users WHERE id = ?", (user_id,))
-        return True, None
-    except Exception as e:
-        logger.error(f"Virhe käyttäjän poistossa: {e}")
-        return False, str(e)
+            self._execute("DELETE FROM user_question_progress WHERE user_id = ?", (user_id,))
+            self._execute("DELETE FROM question_attempts WHERE user_id = ?", (user_id,))
+            self._execute("DELETE FROM active_sessions WHERE user_id = ?", (user_id,))
+            self._execute("DELETE FROM user_achievements WHERE user_id = ?", (user_id,))
+            self._execute("DELETE FROM users WHERE id = ?", (user_id,))
+            return True, None
+        except Exception as e:
+            logger.error(f"Virhe käyttäjän poistossa: {e}")
+            return False, str(e)
+
+    def update_last_practice_preferences(self, user_id, categories, difficulties):
+        """Päivittää käyttäjän viimeisimmät harjoitusasetukset."""
+        try:
+            self._execute(
+                "UPDATE users SET last_practice_categories = ?, last_practice_difficulties = ? WHERE id = ?", 
+                (json.dumps(categories), json.dumps(difficulties), user_id)
+            )
+            return True, None
+        except Exception as e:
+            logger.error(f"Virhe asetusten päivityksessä: {e}")
+            return False, str(e)
 
     def get_categories(self):
         """Hakee kaikki kategoriat."""
