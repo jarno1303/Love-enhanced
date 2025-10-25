@@ -58,7 +58,7 @@ from data_access.database_manager import DatabaseManager
 from logic.stats_manager import EnhancedStatsManager
 from logic.achievement_manager import EnhancedAchievementManager, ENHANCED_ACHIEVEMENTS
 from logic.spaced_repetition import SpacedRepetitionManager
-from logic import simulation_manager # Tuodaan simulation_manager
+from logic.simulation_manager import calculate_remaining_time
 from models.models import User, Question
 from constants import DISTRACTORS
 
@@ -1065,65 +1065,137 @@ def terms_route():
 
 @app.route("/dashboard")
 @login_required
-def dashboard_route():
-    # Hae kaikki käyttäjän tilastot kerralla
-    analytics = stats_manager.get_learning_analytics(current_user.id)
+def dashboard():
+    """Optimoitu dashboard älykäillä suosituksilla v1.1.0"""
     
-    # Etsi valmentajan valinta (heikoin kategoria)
-    coach_pick = None
-    weak_categories = [
-        cat for cat in analytics.get('categories', []) 
-        if cat.get('success_rate') is not None and cat.get('attempts', 0) >= 5
-    ]
-    if weak_categories:
-        coach_pick = min(weak_categories, key=lambda x: x['success_rate'])
-
-    # Etsi vahvin kategoria
-    strength_pick = None
-    strong_categories = [
-        cat for cat in analytics.get('categories', []) 
-        if cat.get('success_rate') is not None and cat.get('attempts', 0) >= 10
-    ]
-    if strong_categories:
-        strength_pick = max(strong_categories, key=lambda x: x['success_rate'])
-
-    # KYSYMYSTEN HAKU MISTAKES KORJATTU
+    # Perustiedot
+    stats = stats_manager.get_learning_analytics(current_user.id)
+    streak = stats_manager.get_user_streak(current_user.id)
+    
+    # Erääntyvät kertaukset
+    due_reviews = len(spaced_repetition_manager.get_due_questions(current_user.id, limit=100))
+    
+    # Vastatut vs. kaikki kysymykset
+    answered_questions = stats['general']['answered_questions']
+    total_questions = stats['general']['total_questions_in_db']
+    
+    # Viikon edistys
+    weekly_improvement = calculate_weekly_improvement(current_user.id)
+    
+    # Saavutukset
     try:
-        false_val = False if db_manager.is_postgres else 0
-        result = execute_query("""
-            SELECT COUNT(*) as count 
-            FROM user_question_progress
-            WHERE user_id = ? 
-              AND times_correct < times_shown 
-              AND (mistake_acknowledged IS NULL OR mistake_acknowledged = ?)
-        """, (current_user.id, false_val), fetch='one')
-        mistake_count = result['count'] if result else 0
-    except Exception as e:
-        app.logger.error(f"Virhe kehityskohteiden määrän haussa: {e}")
-        mistake_count = 0
-
-    # Vanhat toiminnot säilyvät ennallaan
-    user_data_row = db_manager.get_user_by_id(current_user.id)
-    user_data = dict(user_data_row) if user_data_row else {}
+        unlocked_achievements = len(achievement_manager.get_unlocked_achievements(current_user.id))
+        recent_achievements = achievement_manager.get_recent_achievements(current_user.id, limit=3)
+    except:
+        unlocked_achievements = 0
+        recent_achievements = []
     
-    categories_json = user_data.get('last_practice_categories') or '[]'
-    difficulties_json = user_data.get('last_practice_difficulties') or '[]'
-    last_categories = json.loads(categories_json)
-    last_difficulties = json.loads(difficulties_json)
-    all_categories_from_db = db_manager.get_categories()
-    active_session = db_manager.get_active_session(current_user.id)
-    has_active_simulation = (active_session is not None and active_session.get('session_type') == 'simulation')
+    # Kategoriat top 5 heikoimmat
+    categories = stats['categories']
+    categories_sorted = sorted(categories, key=lambda x: x.get('success_rate', 0))
+    
+    # ÄLYKÄS SUOSITUS
+    recommendation = generate_smart_recommendation(current_user.id, stats, streak)
+    
+    return render_template('dashboard.html',
+                         due_reviews=due_reviews,
+                         streak=streak,
+                         answered_questions=answered_questions,
+                         total_questions=total_questions,
+                         weekly_improvement=weekly_improvement,
+                         unlocked_achievements=unlocked_achievements,
+                         recent_achievements=recent_achievements,
+                         categories=categories_sorted,
+                         recommendation=recommendation)
 
-    return render_template(
-        'dashboard.html', 
-        categories=all_categories_from_db,
-        last_categories=last_categories,
-        last_difficulties=last_difficulties,
-        has_active_simulation=has_active_simulation,
-        coach_pick=coach_pick,
-        strength_pick=strength_pick,
-        mistake_count=mistake_count
-    )
+def generate_smart_recommendation(user_id, stats, streak):
+    """Generoi personoitu älykäs suositus käyttäjälle"""
+    
+    recommendations = []
+    
+    # 1. Tarkista heikot kategoriat
+    weak_categories = [c for c in stats['categories'] if c.get('success_rate', 0) < 0.7 and c.get('attempts', 0) >= 5]
+    if weak_categories:
+        weakest = weak_categories[0]
+        recommendations.append({
+            'priority': 'high',
+            'title': f"Keskity: {weakest['category']}",
+            'description': f"Onnistumisprosenttisi on {int(weakest['success_rate']*100)}%. Tarvitset lisäharjoitusta tässä aiheessa.",
+            'action': 'practice_category',
+            'category': weakest['category']
+        })
+    
+    # 2. Tarkista onko valmis simulaatioon
+    if stats['general']['answered_questions'] >= 50 and stats['general']['avg_success_rate'] >= 0.75:
+        recommendations.append({
+            'priority': 'medium',
+            'title': "Kokeile koesimulaatiota!",
+            'description': f"Olet vastannut {stats['general']['answered_questions']} kysymykseen keskiarvolla {int(stats['general']['avg_success_rate']*100)}%. Testaa osaamistasi täydessä simulaatiossa!",
+            'action': 'start_simulation'
+        })
+    
+    # 3. Tarkista streak
+    if streak.get('current_streak', 0) == 0 and streak.get('longest_streak', 0) > 0:
+        recommendations.append({
+            'priority': 'high',
+            'title': "Jatka harjoittelua!",
+            'description': f"Pisin putkesi oli {streak['longest_streak']} päivää. Aloita uusi putki tänään!",
+            'action': 'practice_random'
+        })
+    
+    # 4. Tarkista erääntyvät kertaukset
+    due_reviews = len(spaced_repetition_manager.get_due_questions(user_id, limit=100))
+    if due_reviews >= 10:
+        recommendations.append({
+            'priority': 'high',
+            'title': "Kertaa aikaisempia kysymyksiä",
+            'description': f"Sinulla on {due_reviews} erääntynyt kertauskysymystä. Kertaaminen vahvistaa pitkäkestoista muistia!",
+            'action': 'review'
+        })
+    
+    # Palauta tärkein suositus
+    if recommendations:
+        priority_order = {'high': 0, 'medium': 1, 'low': 2}
+        recommendations.sort(key=lambda x: priority_order[x['priority']])
+        return recommendations[0]
+    
+    # Oletussuositus
+    return {
+        'priority': 'medium',
+        'title': "Jatka hyvää työtä!",
+        'description': "Aloita päivittäinen harjoittelusi vastaamalla 20 kysymykseen.",
+        'action': 'practice_random'
+    }
+
+
+def calculate_weekly_improvement(user_id):
+    """Laske viikon edistyminen prosentteina"""
+    
+    now = datetime.now()
+    week_ago = now - timedelta(days=7)
+    two_weeks_ago = now - timedelta(days=14)
+    
+    try:
+        # PostgreSQL versio
+        this_week = execute_query("""
+            SELECT AVG(CASE WHEN correct THEN 1.0 ELSE 0.0 END) as avg_rate
+            FROM question_attempts
+            WHERE user_id = %s AND timestamp >= %s
+        """, (user_id, week_ago), fetch='one')
+        
+        last_week = execute_query("""
+            SELECT AVG(CASE WHEN correct THEN 1.0 ELSE 0.0 END) as avg_rate
+            FROM question_attempts
+            WHERE user_id = %s AND timestamp >= %s AND timestamp < %s
+        """, (user_id, two_weeks_ago, week_ago), fetch='one')
+        
+        if this_week and last_week and this_week.get('avg_rate') and last_week.get('avg_rate'):
+            improvement = ((this_week['avg_rate'] - last_week['avg_rate']) / last_week['avg_rate']) * 100
+            return round(improvement, 1)
+    except Exception as e:
+        app.logger.error(f"Virhe viikon edistymisen laskemisessa: {e}")
+    
+    return 0
 
 @app.route("/practice")
 @login_required
@@ -1208,17 +1280,11 @@ def simulation_route():
         if 'time_remaining' in sim and sim['time_remaining'] is not None:
             time_remaining = max(0, int(sim['time_remaining']))
         else:
-            # ⚠️ UUSI: Jos ei ole tallennettua aikaa, laske oikein
-            try:
-                start_time = datetime.fromisoformat(sim.get('start_time'))
-                if start_time.tzinfo is None:
-                    start_time = start_time.replace(tzinfo=timezone.utc)
-                
-                elapsed_seconds = (datetime.now(timezone.utc) - start_time).total_seconds()
-                time_remaining = max(0, 3600 - int(elapsed_seconds))
-            except Exception as e:
-                app.logger.error(f"❌ Time calculation error: {e}")
-                time_remaining = 3600
+            # ✅ Käytetään simulation_managerin funktiota ajan laskemiseen
+            time_remaining = calculate_remaining_time(
+                sim.get('start_time'), 
+                3600  # 60 min = 3600 sek
+            )
 
         # ✅ UUSI: Tallenna time_remaining AINA kun ladataan sessio
         sim['time_remaining'] = time_remaining
@@ -2306,7 +2372,7 @@ def admin_delete_user_route(user_id):
         flash('Pääkäyttäjää ei voi poistaa.', 'danger')
         return redirect(url_for('admin_users_route'))
 
-    success, error = db_manager.delete_user_by_id(user_id)
+    success, error = db_manager.delete_user(user_id)
     
     if success:
         flash(f'Käyttäjä #{user_id} ja kaikki hänen tietonsa on poistettu onnistuneesti.', 'success')
@@ -3211,3 +3277,171 @@ def emergency_reset_admin():
         </body>
         </html>
         """
+# ============================================================================
+# KATEGORIATESTIT v1.1.0
+# ============================================================================
+
+@app.route('/test/quick')
+@login_required
+def test_quick():
+    """Nopea testi - 20 kysymystä, 20 minuuttia"""
+    categories = db_manager.get_all_categories()
+    return render_template('test_select.html',
+                         test_type='quick',
+                         categories=categories,
+                         question_count=20,
+                         time_limit=20)
+
+
+@app.route('/test/category')
+@login_required
+def test_category():
+    """Kategoriatesti - 30 kysymystä, 30 minuuttia, 1-3 kategoriaa"""
+    categories = db_manager.get_all_categories()
+    return render_template('test_select.html',
+                         test_type='category',
+                         categories=categories,
+                         question_count=30,
+                         time_limit=30,
+                         max_categories=3)
+
+
+@app.route('/api/test/start', methods=['POST'])
+@login_required
+def start_test():
+    """Aloita testi valituilla parametreilla"""
+    data = request.json
+    test_type = data.get('test_type')
+    selected_categories = data.get('categories', [])
+    question_count = data.get('question_count', 30)
+    difficulty = data.get('difficulty')
+    time_limit = data.get('time_limit', 30)
+    
+    if test_type == 'quick' and len(selected_categories) > 2:
+        return jsonify({'error': 'Maksimi 2 kategoriaa nopeatestissä'}), 400
+    
+    if test_type == 'category' and (len(selected_categories) < 1 or len(selected_categories) > 3):
+        return jsonify({'error': 'Valitse 1-3 kategoriaa'}), 400
+    
+    try:
+        if test_type == 'full':
+            questions = db_manager.get_random_questions(count=50)
+        else:
+            questions = db_manager.get_questions_by_categories(
+                categories=selected_categories,
+                count=question_count,
+                difficulty=difficulty
+            )
+        
+        if len(questions) < question_count:
+            return jsonify({
+                'error': f'Ei tarpeeksi kysymyksiä. Löytyi vain {len(questions)} kysymystä.'
+            }), 400
+        
+        test_id = db_manager.create_test_session(
+            user_id=current_user.id,
+            test_type=test_type,
+            categories=selected_categories,
+            question_count=question_count,
+            time_limit=time_limit,
+            questions=[q['id'] for q in questions]
+        )
+        
+        return jsonify({
+            'test_id': test_id,
+            'questions': [dict(q) for q in questions],
+            'time_limit': time_limit * 60,
+            'started_at': datetime.now().isoformat()
+        })
+    
+    except Exception as e:
+        app.logger.error(f"Virhe testin aloituksessa: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/test/<int:test_id>/complete', methods=['POST'])
+@login_required
+def complete_test(test_id):
+    """Lopeta testi ja tallenna tulokset"""
+    data = request.json
+    answers = data.get('answers', [])
+    
+    try:
+        test_session = db_manager.get_test_session(test_id)
+        
+        if not test_session or test_session['user_id'] != current_user.id:
+            return jsonify({'error': 'Testiä ei löydy'}), 404
+        
+        correct_count = 0
+        detailed_results = []
+        
+        for answer in answers:
+            question = db_manager.get_question_by_id(answer['question_id'])
+            is_correct = answer['selected'] == question['correct']
+            
+            if is_correct:
+                correct_count += 1
+            
+            detailed_results.append({
+                'question_id': answer['question_id'],
+                'selected': answer['selected'],
+                'correct': question['correct'],
+                'is_correct': is_correct,
+                'time_taken': answer.get('time_taken', 0),
+                'category': question['category']
+            })
+        
+        total_questions = len(answers)
+        percentage = (correct_count / total_questions) * 100
+        passed = percentage >= 80
+        
+        result_id = db_manager.save_test_results(
+            test_id=test_id,
+            user_id=current_user.id,
+            score=correct_count,
+            total_questions=total_questions,
+            passed=passed,
+            answers=detailed_results
+        )
+        
+        try:
+            new_achievements = achievement_manager.check_achievements(
+                user_id=current_user.id,
+                context={
+                    'test_complete': True,
+                    'test_type': test_session['test_type'],
+                    'test_perfect': (correct_count == total_questions),
+                    'test_passed': passed
+                }
+            )
+        except:
+            new_achievements = []
+        
+        category_results = {}
+        for result in detailed_results:
+            cat = result['category']
+            if cat not in category_results:
+                category_results[cat] = {'correct': 0, 'total': 0}
+            category_results[cat]['total'] += 1
+            if result['is_correct']:
+                category_results[cat]['correct'] += 1
+        
+        for cat in category_results:
+            total = category_results[cat]['total']
+            correct = category_results[cat]['correct']
+            category_results[cat]['percentage'] = (correct / total) * 100
+        
+        return jsonify({
+            'result_id': result_id,
+            'score': correct_count,
+            'total': total_questions,
+            'percentage': round(percentage, 1),
+            'passed': passed,
+            'category_results': category_results,
+            'new_achievements': new_achievements,
+            'detailed_results': detailed_results
+        })
+    
+    except Exception as e:
+        app.logger.error(f"Virhe testin päättämisessä: {e}")
+        return jsonify({'error': str(e)}), 500
