@@ -327,6 +327,10 @@ class DatabaseManager:
     def delete_user(self, user_id):
         """Poistaa käyttäjän ja siihen liittyvät tiedot."""
         try:
+            # Lisää tämä rivi: Poista ensin viittaukset distractor_attempts-taulusta
+            self._execute("DELETE FROM distractor_attempts WHERE user_id = ?", (user_id,)) # <--- LISÄTTY RIVI
+
+            # Alla olevat rivit olivat jo olemassa
             self._execute("DELETE FROM user_question_progress WHERE user_id = ?", (user_id,))
             self._execute("DELETE FROM question_attempts WHERE user_id = ?", (user_id,))
             self._execute("DELETE FROM active_sessions WHERE user_id = ?", (user_id,))
