@@ -326,18 +326,22 @@ class DatabaseManager:
             logger.error(f"Virhe preferenssien tallennuksessa: {e}")
             return False, str(e)
 
-    def delete_user_by_id(self, user_id):
-        """Poistaa käyttäjän ja kaikki siihen liittyvät tiedot."""
+    def delete_user(self, user_id):
+        """Poistaa käyttäjän ja siihen liittyvät tiedot."""
         try:
+            # ---> LISÄÄ TÄMÄ RIVI ALLE <---
+            self._execute("DELETE FROM distractor_attempts WHERE user_id = ?", (user_id,))
+
+            # Nämä rivit olivat jo olemassa:
             self._execute("DELETE FROM user_question_progress WHERE user_id = ?", (user_id,))
             self._execute("DELETE FROM question_attempts WHERE user_id = ?", (user_id,))
             self._execute("DELETE FROM active_sessions WHERE user_id = ?", (user_id,))
             self._execute("DELETE FROM user_achievements WHERE user_id = ?", (user_id,))
-            self._execute("DELETE FROM users WHERE id = ?", (user_id,))
+            self._execute("DELETE FROM users WHERE id = ?", (user_id,)) # Tämä tulee viimeisenä
             return True, None
         except Exception as e:
-            logger.error(f"Virhe käyttäjän poistossa: {e}")
-            return False, str(e)
+            logger.error(f"Virhe käyttäjän poistossa: {e}") #
+            return False, str(e) #
         
     def get_all_question_ids(self):
         """Hakee kaikkien kysymysten ID:t listana."""
