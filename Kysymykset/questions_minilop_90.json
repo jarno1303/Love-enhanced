@@ -1,0 +1,1172 @@
+[
+  {
+    "question": "Mitä COPD tarkoittaa?",
+    "explanation": "COPD (Chronic Obstructive Pulmonary Disease) on keuhkoahtaumatauti, joka on yleensä tupakointiin liittyvä, hitaasti etenevä keuhkosairaus.",
+    "options": [
+      "Keuhkoahtaumatautia",
+      "Kroonista sydämen vajaatoimintaa",
+      "Akuuttia keuhkokuumetta",
+      "Allergista astmaa"
+    ],
+    "correct": 0,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "helppo"
+  },
+  {
+    "question": "Mitä asioita on lääkehoitosuunnitelmassa pakollisten tietojen lisäksi?",
+    "explanation": "Lääkehoitosuunnitelmassa tulee olla lääkehoidon osaamisvaatimukset, osaamisen varmistaminen, vaikuttavuuden arviointi ja ylläpito.",
+    "options": [
+      "Potilaan harrastukset ja vapaa-ajan toiminnot",
+      "Lääkehoidon osaamisvaatimukset, osaamisen varmistaminen, vaikuttavuuden arviointi ja ylläpito",
+      "Potilaan ruokavalio ja liikuntasuunnitelma",
+      "Omaisten yhteystiedot ja suostumus hoitoon"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "keskivaikea"
+  },
+  {
+    "question": "Mistä osoitteesta löytyy tietoa lääkehoitolaeista?",
+    "explanation": "Lääkehoitolait löytyvät Suomen säädöskokoelmasta osoitteesta finlex.fi.",
+    "options": [
+      "valvira.fi",
+      "finlex.fi",
+      "thl.fi",
+      "fimea.fi"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "helppo"
+  },
+  {
+    "question": "Mikä on pakkausseloste?",
+    "explanation": "Pakkausseloste sisältää tiedot lääkkeen oikeanlaisesta käytöstä, annostuksesta ja mahdollisista haittavaikutuksista.",
+    "options": [
+      "Tiedot lääkkeen oikeanlaisesta käytöstä",
+      "Lääkkeen valmistusprosessin kuvaus",
+      "Apteekin luovutustodistus",
+      "Lääkärin kirjoittama resepti"
+    ],
+    "correct": 0,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "helppo"
+  },
+  {
+    "question": "Millaisissa tapauksissa lääkeaine täytyy injektoida?",
+    "explanation": "Injektio on tarpeen kun aineen teho tuhoutuisi ruuansulatuksessa, kun aine ei imeydy tarpeeksi nopeasti ruuansulatuskanavasta, kun nieleminen ei ole mahdollista, kun ei ole muita tapoja antaa lääkettä tai kun tarvitaan nopea vaikutus.",
+    "options": [
+      "Kun lääke maistuu pahalta",
+      "Kun lääkeaine tuhoutuisi ruuansulatuksessa, kun tarvitaan nopea vaikutus tai kun nieleminen ei ole mahdollista",
+      "Kun potilas haluaa itse valita antotavan",
+      "Kun lääke on edullisempi injektiona"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "keskivaikea"
+  },
+  {
+    "question": "Mikä on annosaerosoli?",
+    "explanation": "Annosaerosoli on lääke hienojakoisessa muodossa sekoitettuna ponnekaasuun. Se on helppo kuljettaa mukana eikä rikkoudu helposti, mutta ei siedä kovaa pakkasta tai kuumuutta.",
+    "options": [
+      "Nestemäinen lääke joka ruiskutetaan suoneen",
+      "Lääke hienojakoisessa muodossa sekoitettuna ponnekaasuun",
+      "Tabletti joka liukenee veden kanssa",
+      "Ihon kautta vaikuttava laastari"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "keskivaikea"
+  },
+  {
+    "question": "Miten pitkiä kuurit ovat astmassa ja keuhkoahtaumataudissa?",
+    "explanation": "Pahenemisvaiheiden hoidossa käytettävät kortisonikuurit ovat yleensä lyhyitä, tyypillisesti 7-10 päivää.",
+    "options": [
+      "Yleensä lyhyitä, 7-10 päivää",
+      "Aina vähintään 6 kuukautta",
+      "Useimmiten 2-3 vuotta",
+      "Koko loppuelämän ajan"
+    ],
+    "correct": 0,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "helppo"
+  },
+  {
+    "question": "Potilas tekee päätöksen sähkösumutteen käytöstä ja hankkii oman laitteen. Tosi vai epätosi?",
+    "explanation": "Epätosi. Lääkäri tekee päätöksen sähkösumutteen käytöstä ja laite saadaan lainaan terveydenhuollosta.",
+    "options": [
+      "Tosi, potilas voi itse päättää ja ostaa laitteen",
+      "Epätosi, lääkäri tekee päätöksen ja laite saadaan lainaan",
+      "Tosi, mutta vain yksityisellä sektorilla",
+      "Epätosi, vain apteekit voivat päättää laitteen käytöstä"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "helppo"
+  },
+  {
+    "question": "Mitä aseptinen työjärjestys tarkoittaa?",
+    "explanation": "Aseptinen työjärjestys tarkoittaa työskentelyä puhtaimmasta likaisempaan, jotta vältetään saastuminen ja infektiot.",
+    "options": [
+      "Työskentely likaisimmasta puhtaimpaan",
+      "Työskentely puhtaimmasta likaisempaan",
+      "Kaikkien työkalujen sterilointi jokaisen käytön jälkeen",
+      "Käsineiden vaihto jokaisen potilaan välillä"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "helppo"
+  },
+  {
+    "question": "Lääkehoitoon kouluttamattoman ei tarvitse tietää lääkkeen haittavaikutuksia, kun lääkkeet jakaa koulutettu henkilö. Tosi vai epätosi?",
+    "explanation": "Epätosi. Kaikkien lääkehoitoon osallistuvien tulee tietää lääkkeiden mahdolliset haittavaikutukset, jotta ne voidaan tunnistaa ja hoitaa ajoissa.",
+    "options": [
+      "Tosi, vain lääkkeiden jakajan tulee tietää haittavaikutukset",
+      "Epätosi, kaikkien lääkehoitoon osallistuvien tulee tietää haittavaikutukset",
+      "Tosi, haittavaikutukset ovat vain lääkärin vastuulla",
+      "Epätosi, mutta vain vakavat haittavaikutukset tulee tietää"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "helppo"
+  },
+  {
+    "question": "Mitä pitää muistaa lääkkeen dosettiinlaitossa?",
+    "explanation": "Dosetissa tulee olla puhdas, käytä lääkkeenjakolusikkaa ja -puolittajaa, käytä käsidesiä, jaa lääkkeet muistaen lääkelista, tarkista jaetut lääkkeet, puhdista välineet ja kädet, hävitä käsineet.",
+    "options": [
+      "Dosetin tulee olla puhdas, käytä jakovälineitä, hygienia, tarkista jaetut lääkkeet",
+      "Lääkkeet voi laittaa suoraan käsistä dosettiin",
+      "Dosetti voidaan täyttää viikoksi kerralla ilman tarkistusta",
+      "Käsineitä ei tarvita dosetinlaittoon"
+    ],
+    "correct": 0,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "keskivaikea"
+  },
+  {
+    "question": "Jos täytyy ottaa avaavaa lääkettä henkeen ennen hoitavaa, kuinka kauan avaavan lääkkeen pitää antaa vaikuttaa?",
+    "explanation": "Avaavan lääkkeen tulee vaikuttaa vähintään 15 minuuttia ennen hoitavan lääkkeen ottamista, jotta keuhkoputket ovat riittävästi auki.",
+    "options": [
+      "5 minuuttia",
+      "Vähintään 15 minuuttia",
+      "30-60 minuuttia",
+      "2 tuntia"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "helppo"
+  },
+  {
+    "question": "Mikä on peruslääkevalikoiman tarkoitus?",
+    "explanation": "Peruslääkevalikoiman tarkoitus on varmistaa tehokas, turvallinen ja taloudellinen lääkehoito sekä helpottaa kriisejä ja toimituskatkoksia.",
+    "options": [
+      "Tehokas, turvallinen ja taloudellinen lääkehoito sekä kriisien helpottaminen",
+      "Vähentää apteekkien lääkevarastoja",
+      "Rajoittaa potilaiden lääkevalikoimaa",
+      "Alentaa kaikkien lääkkeiden hintoja"
+    ],
+    "correct": 0,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "keskivaikea"
+  },
+  {
+    "question": "Mitkä ovat yleisimmät hengityselinsairaudet?",
+    "explanation": "Yleisimmät hengityselinsairaudet ovat astma (yleisin), keuhkoahtaumatauti (COPD) ja uniapnea.",
+    "options": [
+      "Astma, keuhkoahtaumatauti ja uniapnea",
+      "Influenssa, keuhkokuume ja bronkiitti",
+      "Tuberkuloosi, keuhkosyöpä ja pneumotorax",
+      "Keuhkopussitulehdus, emfyseema ja keuhkoembolia"
+    ],
+    "correct": 0,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "helppo"
+  },
+  {
+    "question": "Mitä on KATSE lääketietokriittisyydessä?",
+    "explanation": "KATSE auttaa arvioimaan lääketietojen luotettavuutta: Kirjoittaja, Ajankohtaisuus, Tarkoitus, Sponsorointi, Evidenssi ja lähdetiedot.",
+    "options": [
+      "Kirjoittaja, Ajankohtaisuus, Tarkoitus, Sponsorointi, Evidenssi, Lähdetiedot",
+      "Kontrolli, Arviointi, Testaus, Seuranta, Evaluointi",
+      "Käytäntö, Asennus, Toteutus, Seuranta, Ennaltaehkäisy",
+      "Kriittisyys, Arvostelu, Tarkistus, Selkeys, Eksaktius"
+    ],
+    "correct": 0,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "keskivaikea"
+  },
+  {
+    "question": "Mitä lääketietoja valmisteyhteenveto sisältää?",
+    "explanation": "Valmisteyhteenveto sisältää oleelliset asiat, vaikutusmekanismit, kulkeutuminen elimistössä sekä käyttö- ja käsittelyohjeet.",
+    "options": [
+      "Vain lääkkeen hinnan ja valmistajan",
+      "Oleelliset asiat, vaikutusmekanismit, kulkeutuminen elimistössä, käyttö- ja käsittelyohjeet",
+      "Ainoastaan annostusohjeet",
+      "Vain kontraindikaatiot ja haittavaikutukset"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "keskivaikea"
+  },
+  {
+    "question": "Mitä tauteja liittyy keuhkoahtaumatautiin?",
+    "explanation": "Keuhkoahtaumatautiin liittyy usein sydän- ja verisuonisairauksia, valtimoiden kovettumatautia (ASO), diabetesta, metabolista oireyhtymää, osteoporoosia, masennusta ja keuhkosyöpää.",
+    "options": [
+      "Vain keuhkoinfektioita",
+      "Sydän- ja verisuonisairauksia, diabetes, osteoporoosi, masennus, keuhkosyöpä",
+      "Ainoastaan astmaa",
+      "Vain neurologisia sairauksia"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "keskivaikea"
+  },
+  {
+    "question": "Mikä on perehdytyksen merkitys injektion antamiseen ihon alle?",
+    "explanation": "Ihon alle antaminen on lisäperehdytystä ja erillisen luvan vaativa tehtävä, joka vaatii asianmukaisen koulutuksen.",
+    "options": [
+      "Ei vaadi erityistä perehdytystä",
+      "On lisäperehdytystä ja erillisen luvan vaativa tehtävä",
+      "Riittää kun katsoo YouTube-videon",
+      "Voi oppia vain kokeilemalla"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "helppo"
+  },
+  {
+    "question": "Millaisia asioita tarvitaan injektioon?",
+    "explanation": "Injektioon tarvitaan ruisku, neula, lääkeaine, säilytysastia viiltävälle jätteelle, desinfiointiaine, puhdislaaput ja laastari tai pistosuoja. Infuusiossa lisäksi lääkeannostelija ja infuusioletku.",
+    "options": [
+      "Vain ruisku ja neula",
+      "Ruisku, neula, lääkeaine, säilytysastia, desinfiointiaine, laastarit",
+      "Ainoastaan lääkeaine ja puhdislaput",
+      "Vain steriili neula"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "keskivaikea"
+  },
+  {
+    "question": "Miten kakkostyypin diabetes toimii?",
+    "explanation": "Kakkostyypin diabeteksessa haima tuottaa edelleen insuliinia, mutta se vaikuttaa heikosti tai sen määrä on liian vähäinen tarpeeseen nähden. Haiman toiminta yleensä heikkenee ajan kanssa.",
+    "options": [
+      "Haima ei tuota lainkaan insuliinia",
+      "Haima tuottaa insuliinia, mutta se vaikuttaa heikosti tai määrä on liian vähäinen",
+      "Maksassa on ongelma sokeriaineenvaihdunnassa",
+      "Munuaiset eivät pysty säätelemään verensokeria"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "keskivaikea"
+  },
+  {
+    "question": "Mitä tehdään virhetilanteessa?",
+    "explanation": "Virhetilanteessa varmistetaan ensin ettei potilaalla ole välitöntä vaaraa. Sitten tutkitaan syy ASAP: annettu lääke, lääkemuoto, vahvuus, annos, antoajankohta ja antoreitti.",
+    "options": [
+      "Odotetaan ja katsotaan mitä tapahtuu",
+      "Varmistetaan ettei ole välitöntä vaaraa, sitten tutkitaan syy",
+      "Soitetaan heti lääkärille ennen mitään muuta",
+      "Kirjoitetaan vain raporttiin ja jatketaan normaalisti"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "helppo"
+  },
+  {
+    "question": "Mikä on lagenula?",
+    "explanation": "Lagenula on usean lääkeannoksen injektiopullo, joko liuoksena tai injektiokuiva-aineena. Pullon avaamisajankohta tulee merkitä muistiin.",
+    "options": [
+      "Kertakäyttöinen injektioruisku",
+      "Usean lääkeannoksen injektiopullo",
+      "Infuusioneste",
+      "Lääkeannostelija"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "helppo"
+  },
+  {
+    "question": "Mikä annostelee hengitettävän aineen?",
+    "explanation": "Inhalaattori annostelee hengitettävän lääkeaineen keuhkoihin.",
+    "options": [
+      "Nebulisaattori",
+      "Inhalaattori",
+      "Aspirator",
+      "Aerokamari"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "helppo"
+  },
+  {
+    "question": "Mitkä ovat astmaatikon hyvän hoitotasapainon merkkejä?",
+    "explanation": "Hyvän hoitotasapainon merkkejä ovat hyvä toimintakyky ja elämänlaatu, oireeton arki, oirelääkettä korkeintaan 2 kertaa viikossa ja PEF-seurannassa ei poikkeavia arvoja.",
+    "options": [
+      "Hyvä toimintakyky, oireeton arki, oirelääkettä max 2x/vko, PEF normaali",
+      "Oirelääkettä käytetään joka päivä",
+      "PEF-arvot vaihtelevat paljon",
+      "Yöllinen hengenahdistus on tavallista"
+    ],
+    "correct": 0,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "keskivaikea"
+  },
+  {
+    "question": "Keuhkoahtaumatautikuvan muuttuessa lääkehoito pitää",
+    "explanation": "Keuhkoahtaumatautikuvan muuttuessa lääkehoito pitää arvioida uudelleen.",
+    "options": [
+      "Lopettaa kokonaan",
+      "Arvioida uudelleen",
+      "Pitää ennallaan",
+      "Vaihtaa pelkästään kortisonihoitoon"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "helppo"
+  },
+  {
+    "question": "Mikä on anafylaktinen reaktio?",
+    "explanation": "Anafylaktinen reaktio on vakava ja äkillinen yliherkkyysreaktio, joka voi olla hengenvaarallinen. Se voi tapahtua missä ja milloin vain lääkkeenoton yhteydessä.",
+    "options": [
+      "Lievä ihottuma",
+      "Vakava ja äkillinen yliherkkyysreaktio, joka voi olla hengenvaarallinen",
+      "Pitkäaikainen allergia",
+      "Hitaasti kehittyvä sivuvaikutus"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "helppo"
+  },
+  {
+    "question": "Mikä voi aiheuttaa nuorelle keuhkoahtaumataudin?",
+    "explanation": "Nuorella keuhkoahtaumataudin voi aiheuttaa harvinainen alfa-1-antitrypsiininpuutos, joka on perinnöllinen aineenvaihduntasairaus.",
+    "options": [
+      "Vain tupakointi",
+      "Harvinainen alfa-1-antitrypsiininpuutos (perinnöllinen)",
+      "Liiallinen liikunta",
+      "Allerginen nuha"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "keskivaikea"
+  },
+  {
+    "question": "Hampaat pestään hengityslääkkeiden jälkeen. Tosi vai epätosi?",
+    "explanation": "Tosi. Tai ainakin suu huuhdellaan vedellä hengityslääkkeiden jälkeen, jotta vältetään suun ja nielun sivuvaikutukset kuten hiivatulehdukset.",
+    "options": [
+      "Epätosi, hampaiden pesu ei ole tarpeen",
+      "Tosi, tai vähintään suu huuhdellaan vedellä",
+      "Epätosi, riittää että nielee sylkeä",
+      "Tosi, mutta vain kerran päivässä"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "helppo"
+  },
+  {
+    "question": "Kaikissa hengitettävien aineiden annostelijoissa on annoslaskuri. Tosi vai epätosi?",
+    "explanation": "Epätosi. Kaikissa inhalaattoreissa ei ole annoslaskuria, vaikka se olisi suositeltavaa.",
+    "options": [
+      "Tosi, kaikissa on annoslaskuri",
+      "Epätosi, kaikissa ei ole annoslaskuria",
+      "Tosi, mutta vain uusimmissa malleissa",
+      "Epätosi, annoslaskurit ovat erikseen ostettavia"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "helppo"
+  },
+  {
+    "question": "Miten anafylaktista reaktiota hoidetaan?",
+    "explanation": "Anafylaksiaa hoidetaan: aiheuttajan annon lopetus, avun hälytys, adrenaliinin anto lihakseen, ilmateiden avaaminen, lisähappi ja suoniyhteys.",
+    "options": [
+      "Odotetaan että oireet menevät ohi itsestään",
+      "Aiheuttajan lopetus, avun hälytys, adrenaliini lihakseen, lisähappi",
+      "Vain antihistamiinilla",
+      "Vain kortisoni-injektiolla"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "vaikea"
+  },
+  {
+    "question": "Miten sähköinen lääkesumutin toimii?",
+    "explanation": "Sähköinen lääkesumutin höyrystää nestemäisen lääkeaineen, joka voidaan hengittää maskin tai suukappaleen avulla omaan tahtiin.",
+    "options": [
+      "Se jäähdyttää lääkeaineen ennen hengitystä",
+      "Sumutin höyrystää nestemäisen lääkeaineen hengitettäväksi",
+      "Se kuumentaa lääkeaineen höyryksi",
+      "Se sekoittaa lääkeaineen happeen"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "keskivaikea"
+  },
+  {
+    "question": "Miten adrenaliinia käytetään lääkeaineena?",
+    "explanation": "Adrenaliini on anafylaktisen reaktion ensisijainen lääkehoito. Sitä käytetään kun on vaikea hengitysvaikeus, tajunnan häiriö tai matala verenpaine. Annetaan ensisijaisesti lihakseen. Vaikutus alkaa nopeasti mutta kestää vain 30+ minuuttia.",
+    "options": [
+      "Ainoastaan suonensisäisesti sairaalassa",
+      "Ensisijaisesti lihakseen anafylaksian hoidossa, vaikutus nopea mutta lyhyt",
+      "Vain nielemällä tablettina",
+      "Ihon alle hitaana injektiona"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "vaikea"
+  },
+  {
+    "question": "Millaisia oireita ilmenee tyypin 1 diabeteksen puhkeamisessa?",
+    "explanation": "Tyypin 1 diabeteksen puhkeamisessa ilmenee lisääntynyttä janoa, virtsaneritystä, laihtumista ja väsymystä.",
+    "options": [
+      "Lisääntynyt jano, virtsaneritys, laihtuminen ja väsymys",
+      "Painonnousu ja turvotus",
+      "Korkea verenpaine ja päänsärky",
+      "Lihaskrampit ja vapina"
+    ],
+    "correct": 0,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "helppo"
+  },
+  {
+    "question": "Mitkä elintoiminnot kannattaa ottaa huomioon lääkkeenottoajoissa?",
+    "explanation": "Lääkkeenottoajoissa tulee huomioida elintoimintojen vuorokausirytmit, muu lääkehoito, potilaan elämänrytmi, elintoimintojen vaihtelu ja sairauksien oirehuiput.",
+    "options": [
+      "Vain potilaan nukkumaanmenoaika",
+      "Elintoimintojen vuorokausirytmit, muu lääkehoito, elämänrytmi, oirehuiput",
+      "Ainoastaan aamuisin tyhjään mahaan",
+      "Vain aterioiden ajankohdat"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "keskivaikea"
+  },
+  {
+    "question": "Anafylaktisen reaktion äärimmäiset vaikutukset ovat kurkunpään tukkeutuminen, hengityksen ja sydämen pysähtyminen sekä sokki. Tosi vai epätosi?",
+    "explanation": "Tosi. Anafylaktinen reaktio voi johtaa kurkunpään tukkeutumiseen, hengityksen pysähtymiseen, sydämen pysähtymiseen ja sokkiin.",
+    "options": [
+      "Epätosi, reaktio on aina lievä",
+      "Tosi, nämä ovat anafylaksian äärimmäisiä vaikutuksia",
+      "Epätosi, vain ihottuma on mahdollinen",
+      "Tosi, mutta vain lapsilla"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "helppo"
+  },
+  {
+    "question": "Millaisia ovat anafylaktisen reaktion ensioireet?",
+    "explanation": "Ensioireita ovat ihon kuumotus, punoitus, kutina ja pistely, pulssin tiheälyöntisyys, kurkussa ja rinnassa täyteläisyyden tunne, yskiminen sekä pahoinvointi ja oksentelu.",
+    "options": [
+      "Vain lievä ihottuma",
+      "Ihon kuumotus, kutina, pulssin tiheys, kurkkutunne, yskä, pahoinvointi",
+      "Ainoastaan korkea kuume",
+      "Vain päänsärky ja väsymys"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "keskivaikea"
+  },
+  {
+    "question": "Mikä on yleisin hoitomuoto tyypin 1 diabeetikolle?",
+    "explanation": "Yleisin hoitomuoto on monipistoshoito, jossa käytetään kahta erityyppistä insuliinia: pitkävaikutteista perusinsuliinia ja pikainsuliinia.",
+    "options": [
+      "Pelkkä ruokavalio",
+      "Monipistoshoito kahdella insuliinityypillä",
+      "Tabletit",
+      "Insuliinipumppu kaikille"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "helppo"
+  },
+  {
+    "question": "Millaisia insuliineja tyypin 1 diabeetikko käyttää?",
+    "explanation": "Tyypin 1 diabeetikko käyttää pitkävaikutteista perusinsuliinia (huolehtii verensokerin säätelystä yöllä ja aterioiden välillä) ja pikainsuliinia (pistetään ruokailun aikana ruoan sisältämän hiilihydraattimäärän mukaan).",
+    "options": [
+      "Vain yhden tyyppistä insuliinia",
+      "Pitkävaikutteista perusinsuliinia ja pikainsuliinia",
+      "Ainoastaan pikainsuliinia",
+      "Tablettimuotoista insuliinia"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "keskivaikea"
+  },
+  {
+    "question": "KAT tarkoittaa keuhkoahtaumatautia. Tosi vai epätosi?",
+    "explanation": "Tosi. KAT on lyhenne sanasta keuhkoahtaumatauti (sama kuin COPD).",
+    "options": [
+      "Epätosi, se tarkoittaa keuhkoastmaa",
+      "Tosi, KAT = keuhkoahtaumatauti",
+      "Epätosi, se tarkoittaa keuhkokuumetta",
+      "Tosi, mutta vain Suomessa"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "helppo"
+  },
+  {
+    "question": "Miten astma puhkeaa?",
+    "explanation": "Astma voi puhjeta missä iässä tahansa. Astmariskin lisääjiä ovat perinnöllinen alttius, allerginen nuha ja muut ylähengitystiesairaudet.",
+    "options": [
+      "Vain lapsena",
+      "Voi puhjeta missä iässä tahansa, riskejä lisäävät perintötekijät ja allergia",
+      "Ainoastaan aikuisiällä",
+      "Vain jos tupakoi"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "helppo"
+  },
+  {
+    "question": "Millaisia haittoja on hengityselin kortisonissa?",
+    "explanation": "Hengityselin kortisonia käytettäessä voi esiintyä ihon ohenemista, mustelmataipumuksen lisääntymistä, ruokahalun lisääntymistä, luukatoa sekä verensokerin ja verenpaineen nousua.",
+    "options": [
+      "Ei mitään haittoja",
+      "Ihon oheneminen, mustelmat, ruokahalu, luukato, verensokerin ja verenpaineen nousu",
+      "Vain lievä väsymys",
+      "Ainoastaan painonnousu"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "keskivaikea"
+  },
+  {
+    "question": "Pahenemisvaiheen hoitoon tarkoitettu kortisonikuuri kestää tyypillisesti 7-10 päivää. Lapsille suositellaan lyhyempiä kuureja. Tosi vai epätosi?",
+    "explanation": "Tosi. Pahenemisvaiheen hoitoon käytetty kortisonikuuri kestää tyypillisesti 7-10 päivää, ja lapsille suositellaan lyhyempiä kuureja.",
+    "options": [
+      "Epätosi, kuurit ovat aina 2-3 viikkoa",
+      "Tosi, aikuisille 7-10 päivää, lapsille lyhyemmin",
+      "Epätosi, lapsille pidempiä kuureja",
+      "Tosi, mutta vain sairaalahoidossa"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "helppo"
+  },
+  {
+    "question": "Miten nopeasti kortisoni alkaa vaikuttaa?",
+    "explanation": "Kortisoni voi alkaa vaikuttaa jo muutamassa päivässä, mutta joskus menee useampi kuukausi että se vaikuttaa tarpeeksi.",
+    "options": [
+      "Aina välittömästi",
+      "Muutamassa päivässä, joskus kuukausia",
+      "Vasta vuoden kuluttua",
+      "Ei koskaan täysin"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "helppo"
+  },
+  {
+    "question": "Mitkä asiat tulee käydä ilmi lääkehoitosuunnitelmassa?",
+    "explanation": "Lääkehoitosuunnitelmassa tulee käydä ilmi lääkityksen selvitys, lääkehoidon tarpeen arviointi, lääkkeiden käyttökuntoon saattaminen, lääkehoidon toteutus, vaikutuksen seuranta, ohjaus, ajantasaisen lääkehoidon varmistaminen ja dokumentointi.",
+    "options": [
+      "Vain potilaan nimi ja lääkkeet",
+      "Lääkityksen selvitys, arviointi, toteutus, seuranta, ohjaus, dokumentointi",
+      "Ainoastaan lääkkeiden nimet ja annokset",
+      "Vain lääkärin yhteystiedot"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "keskivaikea"
+  },
+  {
+    "question": "Miten tyypin 1 diabetes syntyy?",
+    "explanation": "Tyypin 1 diabeteksessa insuliinia tuottavat haiman saarekesolut tuhoutuvat sisäsyntyisen tulehduksen seurauksena.",
+    "options": [
+      "Liiallisesta sokerinsyönnistä",
+      "Insuliinia tuottavat haiman solut tuhoutuvat sisäsyntyisen tulehduksen vuoksi",
+      "Lihavuudesta",
+      "Stressistä"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "helppo"
+  },
+  {
+    "question": "Mitä tehdään jos virhetila johtui väärästä lääkityksestä?",
+    "explanation": "Kirjataan poikkeamat, seurataan ei-toivottuja vaikutuksia ja varaudutaan hoitamaan niitä. Jos haittoja on odotettavissa, ilmoitus lääkärille heti.",
+    "options": [
+      "Ei tehdä mitään",
+      "Kirjataan poikkeamat, seurataan haittoja, ilmoitus lääkärille",
+      "Vain kerrotaan potilaalle",
+      "Odotetaan seuraavaa lääkekierrosta"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "keskivaikea"
+  },
+  {
+    "question": "Mikä taho määrittää ohjeet lääkeasioille ja mitä siihen kuuluu?",
+    "explanation": "Fimea määrittää ohjeet. Siihen kuuluu lääkkeiden jako, tilaus, säilytys, hävitys ja apteekkiin palautus.",
+    "options": [
+      "Vain lääkärit",
+      "Fimea: lääkkeiden jako, tilaus, säilytys, hävitys, palautus",
+      "Jokainen terveydenhuollon yksikkö erikseen",
+      "Potilas itse"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "keskivaikea"
+  },
+  {
+    "question": "Mitkä ovat entraaliset lääkkeenantotavat?",
+    "explanation": "Entraaliset antotavat ovat nieltävät, suuontelon kautta, kielen alle, posken limakalvoille ja peräsuolen kautta.",
+    "options": [
+      "Vain suoneen ja lihakseen",
+      "Nieltävät, suuontelo, kielen alle, posken limakalvot, peräsuoli",
+      "Ainoastaan ihon läpi",
+      "Vain hengittämällä"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "keskivaikea"
+  },
+  {
+    "question": "Kuinka monta millilitraa on litra?",
+    "explanation": "Yhdessä litrassa on 1000 millilitraa.",
+    "options": [
+      "100 millilitraa",
+      "1000 millilitraa",
+      "10 millilitraa",
+      "10000 millilitraa"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "helppo"
+  },
+  {
+    "question": "Voiko hormoneja antaa nenän kautta?",
+    "explanation": "Kyllä voi. Nenän kautta voidaan antaa esimerkiksi migreenilääkettä, osteoporoosi-lääkettä ja lasten yökastelun hoitoon tarkoitettuja hormoneja.",
+    "options": [
+      "Ei koskaan",
+      "Kyllä voi",
+      "Vain suoneen",
+      "Vain lihakseen"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "helppo"
+  },
+  {
+    "question": "Millaisissa tilanteissa suojakäsineitä käytetään?",
+    "explanation": "Suojakäsineitä käytetään kun on kosketusriski vereen, elimistönesteisiin, sylkeen, limakalvoihin, vaurioituneeseen ihoon, infektoivaan materiaaliin tai injektoinnissa jos hoitajalla ei ole terve ja ehjä iho.",
+    "options": [
+      "Vain verikontaktissa",
+      "Kosketusriski vereen, elimistönesteisiin, limakalvoihin, vaurioituneeseen ihoon, infektoivaan materiaaliin",
+      "Ainoastaan leikkauksissa",
+      "Vain jos potilas on tarttuva"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "keskivaikea"
+  },
+  {
+    "question": "Tarvitseeko astmaatikon kantaa keuhkoputkia avaavaa lääkettä mukanaan koko ajan?",
+    "explanation": "Kyllä. Avaavilla lääkkeillä saadaan supistuneet keuhkoputket auki tai estetään supistuminen ennakolta esimerkiksi ennen liikuntasuoritusta.",
+    "options": [
+      "Ei, vain kotona",
+      "Kyllä, avaavat lääkkeet tulee olla aina mukana",
+      "Vain talvella",
+      "Vain jos oireilee"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "helppo"
+  },
+  {
+    "question": "Paikallisesti annettu lääke vaikuttaa vain paikallisesti. Tosi vai epätosi?",
+    "explanation": "Epätosi. Paikallisesti annettu lääke voi imeytyä verenkiertoon ja vaikuttaa myös yleisesti elimistössä.",
+    "options": [
+      "Tosi, vain paikallisesti",
+      "Epätosi, voi imeytyä ja vaikuttaa yleisesti",
+      "Tosi, mutta vain voiteet",
+      "Epätosi, vain ihonalainen vaikuttaa yleisesti"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "keskivaikea"
+  },
+  {
+    "question": "Sublinguaalinen on posken kautta vaikuttava aine. Tosi vai epätosi?",
+    "explanation": "Epätosi. Sublinguaalinen tarkoittaa kielen alle asetettavaa lääkeainetta (esim. nitrotabletit), ei posken kautta.",
+    "options": [
+      "Tosi, posken kautta",
+      "Epätosi, se tarkoittaa kielen alle asetettavaa lääkettä",
+      "Tosi, mutta vain nestemäiset lääkkeet",
+      "Epätosi, se tarkoittaa suun kautta nieltävää"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "keskivaikea"
+  },
+  {
+    "question": "Mistä tunnistaa astman pahenemisvaiheen?",
+    "explanation": "Astman pahenemisvaiheen tunnistaa siitä että avaavan lääkityksen tarve kasvaa, yskä lisääntyy, hengittäminen muuttuu vaikeammaksi, rasituksensieto huononee ja aamun PEF-arvot laskevat.",
+    "options": [
+      "Vain kuumeesta",
+      "Avaavan lääkkeen tarve kasvaa, yskä lisääntyy, hengitys vaikeutuu, PEF laskee",
+      "Ainoastaan ihottumasta",
+      "Vain öisestä hengityksestä"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "keskivaikea"
+  },
+  {
+    "question": "Perinteinen pullohappi soveltuu ulkona liikkumisen tueksi ja tilapäiseen lisähapen tarpeeseen. Sitä voidaan käyttää varajärjestelmänä esim. sähkökatkojen aikana. Tosi vai epätosi?",
+    "explanation": "Tosi. Perinteinen pullohappi soveltuu ulkona liikkumisen tueksi, tilapäiseen lisähapen tarpeeseen ja varajärjestelmänä esim. sähkökatkojen ja laitevikojen aikana.",
+    "options": [
+      "Epätosi, vain sairaalakäyttöön",
+      "Tosi, soveltuu ulkoiluun, tilapäistarpeeseen ja varajärjestelmäksi",
+      "Epätosi, vain kotikäyttöön",
+      "Tosi, mutta vain alle tunnin käyttöön"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "helppo"
+  },
+  {
+    "question": "Kuinka monta milligrammaa on gramma?",
+    "explanation": "Yhdessä grammassa on 1000 milligrammaa.",
+    "options": [
+      "100 milligrammaa",
+      "1000 milligrammaa",
+      "10 milligrammaa",
+      "10000 milligrammaa"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "helppo"
+  },
+  {
+    "question": "Mistä tunnistaa keuhkoahtaumataudissa pahenemisvaiheen?",
+    "explanation": "Pahenemisvaiheen tunnistaa lisääntyneestä hengenahdistuksesta, yskästä ja mahdollisesti märkäisistä yskösistä.",
+    "options": [
+      "Vain kuumeesta",
+      "Lisääntynyt hengenahdistus, yskä ja märkäiset yskökset",
+      "Ainoastaan väsymyksestä",
+      "Vain painon noususta"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "helppo"
+  },
+  {
+    "question": "Mitä aseptiikka tarkoittaa?",
+    "explanation": "Aseptiikka on synonyymi hygienialle - se tarkoittaa toimenpiteitä, joilla estetään mikrobien pääsy elimistöön.",
+    "options": [
+      "Lääkkeiden säilytystä",
+      "Hygienia eli mikrobien pääsyn estäminen elimistöön",
+      "Steriilien välineiden käyttöä",
+      "Käsien pesua"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "helppo"
+  },
+  {
+    "question": "Mitkä ovat astman yleisimmät oireet?",
+    "explanation": "Astman yleisimpiä oireita ovat pitkittynyt yskä, lisääntynyt limaneritys, hengenahdistus ja uloshengityksen ajoittainen vinkuna tai pihinä.",
+    "options": [
+      "Vain kuume ja väsymys",
+      "Pitkittynyt yskä, limaneritys, hengenahdistus, vinkuna tai pihinä",
+      "Ainoastaan ihottuma",
+      "Vain öinen hengenahdistus"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "helppo"
+  },
+  {
+    "question": "Mikä on happirikastin?",
+    "explanation": "Happirikastin poistaa typen huoneilmasta ja tekee hengitysilmasta 90% happea, jolloin potilas saa riittävästi happea kotiolosuhteissa.",
+    "options": [
+      "Happisäiliö",
+      "Laite joka poistaa typen ja rikastaa ilman 90% hapeksi",
+      "Hengitysharjoituslaite",
+      "Ilmanpuhdistin"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "keskivaikea"
+  },
+  {
+    "question": "Infuusio tarkoittaa lääkkeenantoa suoneen ja mahdollisesti myös ihon alle. Tosi vai epätosi?",
+    "explanation": "Tosi. Infuusio tarkoittaa ensisijaisesti lääkkeenantoa suoneen, mutta mahdollisesti myös ihon alle.",
+    "options": [
+      "Epätosi, vain suoneen",
+      "Tosi, suoneen ja mahdollisesti ihon alle",
+      "Epätosi, vain lihakseen",
+      "Tosi, mutta vain nesteytys"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "helppo"
+  },
+  {
+    "question": "Mitä pitää huomioida kun vuorovaikutetaan potilaan kanssa lääkehoidosta?",
+    "explanation": "On varmistettava että potilas ymmärtää lääkehoitoaan. Tämä auttaa sitoutumista ja lääkkeiden oikeinkäyttöä. Potilaalla on tiedonsaantioikeus ja itsemääräämisoikeus.",
+    "options": [
+      "Vain lääkkeiden nimet",
+      "Varmista että potilas ymmärtää hoitonsa, tiedonsaantioikeus ja itsemääräämisoikeus",
+      "Ainoastaan annostusohjeet",
+      "Vain haittavaikutukset"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "keskivaikea"
+  },
+  {
+    "question": "Miten lääkkeen vaikutusta hidastetaan tai kumotaan?",
+    "explanation": "Lääkkeen vaikutusta hidastetaan tai kumotaan lääkehiilellä jos lääke on nielty (mielellään alle 30 min kuluessa), tai vastalääkkeillä jos aine vaikuttaa jo tai on annettu parenteraalisesti.",
+    "options": [
+      "Vain odottamalla",
+      "Lääkehiilellä (jos nielty) tai vastalääkkeillä",
+      "Ainoastaan oksentamalla",
+      "Vain runsaalla juomisella"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "keskivaikea"
+  },
+  {
+    "question": "Tilanjatke on ylimääräinen osa injektioneulaa. Tosi vai epätosi?",
+    "explanation": "Epätosi. Tilanjatke tulee suun ja annosaerosolin väliin. Sitä käytettäessä lääkeainetta pääsee keuhkoihin enemmän.",
+    "options": [
+      "Tosi, neulan jatke",
+      "Epätosi, se on inhalaattorin lisäosa",
+      "Tosi, mutta vain lasten neuloissa",
+      "Epätosi, se on infuusioletku"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "keskivaikea"
+  },
+  {
+    "question": "Kotihappihoitoa käytetään kun keuhkosairaus on edennyt pitkälle. Tosi vai epätosi?",
+    "explanation": "Tosi. Kotihappihoitoa käytetään kun keuhkosairaus on edennyt pitkälle ja potilas tarvitsee jatkuvaa lisähappea.",
+    "options": [
+      "Epätosi, vain sairaalassa",
+      "Tosi, kun keuhkosairaus on pitkällä",
+      "Epätosi, vain akuuteissa tilanteissa",
+      "Tosi, mutta vain yöllä"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "helppo"
+  },
+  {
+    "question": "Miten insuliiniannokset sovitetaan sopiviksi?",
+    "explanation": "Insuliiniannokset sovitetaan verensokerin omaseurannan ja ruoan hiilihydraattipitoisuuksien tuntemisen avulla.",
+    "options": [
+      "Vain painon perusteella",
+      "Verensokerin omaseurannalla ja ruoan hiilihydraattien tuntemisella",
+      "Ainoastaan lääkärin päätöksellä",
+      "Vain aamuverensokerien perusteella"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "keskivaikea"
+  },
+  {
+    "question": "Miten astma määritellään?",
+    "explanation": "Astma määritellään keuhkojen limakalvojen tulehdukseksi jossa keuhkoputket supistelevat aiheuttaen hengitystieoireita.",
+    "options": [
+      "Vain yskänä",
+      "Keuhkojen limakalvojen tulehdus jossa keuhkoputket supistelevat",
+      "Ainoastaan allergia",
+      "Vain hengenahdistus"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "helppo"
+  },
+  {
+    "question": "Millaisille hengitysärsykkeille astmaatikko on herkkä?",
+    "explanation": "Astmaatikko on herkkä pölyille, kylmälle ilmalle, rasitukselle, tupakansavulle ja voimakkaille tuoksuille.",
+    "options": [
+      "Vain pölylle",
+      "Pölyille, kylmälle ilmalle, rasitukselle, tupakansavulle, voimakkaille tuoksuille",
+      "Ainoastaan allergeeneille",
+      "Vain tupakansavulle"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "helppo"
+  },
+  {
+    "question": "Kuinka monta grammaa on milligramma?",
+    "explanation": "Milligramma on 0,001 grammaa (eli tuhannesosa grammasta).",
+    "options": [
+      "0,1 grammaa",
+      "0,001 grammaa",
+      "0,01 grammaa",
+      "0,0001 grammaa"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "helppo"
+  },
+  {
+    "question": "PEF-seuranta on tärkeä työkalu erityisesti astman hoitotasapainon seurannassa. Tosi vai epätosi?",
+    "explanation": "Tosi. PEF-seuranta (uloshengityksen huippuvirtaus) on tärkeä työkalu astman hoitotasapainon seurannassa.",
+    "options": [
+      "Epätosi, vain diabeteksessa",
+      "Tosi, astman hoitotasapainon seurannassa",
+      "Epätosi, vain keuhkoahtaumataudissa",
+      "Tosi, mutta vain sairaalassa"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "helppo"
+  },
+  {
+    "question": "Millaisiin vaivoihin annetaan lääkettä nenän kautta?",
+    "explanation": "Nenän kautta annetaan lääkettä migreeniin, osteoporoosiin ja lasten yökasteluun.",
+    "options": [
+      "Vain allergiaan",
+      "Migreeniin, osteoporoosiin ja lasten yökasteluun",
+      "Ainoastaan nuhaantuottavat",
+      "Vain keuhkosairauksiin"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "keskivaikea"
+  },
+  {
+    "question": "Mitkä ovat paraentraaliset antotavat?",
+    "explanation": "Paraentraaliset antotavat ovat iho, limakalvo, keuhko, korva, silmä, nenä ja emätin.",
+    "options": [
+      "Vain suoneen ja lihakseen",
+      "Iho, limakalvo, keuhko, korva, silmä, nenä, emätin",
+      "Ainoastaan suun kautta",
+      "Vain injektiot"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "keskivaikea"
+  },
+  {
+    "question": "Miksi lääkkeenottoajat ovat tärkeitä?",
+    "explanation": "Lääkkeenottoajat ovat tärkeitä elintoimintojen vuorokausirytmien, muun lääkehoidon, potilaan elämänrytmin, elintoimintojen vaihtelun ja sairauksien oirehuippujen vuoksi.",
+    "options": [
+      "Vain lääkärin käskystä",
+      "Elintoimintojen rytmit, muu lääkehoito, elämänrytmi, oirehuiput",
+      "Ainoastaan unen vuoksi",
+      "Vain ruokailuaikojen takia"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "keskivaikea"
+  },
+  {
+    "question": "Mikä on resepti?",
+    "explanation": "Resepti on lääkemääräys, jonka lääkäri tai muu lääkkeenmääräämiseen oikeutettu henkilö kirjoittaa.",
+    "options": [
+      "Ruokaohje",
+      "Lääkemääräys",
+      "Hoitosuunnitelma",
+      "Lääkelista"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "helppo"
+  },
+  {
+    "question": "Milloin käytetään pitkävaikutteisia avauslääkkeitä astmassa?",
+    "explanation": "Pitkävaikutteisia avauslääkkeitä käytetään kun tehokas kortisonilääkitys ja tarvittaessa käytetty lyhytvaikutteinen avaava lääke eivät riitä pitämään oireita kurissa.",
+    "options": [
+      "Heti diagnoosin jälkeen",
+      "Kun kortisoni ja lyhytvaikutteiset avaavat eivät riitä",
+      "Ainoastaan pahenemisvaiheiden aikana",
+      "Vain yöllä"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "keskivaikea"
+  },
+  {
+    "question": "Miten diabeetikon tabletit vaikuttavat?",
+    "explanation": "Diabeetikon tabletit vähentävät maksan sokerintuotantoa, tehostavat elimistön omaa insuliinin vaikutusta, lisäävät haiman insuliinieritystä ja nopeuttavat insuliinin vapautumista haimasta.",
+    "options": [
+      "Vain alentavat verensokeria",
+      "Vähentävät maksan sokerintuotantoa, tehostavat insuliinin vaikutusta, lisäävät eritystä",
+      "Ainoastaan korvaavat insuliinia",
+      "Vain estävät sokerin imeytymistä"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "keskivaikea"
+  },
+  {
+    "question": "Millaisia ovat anafylaktisen reaktion jatkumo-oireet ensioireiden jälkeen?",
+    "explanation": "Jatkumo-oireita ovat ihon ja limakalvojen turvotus, ihon kalpeus, hikoilu, nokkosihottuma, yskänpuuskat, vinkuva hengitys, kurkunpään käheys ja turvotus, vatsakivut, pahoinvointi, oksentelu, ripuli ja verenpaineen lasku.",
+    "options": [
+      "Vain ihottuma jatkuu",
+      "Turvotus, kalpeus, nokkosihottuma, hengitysoireet, vatsaoireet, verenpaineen lasku",
+      "Ainoastaan väsymys",
+      "Vain päänsärky"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "vaikea"
+  },
+  {
+    "question": "Lääkehoito perustuu lääkehoitosuunnitelmaan. Tosi vai epätosi?",
+    "explanation": "Tosi. Lääkehoito perustuu aina lääkehoitosuunnitelmaan, joka on lakisääteinen.",
+    "options": [
+      "Epätosi, vain suositeltavaa",
+      "Tosi, lääkehoito perustuu aina lääkehoitosuunnitelmaan",
+      "Epätosi, vain sairaalassa",
+      "Tosi, mutta vain reseptilääkkeillä"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "helppo"
+  },
+  {
+    "question": "Keille muille soveltuu astmaatikkojen ja keuhkoahtaumatautisten lääkkeet?",
+    "explanation": "Samoja lääkkeitä voivat käyttää allergista nuhaa sairastavat, asbestisairauksia sairastavat ja sisäilmasta ja homeesta sairastuneet.",
+    "options": [
+      "Vain astmaatikoille",
+      "Allergista nuhaa, asbestisairauksia, sisäilma- ja homesairauksia sairastaville",
+      "Ainoastaan diabeetikoille",
+      "Vain sydänpotilaille"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "keskivaikea"
+  },
+  {
+    "question": "Miten tyypin 2 diabetesta hoidetaan?",
+    "explanation": "Tyypin 2 diabetesta hoidetaan terveellisellä ruokailulla, liikunnalla, tableteilla ja tarvittaessa insuliinilla.",
+    "options": [
+      "Vain insuliinilla",
+      "Terveellisellä ruokailulla, liikunnalla, tableteilla ja tarvittaessa insuliinilla",
+      "Ainoastaan ruokavaliolla",
+      "Vain liikunnalla"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "helppo"
+  },
+  {
+    "question": "Mitkä ovat silmiin soveltuvia lääkkeitä?",
+    "explanation": "Silmiin soveltuvia lääkkeitä ovat tipat, voiteet sekä insertit ja lamellit (levyt silmiin).",
+    "options": [
+      "Vain tipat",
+      "Tipat, voiteet, insertit ja lamellit",
+      "Ainoastaan tabletit",
+      "Vain injektiot"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "helppo"
+  },
+  {
+    "question": "Mikä on lääkkeen määritelmä?",
+    "explanation": "Lääke on valmiste, aine tai näiden yhdistelmä. Se nautitaan sisäisesti tai ulkoisesti. Se parantaa, lievittää tai ehkäisee sairautta tai sen oireita ihmisessä tai muussa eläimessä. Se palauttaa, korjaa tai muuttaa elintoimintoja ja auttaa terveydentilan tai sairauden selvittämisessä.",
+    "options": [
+      "Vain tabletti tai injektio",
+      "Valmiste joka parantaa, lievittää tai ehkäisee sairautta, muuttaa elintoimintoja",
+      "Ainoastaan reseptilääke",
+      "Vain luonnollinen aine"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "keskivaikea"
+  },
+  {
+    "question": "Nieltävän lääkkeen kanssa tulee juoda 150-300 ml vettä. Tosi vai epätosi?",
+    "explanation": "Epätosi. Oikea määrä on 100-200 ml vettä, ei 150-300 ml.",
+    "options": [
+      "Tosi, 150-300 ml",
+      "Epätosi, oikea määrä on 100-200 ml",
+      "Tosi, mutta vain aikuisilla",
+      "Epätosi, riittää että kostuttaa suun"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "helppo"
+  },
+  {
+    "question": "Miksi dokumentointi on tärkeää?",
+    "explanation": "Dokumentointi on tärkeää työntekijän oikeusturvan tähden, hoidon jatkuvuuden, tiedonkulun ja hoidon laadun varmistamiseksi.",
+    "options": [
+      "Vain lääkärin käskystä",
+      "Työntekijän oikeusturvan, hoidon jatkuvuuden ja laadun vuoksi",
+      "Ainoastaan vakuutuksia varten",
+      "Vain tilastointia varten"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "helppo"
+  },
+  {
+    "question": "Mitä IU tarkoittaa?",
+    "explanation": "IU tarkoittaa kansainvälistä yksikköä (International Unit). Se tunnetaan myös lyhenteenä KY.",
+    "options": [
+      "Insuliiniannos",
+      "Kansainvälinen yksikkö (International Unit)",
+      "Injektio-ohje",
+      "Infuusionopeus"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "helppo"
+  },
+  {
+    "question": "Miten tupakansavu vaikuttaa keuhkoihin?",
+    "explanation": "Tupakansavu aiheuttaa kroonisen tulehduksen keuhkoputken limakalvoilla ja keuhkokudoksessa, pysyvän keuhkoputken ahtautumisen syntymisen ja keuhkorakkuloiden tuhoutumisen ajan saatossa. Tästä seuraa hengenahdistusta.",
+    "options": [
+      "Vain yskää",
+      "Krooninen tulehdus, keuhkoputkien ahtautuminen, rakkuloiden tuhoutuminen, hengenahdistus",
+      "Ainoastaan liman lisääntyminen",
+      "Vain väliaikainen ärsytys"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "keskivaikea"
+  },
+  {
+    "question": "Mitkä ovat keuhkoahtaumataudin yleisimpiä oireita?",
+    "explanation": "Yleisimpiä oireita ovat hengenahdistus tai suorituskyvyn lasku rasituksessa, sairauden edetessä hengenahdistusta myös levossa, pitkittynyt yskä (etenkin aamuisin), limannousu (varsinkin aamuisin), hengityksen vinkuminen, taipumus hengitystieinfektioihin, toistuvat pahenemisvaiheet sekä sairauden edetessä veren happipitoisuuden lasku, hiilidioksipitoisuuden kasvu, laihtuminen ja yleinen kuihtuminen.",
+    "options": [
+      "Vain yskä",
+      "Hengenahdistus, yskä, lima, vinkuminen, infektioherkkyys, laihtuminen",
+      "Ainoastaan väsymys",
+      "Vain kuume"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "keskivaikea"
+  },
+  {
+    "question": "Miten sinun pitää käyttää hengityslääkkeen jauheannostelijaa?",
+    "explanation": "Käyttö: Yski lima pois, lataa annos, tyhjennä keuhkot, aseta annostelija aloilleen, hengitä sisään voimakkaasti, pidätä hengitystä 5-10 sekuntia lääkkeenoton jälkeen, hengitä ulos nenän kautta ja huuhtele suu.",
+    "options": [
+      "Vain hengitä normaalisti",
+      "Yski lima pois, lataa, tyhjennä keuhkot, hengitä voimakkaasti sisään, pidätä 5-10s, huuhtele suu",
+      "Ainoastaan ravista ja hengitä",
+      "Vain suihkauta suuhun"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "keskivaikea"
+  },
+  {
+    "question": "Mitä muita lääkemuotoja astmaatikko voi käyttää kortisonin lisäksi?",
+    "explanation": "Kortisonin lisäksi astmaatikko voi käyttää tablettimuotoisia tulehdusta rauhoittavia lääkkeitä (leukotrieenisalpaajia, teofylliinejä), hengitettäviä yhdistelmävalmisteita joissa on kortisonin lisäksi keuhkoputkia pitkävaikutteisesti avaava lääke, sekä pitkävaikutteisia avaavia lääkkeitä myös yksinään.",
+    "options": [
+      "Vain inhaloitavaa kortisonia",
+      "Tabletit, yhdistelmävalmisteet (kortisoni + avaava), pitkävaikutteiset avaavat",
+      "Ainoastaan injektiot",
+      "Vain lyhytvaikutteiset avaavat"
+    ],
+    "correct": 1,
+    "category": "MINILOP - Lääketieto",
+    "difficulty": "vaikea"
+  }
+]

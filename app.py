@@ -1053,7 +1053,7 @@ def get_recommendations_api():
 
 @app.route("/")
 def index_route():
-    return redirect(url_for('login_route')) if not current_user.is_authenticated else redirect(url_for('dashboard_route'))
+    return redirect(url_for('login_route')) if not current_user.is_authenticated else redirect(url_for('dashboard'))
 
 @app.route("/privacy")
 def privacy_route():

@@ -1,4 +1,4 @@
-# TARKISTUSKOMMENTTI 25.10. KLO 10:10
+# TARKISTUSKOMMENTTI 25.10. KLO 10:00
 # -*- coding: utf-8 -*-
 # data_access/database_manager.py
 import sqlite3
@@ -224,7 +224,7 @@ class DatabaseManager:
                     u.created_at,
                     u.expires_at,
                     COUNT(DISTINCT qa.id) as total_attempts,
-                    COUNT(DISTINCT CASE WHEN qa.correct = 1 THEN qa.id END) as correct_attempts,
+                    COUNT(DISTINCT CASE WHEN qa.correct THEN qa.id END) as correct_attempts,
                     MAX(qa.timestamp) as last_activity
                 FROM users u
                 LEFT JOIN question_attempts qa ON u.id = qa.user_id
@@ -253,6 +253,49 @@ class DatabaseManager:
             logger.error(f"Virhe käyttäjien haussa admin-paneelille: {e}")
             # Fallback: Palauta perus get_all_users jos query epäonnistuu
             return self.get_all_users()
+
+    def get_all_users_for_admin(self):
+        """Hakee kaikki käyttäjät admin-paneelille lisätiedoilla."""
+        try:
+            query = """
+                SELECT 
+                    u.id,
+                    u.username,
+                    u.email,
+                    u.role,
+                    u.status,
+                    u.created_at,
+                    u.expires_at,
+                    COUNT(DISTINCT qa.id) as total_attempts,
+                    COUNT(DISTINCT CASE WHEN qa.correct THEN qa.id END) as correct_attempts,
+                    MAX(qa.timestamp) as last_activity
+                FROM users u
+                LEFT JOIN question_attempts qa ON u.id = qa.user_id
+                GROUP BY u.id, u.username, u.email, u.role, u.status, u.created_at, u.expires_at
+                ORDER BY u.created_at DESC
+            """
+            
+            rows = self._execute(query, fetch='all')
+            
+            users = []
+            for row in rows:
+                user_dict = dict(row)
+                # Laske onnistumisprosentti
+                if user_dict.get('total_attempts') and user_dict['total_attempts'] > 0:
+                    user_dict['success_rate'] = round(
+                        (user_dict['correct_attempts'] / user_dict['total_attempts']) * 100, 1
+                    )
+                else:
+                    user_dict['success_rate'] = 0
+                
+                users.append(user_dict)
+            
+            return users
+            
+        except Exception as e:
+            logger.error(f"Virhe käyttäjien haussa admin-paneelille: {e}")
+            # Fallback: Palauta perus get_all_users jos query epäonnistuu
+            return self.get_all_users()    
 
     def update_user_role(self, user_id, new_role):
         """Päivittää käyttäjän roolin."""

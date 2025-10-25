@@ -1,0 +1,353 @@
+[
+  {
+    "question": "Miten N-lääkkeet tulee säilyttää lainsäädännön mukaan?",
+    "explanation": "Kuvan 'PKV- ja N-lääkkeiden säilytys' mukaan N-lääkkeet tulee pitää erillään muista lääkkeistä omassa lukitussa tilassaan, kuten huumausainelokerossa tai erillisessä lääkehuoneessa, jotta niiden kulunvalvonta on mahdollisimman tehokasta ja ne eivät joudu asiattomien käsiin.",
+    "options": [
+      "Samassa lukitussa lääkekaapissa PKV-lääkkeiden kanssa.",
+      "Lukitussa tilassa, joka on erillään muista lääkkeistä.",
+      "Huoneenlämmössä potilaskohtaisissa lääkelokeroissa.",
+      "Äly-lääkekaapissa, joka kirjaa kaikki otot automaattisesti."
+    ],
+    "correct": 1,
+    "category": "PKV- ja N-lääkkeet",
+    "difficulty": "helppo"
+  },
+  {
+    "question": "Mikä on oikea tapa hävittää vanhentuneet ja käyttämättömät PKV- ja N-lääkkeet?",
+    "explanation": "Kuvan 'Hävittäminen' mukaan PKV- ja N-lääkkeitä ei saa hävittää itse, sillä ne ovat vaarallista jätettä. Oikea tapa on palauttaa ne apteekkiin, joka huolehtii niiden asianmukaisesta ja ympäristöturvallisesta hävittämisestä.",
+    "options": [
+      "Ne voi turvallisesti heittää sekajätteen mukana.",
+      "Ne tulee huuhdella viemäristä alas runsaan veden kera.",
+      "Ne tulee palauttaa apteekkiin asianmukaista hävittämistä varten.",
+      "Ne tulee sekoittaa kahvinpuruihin ennen biojätteeseen laittamista."
+    ],
+    "correct": 2,
+    "category": "PKV- ja N-lääkkeet",
+    "difficulty": "helppo"
+  },
+  {
+    "question": "Mitä tarkoitetaan bentsodiatsepiinien anksiolyyttisellä vaikutuksella?",
+    "explanation": "Kuvan 'Bentsodiatsepiinien vaikutuksia' mukaan anksiolyyttinen vaikutus tarkoittaa niiden kykyä lievittää ahdistuneisuutta, paniikkihäiriöitä ja pelkotiloja.",
+    "options": [
+      "Lihasten rentoutumista ja kouristusten laukeamista.",
+      "Uneen pääsyn helpottumista ja nukahtamista.",
+      "Ahdistuksen ja pelkotilojen lievittymistä.",
+      "Lyhytaikaista muistinmenetystä toimenpiteen ajaksi."
+    ],
+    "correct": 2,
+    "category": "Bentsodiatsepiinit ja hydroksitsiini",
+    "difficulty": "keskivaikea"
+  },
+  {
+    "question": "Mikä seuraavista bentsodiatsepiineista on taulukon mukaan lyhytvaikutteinen, puoliintumisajan ollessa vain 1-3 tuntia?",
+    "explanation": "Kuvan 'puoliintumisajat' taulukon mukaan midatsolaamin puoliintumisaika on vain 1-3 tuntia, tehden siitä lyhytvaikutteisen. Diatsepaami on pitkävaikutteinen ja oksatsepaami sekä alpratsolaami keskipitkävaikutteisia.",
+    "options": [
+      "Diatsepaami",
+      "Oksatsepaami",
+      "Midatsolaami",
+      "Alpratsolaami"
+    ],
+    "correct": 2,
+    "category": "Bentsodiatsepiinit ja hydroksitsiini",
+    "difficulty": "vaikea"
+  },
+  {
+    "question": "Mitä lääkeainetta käytetään bentsodiatsepiinimyrkytyksen vastalääkkeenä?",
+    "explanation": "Kuvan 'Bentsodiatsepiini-myrkytyksen hoito' mukaan flumatseniili on bentsodiatsepiinien vastalääke eli antagonisti, joka kumoaa niiden sedatiivisen ja hengitystä lamaavan vaikutuksen. Naloksoni on opioidien vastalääke.",
+    "options": [
+      "Naloksonia",
+      "Adrenaliinia",
+      "Aktivoitua lääkehiiltä",
+      "Flumatseniilia"
+    ],
+    "correct": 3,
+    "category": "Bentsodiatsepiinit ja hydroksitsiini",
+    "difficulty": "keskivaikea"
+  },
+  {
+    "question": "Mitä tarkoitetaan bentsodiatsepiinien paradoksaalisella reaktiolla?",
+    "explanation": "Kuvan 'Paradoksaaliset reaktiot' mukaan paradoksaalinen reaktio on lääkkeen odotuksen vastainen vaikutus. Bentsodiatsepiinit voivat rauhoittavan vaikutuksen sijaan aiheuttaa joillakin potilailla kiihtyneisyyttä, aggressiivisuutta ja levottomuutta.",
+    "options": [
+      "Lääke aiheuttaa odotuksen vastaisesti kiihtymystä ja levottomuutta.",
+      "Lääke aiheuttaa poikkeuksellisen voimakasta väsymystä.",
+      "Lääkkeen teho heikkenee nopeasti käytön aikana.",
+      "Lääke aiheuttaa allergisen ihoreaktion."
+    ],
+    "correct": 0,
+    "category": "Bentsodiatsepiinit ja hydroksitsiini",
+    "difficulty": "keskivaikea"
+  },
+  {
+    "question": "Mihin lääkeryhmään vahvat opioidit, kuten morfiini ja fentanyyli, luokitellaan Suomessa?",
+    "explanation": "Kuvan 'Opioidit' mukaan vahvat opioidit luokitellaan huumausaineiksi ja ne kuuluvat N-lääkkeiden ryhmään, kun taas heikot ja keskivahvat opioidit ovat PKV-lääkkeitä.",
+    "options": [
+      "PKV-lääkkeiksi.",
+      "Reseptivapaiksi lääkkeiksi.",
+      "N-lääkkeiksi (huumausainelääkkeiksi).",
+      "'High Alert' -lääkkeiksi ilman erityisluokitusta."
+    ],
+    "correct": 2,
+    "category": "Opioidit ja amfetamiinijohdokset",
+    "difficulty": "helppo"
+  },
+  {
+    "question": "Mikä on opioidimyrkytyksen ensisijainen hoito ja vastalääke?",
+    "explanation": "Kuvan 'Opioidimyrkytys' mukaan naloksoni on opioidien antagonisti ja spesifinen vastalääke opioidien yliannostukseen. Se kumoaa nopeasti opioidien aiheuttaman tajunnantason laskun ja hengityslaman.",
+    "options": [
+      "Flumatseniili",
+      "Naloksoni",
+      "Happi",
+      "Adrenaliini"
+    ],
+    "correct": 1,
+    "category": "Opioidit ja amfetamiinijohdokset",
+    "difficulty": "keskivaikea"
+  },
+  {
+    "question": "Mikä seuraavista EI ole tyypillinen opioidien vieroitusoire?",
+    "explanation": "Kuvan 'Opioidien vieroitusoireet' mukaan tyypillisiä oireita ovat mm. kivut, vapina, ahdistuneisuus ja oksentelu. Tajunnantason lasku ja hengityslama ovat sen sijaan yliannostuksen, ei vieroituksen, oireita.",
+    "options": [
+      "Kivut ja vapina",
+      "Ahdistuneisuus ja levottomuus",
+      "Tajunnantason lasku",
+      "Kouristukset ja oksentelu"
+    ],
+    "correct": 2,
+    "category": "Opioidit ja amfetamiinijohdokset",
+    "difficulty": "keskivaikea"
+  },
+  {
+    "question": "Mihin sairauteen amfetamiinijohdoksia, kuten metyylifenidaattia, pääasiassa käytetään?",
+    "explanation": "Kuvan 'Amfetamiinijohdosten ominaisuuksia' mukaan amfetamiinijohdokset ovat keskushermostoa stimuloivia huumausainelääkkeitä (N-lääkkeitä), joita käytetään tarkkaavaisuushäiriön (ADHD) hoitoon.",
+    "options": [
+      "Keskivaikean kivun hoitoon.",
+      "Tarkkaavaisuushäiriö ADHD:n hoitoon.",
+      "Unilääkkeenä unettomuuteen.",
+      "Masennuksen hoitoon."
+    ],
+    "correct": 1,
+    "category": "Opioidit ja amfetamiinijohdokset",
+    "difficulty": "helppo"
+  },
+  {
+    "question": "Mitä voi seurata, jos depot-opioidivalmisteen murskaa ennen sen antamista?",
+    "explanation": "Kuvan 'PKV- ja N-lääkkeet ovat riskilääkkeitä 2' mukaan depot-valmisteita ei saa murskata. Murskaaminen rikkoo lääkkeen hitaasti vapauttavan rakenteen, jolloin koko lääkeannos vapautuu elimistöön kerralla, mikä voi johtaa vaaralliseen yliannostukseen.",
+    "options": [
+      "Lääkkeen teho heikkenee merkittävästi.",
+      "Se aiheuttaa yliannoksen riskin, kun lääkeaine vapautuu kerralla.",
+      "Lääke ei imeydy lainkaan.",
+      "Se parantaa lääkkeen makua."
+    ],
+    "correct": 1,
+    "category": "PKV- ja N-lääkkeet",
+    "difficulty": "vaikea"
+  },
+  {
+    "question": "Miten buprenorfiini eroaa ominaisuuksiltaan puhtaista opioidiagonisteista, kuten morfiinista?",
+    "explanation": "Kuvan 'Buprenorfiini' mukaan buprenorfiini on osittainen opioidiantagonisti. Tämä tarkoittaa, että annosta nostettaessa sen vaikutus ei voimistu loputtomiin (ns. kattovaikutus), toisin kuin puhtailla agonisteilla kuten morfiinilla. Se aiheuttaa myös vähemmän riippuvuutta.",
+    "options": [
+      "Se aiheuttaa voimakkaampaa riippuvuutta kuin morfiini.",
+      "Sen vaikutus voimistuu annoksen kasvaessa ilman ylärajaa.",
+      "Sitä käytetään ainoastaan laastarina krooniseen kipuun.",
+      "Se on osittainen antagonisti, mikä rajoittaa sen vaikutusta."
+    ],
+    "correct": 3,
+    "category": "Opioidit ja amfetamiinijohdokset",
+    "difficulty": "vaikea"
+  },
+  {
+    "question": "Mitä erityistä riskiä liittyy tramadolin ja muiden serotonergisten lääkkeiden samanaikaiseen käyttöön?",
+    "explanation": "Kuvan 'PKV- ja N-lääkkeet ovat riskilääkkeitä 2' mukaan tramadolin käyttämisessä samaan aikaan muiden serotonergisten lääkkeiden kanssa on oltava varovainen serotoniinioireyhtymän riskin vuoksi.",
+    "options": [
+      "Vakavan hengityslaman riski",
+      "Serotoniinioireyhtymän riski",
+      "Akuutin munuaisvaurion riski",
+      "Nopean toleranssin kehittymisen riski"
+    ],
+    "correct": 1,
+    "category": "PKV- ja N-lääkkeet",
+    "difficulty": "vaikea"
+  },
+  {
+    "question": "Mikä seuraavista lääkeaineryhmistä on esimerkki lääkkeistä, joilla on punainen kolmio, mutta jotka EIVÄT ole PKV- tai N-lääkkeitä?",
+    "explanation": "Kuvan 'Punainen kolmio' mukaan kaikki kolmiolääkkeet eivät ole PKV- tai N-lääkkeitä. Esimerkkeinä mainitaan muun muassa migreenilääkkeet (triptaanit) ja lihasrelaksantit.",
+    "options": [
+      "Miedot opioidit",
+      "Bentsodiatsepiinit",
+      "Migreenilääkkeet (triptaanit)",
+      "Nukahtamislääkkeet"
+    ],
+    "correct": 2,
+    "category": "PKV- ja N-lääkkeet",
+    "difficulty": "keskivaikea"
+  },
+  {
+    "question": "Mitä tulee kirjata ylös, jos huumausainetta sisältävä lääkeannostelija joudutaan avaamaan ennen lääkkeen antamista?",
+    "explanation": "Kuvan 'Huumausainetta sisältävän lääkeannostelijan avaaminen' mukaan, jos annostelija avataan ennakkoon, avaajan tulee kirjata ylös syy yksikössä sovitulla tavalla.",
+    "options": [
+      "Potilaan verenpaine ja pulssi",
+      "Avaajan nimi ja kellonaika",
+      "Syy avaamiseen",
+      "Lääkkeen eränumero"
+    ],
+    "correct": 2,
+    "category": "PKV- ja N-lääkkeet",
+    "difficulty": "helppo"
+  },
+  {
+    "question": "Miten sosiaalihuollon asumispalveluyksikössä tulee seurata asiakkaan PKV-lääkkeiden kulutusta?",
+    "explanation": "Kuvan 'PKV-lääkkeen kulutuksen seuranta' mukaan yksikön, jolla on yhteiskäyttöön tarkoitettu lääkevarasto, tulee pitää kirjanpitoa varastoon kuuluvista PKV-lääkkeistä.",
+    "options": [
+      "Kulutusta ei tarvitse seurata, jos lääkkeet ovat annosjakelussa",
+      "Asiakkaan omaisen tulee seurata kulutusta",
+      "Vain N-lääkkeiden kulutusta seurataan kirjanpidolla",
+      "Yhteiskäyttöisestä lääkevarastosta on pidettävä pakkauskohtaista kirjanpitoa"
+    ],
+    "correct": 3,
+    "category": "PKV- ja N-lääkkeet",
+    "difficulty": "keskivaikea"
+  },
+  {
+    "question": "Mikä seuraavista bentsodiatsepiinien vaikutuksista hyödynnetään esilääkityksenä ennen pieniä kirurgisia toimenpiteitä?",
+    "explanation": "Kuvan 'Bentsodiatsepiinien vaikutuksia' taulukon mukaan amnesia eli lyhytaikainen muistamattomuus on yksi bentsodiatsepiinien vaikutuksista, jota käytetään hyödyksi esilääkkeenä.",
+    "options": [
+      "Hypnoosi (unettava vaikutus)",
+      "Relaksaatio (lihaksia rentouttava vaikutus)",
+      "Anksiolyysi (ahdistusta lievittävä vaikutus)",
+      "Amnesia (muistamattomuus)"
+    ],
+    "correct": 3,
+    "category": "Bentsodiatsepiinit ja hydroksitsiini",
+    "difficulty": "keskivaikea"
+  },
+  {
+    "question": "4-vuotias, 18 kg painava lapsi saa pitkittyneen kuumekouristuksen. Mikä on oikea kerta-annos diatsepaamia Stesolid®-peräruiskeena annettuna?",
+    "explanation": "Kuvan 'Stesolid, peräruiske' ohjeen mukaan yli 3-vuotiaalle, joka painaa yli 15 kg, annetaan 10 mg diatsepaamia peräruiskeena (p.r.).",
+    "options": [
+      "2,5 mg",
+      "5 mg",
+      "7,5 mg",
+      "10 mg"
+    ],
+    "correct": 3,
+    "category": "Bentsodiatsepiinit ja hydroksitsiini",
+    "difficulty": "keskivaikea"
+  },
+  {
+    "question": "Kuinka pitkä varoaika autolla ajamisessa on tsopiklonin ottamisen jälkeen?",
+    "explanation": "Kuvan 'Bentsodiatsepiinien kaltaiset unilääkkeet' mukaan tsopiklonin ottamisen ja autolla ajamisen välillä on oltava vähintään 12 tuntia.",
+    "options": [
+      "Vähintään 7 tuntia",
+      "Vähintään 8 tuntia",
+      "Vähintään 12 tuntia",
+      "Vähintään 24 tuntia"
+    ],
+    "correct": 2,
+    "category": "Bentsodiatsepiinit ja hydroksitsiini",
+    "difficulty": "helppo"
+  },
+  {
+    "question": "Mikä seuraavista lääkkeistä voi TEHOSTAA bentsodiatsepiinien (esim. midatsolaamin) vaikutusta estämällä niiden hajoamista maksassa?",
+    "explanation": "Kuvan 'Bentsodiatsepiinien yhteisvaikutukset' mukaan CYP3A4-entsyymin toimintaa estävät lääkkeet, kuten makrolidiantibiootit, tehostavat bentsodiatsepiinien vaikutusta. Samassa diassa mainitaan, että karbamatsepiini puolestaan heikentää niiden vaikutusta.",
+    "options": [
+      "Karbamatsepiini",
+      "Rifampisiini",
+      "Makrolidiantibiootit",
+      "Tsopikloni"
+    ],
+    "correct": 2,
+    "category": "Bentsodiatsepiinit ja hydroksitsiini",
+    "difficulty": "vaikea"
+  },
+  {
+    "question": "Miksi bentsodiatsepiinien käyttöä iäkkäillä tulee seurata erityisen tarkasti?",
+    "explanation": "Kuvan 'Bentsodiatsepiinien aiheuttamia ongelmallisia vaikutuksia iäkkäillä' mukaan vanhukset ovat erityisen herkkiä bentsodiatsepiinien motorisille ja neurokognitiivisille haitoille, koska lääkeaine kertyy rasvakudokseen ja kognitiiviset toiminnot heikentyvät.",
+    "options": [
+      "Koska iäkkäät sietävät lääkkeitä paremmin",
+      "Koska lääke poistuu heiltä nopeammin",
+      "Koska lääke kertyy rasvakudokseen ja lisää kaatumisriskiä",
+      "Koska se parantaa iäkkäiden muistia"
+    ],
+    "correct": 2,
+    "category": "Bentsodiatsepiinit ja hydroksitsiini",
+    "difficulty": "keskivaikea"
+  },
+  {
+    "question": "Mikä seuraavista on heikko opioidi, joka luokitellaan PKV-lääkkeeksi?",
+    "explanation": "Kuvan 'Opioidit' taulukossa kodeiini ja tramadoli on lueteltu 'Heikot opioidit' -ryhmässä ja merkitty PKV-lääkkeiksi.",
+    "options": [
+      "Morfiini",
+      "Buprenorfiini",
+      "Oksikodoni",
+      "Kodeiini"
+    ],
+    "correct": 3,
+    "category": "Opioidit ja amfetamiinijohdokset",
+    "difficulty": "helppo"
+  },
+  {
+    "question": "Miten opioidiriippuvuuden vieroitusoireita voidaan hoitaa lääkkeellisesti?",
+    "explanation": "Kuvan 'Opioidien vieroitusoireiden ilmaantuminen' mukaan oireenmukaisena hoitona voidaan käyttää tulehduskipulääkkeitä, pahoinvointilääkkeitä, ahdistuneisuuden hoitoon käytettäviä lääkkeitä, klonidiinia ja loperamidia.",
+    "options": [
+      "Vain buprenorfiinilla tai metadonilla",
+      "Oireenmukaisesti esimerkiksi tulehduskipulääkkeillä ja klonidiinilla",
+      "Lisäämällä väliaikaisesti vahvan opioidin annosta",
+      "Antamalla bentsodiatsepiinien vastalääkettä, flumatseniilia"
+    ],
+    "correct": 1,
+    "category": "Opioidit ja amfetamiinijohdokset",
+    "difficulty": "keskivaikea"
+  },
+  {
+    "question": "Mitä etua oksikodonilla on verrattuna morfiiniin joidenkin haittavaikutusten osalta?",
+    "explanation": "Kuvan 'Vahvat opioidit N Oksikodoni' mukaan oksikodoni aiheuttaa vähemmän hallusinaatioita ja vapauttaa vähemmän histamiinia kuin morfiini.",
+    "options": [
+      "Se aiheuttaa vähemmän ummetusta",
+      "Se aiheuttaa vähemmän hallusinaatioita",
+      "Se ei aiheuta lainkaan riippuvuutta",
+      "Sen vaikutus alkaa hitaammin"
+    ],
+    "correct": 1,
+    "category": "Opioidit ja amfetamiinijohdokset",
+    "difficulty": "vaikea"
+  },
+  {
+    "question": "Miten fentanyyliä tyypillisesti annostellaan kroonisen kivun hoidossa?",
+    "explanation": "Kuvan 'Yleistä vahvoista opioideista kivun hoito' mukaan fentanyyliä käytetään krooniseen kipuun laastarina.",
+    "options": [
+      "Suonensisäisenä injektiona sairaalassa",
+      "Laastarina ihon kautta",
+      "Nieltävinä tabletteina",
+      "Peräpuikkoina"
+    ],
+    "correct": 1,
+    "category": "Opioidit ja amfetamiinijohdokset",
+    "difficulty": "keskivaikea"
+  },
+  {
+    "question": "Mikä on lisdeksamfetamiinin arvioitu vaikutuksen kesto ADHD:n hoidossa?",
+    "explanation": "Kuvan 'Amfetamiinijohdosten vaikutusaikoja' taulukon mukaan lisdeksamfetamiinin vaikutus kestää noin 10–12 tuntia.",
+    "options": [
+      "Noin 4-6 tuntia",
+      "Noin 6-8 tuntia",
+      "Noin 10-12 tuntia",
+      "Yli 24 tuntia"
+    ],
+    "correct": 2,
+    "category": "Opioidit ja amfetamiinijohdokset",
+    "difficulty": "keskivaikea"
+  },
+  {
+    "question": "Miten todennäköisesti toimit, jos huomaat potilaan, jolla on opioidimyrkytys?",
+    "explanation": "Kuvan 'Opioidimyrkytys' mukaan oireita ovat tajunnantason lasku ja hengityslama. Hoitona on naloksonin anto.",
+    "options": [
+      "Annat potilaalle bentsodiatsepiiniä rauhoittamaan tilannetta.",
+      "Annat potilaalle naloksonia ja hälytät lisäapua.",
+      "Asetat potilaan istumaan ja tarjoat hänelle nestettä.",
+      "Annat potilaalle flumatseniilia, joka on yleinen vastalääke."
+    ],
+    "correct": 1,
+    "category": "Opioidit ja amfetamiinijohdokset",
+    "difficulty": "helppo"
+  }
+]

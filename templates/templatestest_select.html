@@ -1,0 +1,344 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Nopea testi' if test_type == 'quick' else 'Kategoriatesti' }} - LOVe Enhanced{% endblock %}
+
+{% block extra_css %}
+<style>
+    .category-selection {
+        max-width: 800px;
+        margin: 0 auto;
+    }
+    
+    .category-card {
+        border: 2px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        background: white;
+    }
+    
+    .category-card:hover {
+        border-color: #667eea;
+        transform: translateX(4px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+    }
+    
+    .category-card.selected {
+        border-color: #667eea;
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+    }
+    
+    .category-card input[type="checkbox"] {
+        width: 24px;
+        height: 24px;
+        margin-right: 1rem;
+        cursor: pointer;
+    }
+    
+    .category-info {
+        flex: 1;
+    }
+    
+    .category-stats {
+        display: flex;
+        gap: 1rem;
+        margin-top: 0.5rem;
+        font-size: 0.9rem;
+    }
+    
+    .stat-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-weight: 600;
+    }
+    
+    .test-config {
+        background: #f7fafc;
+        border-radius: 12px;
+        padding: 2rem;
+        margin-top: 2rem;
+    }
+    
+    .start-test-btn {
+        width: 100%;
+        padding: 1rem;
+        font-size: 1.2rem;
+        font-weight: 700;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        color: white;
+        transition: transform 0.2s ease;
+    }
+    
+    .start-test-btn:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 16px rgba(102, 126, 234, 0.3);
+    }
+    
+    .start-test-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+    
+    .info-box {
+        background: #fffbeb;
+        border-left: 4px solid #f59e0b;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 2rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="category-selection">
+        <!-- Header -->
+        <div class="mb-4">
+            <a href="/dashboard" class="btn btn-outline-secondary mb-3">
+                <i class="fas fa-arrow-left"></i> Takaisin
+            </a>
+            
+            <h1 class="display-5">
+                {% if test_type == 'quick' %}
+                    ⚡ Nopea testi
+                {% else %}
+                    🎯 Kategoriatesti
+                {% endif %}
+            </h1>
+            
+            <p class="lead text-muted">
+                {% if test_type == 'quick' %}
+                    Testaa osaamistasi nopeasti - valitse 1-2 aihetta
+                {% else %}
+                    Testaa osaamistasi tietyissä aiheissa - valitse 1-3 kategoriaa
+                {% endif %}
+            </p>
+        </div>
+        
+        <!-- Info Box -->
+        <div class="info-box">
+            <div class="d-flex align-items-start">
+                <i class="fas fa-info-circle me-3 mt-1" style="font-size: 1.5rem; color: #f59e0b;"></i>
+                <div>
+                    <strong>Testin tiedot:</strong>
+                    <ul class="mb-0 mt-2">
+                        <li>Kysymyksiä: <strong>{{ question_count }}</strong></li>
+                        <li>Aikaraja: <strong>{{ time_limit }} minuuttia</strong></li>
+                        <li>Läpäisyraja: <strong>80%</strong> ({{ (question_count * 0.8)|round|int }}/{{ question_count }} oikein)</li>
+                        {% if test_type == 'quick' %}
+                        <li>Kategorioita: <strong>1-2 kpl</strong></li>
+                        {% else %}
+                        <li>Kategorioita: <strong>1-{{ max_categories }} kpl</strong></li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Category Selection -->
+        <form id="testForm">
+            <input type="hidden" name="test_type" value="{{ test_type }}">
+            <input type="hidden" name="question_count" value="{{ question_count }}">
+            <input type="hidden" name="time_limit" value="{{ time_limit }}">
+            
+            <h4 class="mb-3">Valitse aiheet:</h4>
+            
+            <div id="categoryList">
+                {% for category in categories %}
+                <div class="category-card" onclick="toggleCategory(this)">
+                    <div class="d-flex align-items-start">
+                        <input type="checkbox" 
+                               name="categories" 
+                               value="{{ category.name }}"
+                               id="cat_{{ loop.index }}"
+                               onclick="event.stopPropagation();">
+                        
+                        <div class="category-info">
+                            <label for="cat_{{ loop.index }}" style="cursor: pointer; margin: 0;">
+                                <strong style="font-size: 1.1rem;">{{ category.name }}</strong>
+                            </label>
+                            
+                            <div class="category-stats">
+                                <span class="stat-badge bg-light text-dark">
+                                    <i class="fas fa-question-circle"></i>
+                                    {{ category.question_count }} kysymystä
+                                </span>
+                                
+                                {% if category.user_stats %}
+                                <span class="stat-badge bg-{{ 'success' if category.user_stats.success_rate >= 0.8 else 'warning' if category.user_stats.success_rate >= 0.6 else 'danger' }}">
+                                    <i class="fas fa-chart-line"></i>
+                                    {{ (category.user_stats.success_rate * 100)|round }}% onnistuminen
+                                </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <!-- Additional Settings -->
+            <div class="test-config">
+                <h5 class="mb-3">Lisäasetukset (valinnainen)</h5>
+                
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Vaikeustaso:</label>
+                        <select class="form-select" name="difficulty">
+                            <option value="">Kaikki tasot (suositeltu)</option>
+                            <option value="helppo">Vain helpot</option>
+                            <option value="keskivaikea">Vain keskivaikeat</option>
+                            <option value="vaikea">Vain vaikeat</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">
+                            <input type="checkbox" name="shuffle" checked> 
+                            Sekoita kysymysjärjestys
+                        </label>
+                        <br>
+                        <label class="form-label mt-2">
+                            <input type="checkbox" name="show_explanations" checked> 
+                            Näytä selitykset lopussa
+                        </label>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Start Button -->
+            <div class="mt-4">
+                <button type="submit" class="start-test-btn" id="startBtn" disabled>
+                    🚀 Aloita testi
+                </button>
+                <p class="text-center mt-2 text-muted" id="selectionHint">
+                    {% if test_type == 'quick' %}
+                    Valitse 1-2 kategoriaa aloittaaksesi
+                    {% else %}
+                    Valitse 1-{{ max_categories }} kategoriaa aloittaaksesi
+                    {% endif %}
+                </p>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const MAX_CATEGORIES = {{ max_categories if max_categories else 2 }};
+const TEST_TYPE = '{{ test_type }}';
+const QUESTION_COUNT = {{ question_count }};
+const TIME_LIMIT = {{ time_limit }};
+
+function toggleCategory(card) {
+    const checkbox = card.querySelector('input[type="checkbox"]');
+    checkbox.checked = !checkbox.checked;
+    updateSelection();
+}
+
+function updateSelection() {
+    const checkboxes = document.querySelectorAll('input[name="categories"]:checked');
+    const selectedCount = checkboxes.length;
+    const startBtn = document.getElementById('startBtn');
+    const hint = document.getElementById('selectionHint');
+    
+    // Päivitä card-tyylit
+    document.querySelectorAll('.category-card').forEach(card => {
+        const checkbox = card.querySelector('input[type="checkbox"]');
+        if (checkbox.checked) {
+            card.classList.add('selected');
+        } else {
+            card.classList.remove('selected');
+        }
+    });
+    
+    // Validoi valinta
+    if (selectedCount >= 1 && selectedCount <= MAX_CATEGORIES) {
+        startBtn.disabled = false;
+        hint.textContent = `${selectedCount} kategoriaa valittu - valmis aloittamaan!`;
+        hint.style.color = '#48bb78';
+    } else if (selectedCount > MAX_CATEGORIES) {
+        startBtn.disabled = true;
+        hint.textContent = `Liikaa kategorioita (maksimi ${MAX_CATEGORIES})`;
+        hint.style.color = '#f56565';
+        
+        // Estä lisävalinnat
+        document.querySelectorAll('input[name="categories"]:not(:checked)').forEach(cb => {
+            cb.disabled = true;
+        });
+    } else {
+        startBtn.disabled = true;
+        hint.textContent = TEST_TYPE === 'quick' 
+            ? 'Valitse 1-2 kategoriaa aloittaaksesi'
+            : `Valitse 1-${MAX_CATEGORIES} kategoriaa aloittaaksesi`;
+        hint.style.color = '#6b7280';
+        
+        // Salli kaikki valinnat
+        document.querySelectorAll('input[name="categories"]').forEach(cb => {
+            cb.disabled = false;
+        });
+    }
+}
+
+// Form submission
+document.getElementById('testForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const selectedCategories = [];
+    formData.getAll('categories').forEach(cat => selectedCategories.push(cat));
+    
+    const data = {
+        test_type: TEST_TYPE,
+        categories: selectedCategories,
+        question_count: QUESTION_COUNT,
+        time_limit: TIME_LIMIT,
+        difficulty: formData.get('difficulty') || null,
+        shuffle: formData.get('shuffle') === 'on',
+        show_explanations: formData.get('show_explanations') === 'on'
+    };
+    
+    // Näytä loading
+    const startBtn = document.getElementById('startBtn');
+    startBtn.disabled = true;
+    startBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Ladataan...';
+    
+    try {
+        const response = await fetch('/api/test/start', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            // Tallenna testin tiedot sessioniin ja redirectaa
+            sessionStorage.setItem('currentTest', JSON.stringify(result));
+            window.location.href = '/test/' + result.test_id;
+        } else {
+            alert('Virhe: ' + result.error);
+            startBtn.disabled = false;
+            startBtn.innerHTML = '🚀 Aloita testi';
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Verkkovirhe. Yritä uudelleen.');
+        startBtn.disabled = false;
+        startBtn.innerHTML = '🚀 Aloita testi';
+    }
+});
+
+// Päivitä valinta checkboxien muuttuessa
+document.querySelectorAll('input[name="categories"]').forEach(checkbox => {
+    checkbox.addEventListener('change', updateSelection);
+});
+</script>
+{% endblock %}
