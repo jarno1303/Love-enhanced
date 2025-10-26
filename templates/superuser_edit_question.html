@@ -1,0 +1,1098 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+    <!-- Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-R8Z9S5GZXC"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-R8Z9S5GZXC');
+    </script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}LOVe Enhanced{% endblock %}</title>
+    
+    <!-- Bootstrap 5.3 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- 🎨 WOW: Toastify for beautiful notifications -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+    
+    <!-- 🎨 WOW: AOS - Animate On Scroll -->
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    
+    <style>
+        /* ============================================
+           🎨 WOW: CSS CUSTOM PROPERTIES (Design System)
+           ============================================ */
+        :root {
+            /* Primary Colors */
+            --primary-color: #5A67D8;
+            --primary-light: #7F9CF5;
+            --primary-dark: #4C51BF;
+            --primary-glow: rgba(90, 103, 216, 0.4);
+            
+            /* Secondary Colors */
+            --secondary-color: #718096;
+            --accent-color: #ED64A6;
+            --success-color: #48BB78;
+            --warning-color: #ECC94B;
+            --danger-color: #F56565;
+            --info-color: #4299E1;
+            
+            /* Neutrals */
+            --light-bg: #F7FAFC;
+            --light-hover: #EDF2F7;
+            --medium-color: #A0AEC0;
+            --dark-color: #2D3748;
+            --white-color: #FFFFFF;
+            --border-color: #E2E8F0;
+            --text-primary: #2D3748;
+            --text-secondary: #718096;
+            
+            /* Badges */
+            --gold: #ECC94B;
+            --silver: #E2E8F0;
+            --bronze: #CD7F32;
+            
+            /* 🎨 WOW: Gradients */
+            --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --gradient-success: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            --gradient-danger: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            --gradient-info: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            --gradient-animated: linear-gradient(270deg, #667eea, #764ba2, #f093fb, #4facfe);
+            
+            /* 🎨 WOW: Shadows */
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.06);
+            --shadow-lg: 0 10px 15px rgba(0,0,0,0.1), 0 4px 6px rgba(0,0,0,0.05);
+            --shadow-xl: 0 20px 25px rgba(0,0,0,0.15), 0 10px 10px rgba(0,0,0,0.04);
+            --shadow-glow: 0 0 20px var(--primary-glow);
+            
+            /* 🎨 WOW: Transitions */
+            --transition-fast: 0.2s ease;
+            --transition-normal: 0.3s ease;
+            --transition-slow: 0.5s ease;
+            
+            /* 🎨 WOW: Border Radius */
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-xl: 24px;
+        }
+
+        /* Dark Mode Variables */
+        body.dark-mode {
+            --primary-color: #8b5cf6;
+            --primary-light: #a78bfa;
+            --primary-dark: #7c3aed;
+            --secondary-color: #14b8a6;
+            --accent-color: #ec4899;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --light-bg: #0f0f0f;
+            --light-hover: #1a1a1a;
+            --medium-color: #6b7280;
+            --dark-color: #030712;
+            --white-color: #171717;
+            --border-color: #27272a;
+            --text-primary: #f9fafb;
+            --text-secondary: #9ca3af;
+            --gold: #fbbf24;
+            --silver: #d1d5db;
+            --bronze: #d97706;
+            --gradient-animated: linear-gradient(270deg, #8b5cf6, #7c3aed, #ec4899, #06b6d4);
+        }
+
+        /* ============================================
+           🌊 WOW: ANIMATED GRADIENT BACKGROUND
+           ============================================ */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--gradient-animated);
+            background-size: 400% 400%;
+            animation: gradientShift 15s ease infinite;
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Subtle overlay for readability */
+        body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.85);  /* <- Kevyempi! */
+    z-index: -1;
+    pointer-events: none;
+}
+
+body.dark-mode::before {
+    background: rgba(15, 15, 15, 0.90);  /* <- Kevyempi dark mode! */
+}
+
+        /* ============================================
+   ✨ WOW: GLASSMORPHISM NAVBAR (PARANNETTU KONTRASTI)
+   ============================================ */
+.navbar {
+    background: linear-gradient(135deg, rgba(90, 103, 216, 0.9) 0%, rgba(76, 81, 191, 0.9) 100%) !important;
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    transition: all var(--transition-normal);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+body.dark-mode .navbar {
+    background: linear-gradient(135deg, rgba(30, 27, 75, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.navbar-brand {
+    font-weight: 800;
+    font-size: 1.5rem;
+    color: white !important;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.6);
+    transition: all var(--transition-fast);
+}
+
+.navbar-brand:hover {
+    transform: translateY(-2px);
+    text-shadow: 0 4px 20px rgba(0,0,0,0.8);
+}
+
+.nav-link {
+    color: white !important;  /* Täysin valkoinen! */
+    font-weight: 600;  /* Paksumpi */
+    padding: 0.5rem 1rem !important;
+    border-radius: var(--radius-md);
+    transition: all var(--transition-fast);
+    position: relative;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.5);
+}
+
+/* 💫 WOW: Nav link underline effect */
+.nav-link::before {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    width: 0%;
+    height: 2px;
+    background: white;
+    transition: all var(--transition-normal);
+    transform: translateX(-50%);
+}
+
+.nav-link:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+    color: white !important;
+}
+
+.nav-link:hover::before {
+    width: 80%;
+}
+
+.nav-link.active {
+    background: rgba(255, 255, 255, 0.25);
+    color: white !important;
+}
+        /* ============================================
+           💫 WOW: MIKROINTERAKTIOT
+           ============================================ */
+        .btn {
+            transition: all var(--transition-fast);
+            border: none;
+            font-weight: 600;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Ripple effect */
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .btn:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .btn:active {
+            transform: translateY(-1px);
+        }
+        
+        .btn-primary {
+            background: var(--gradient-primary);
+            border-color: transparent;
+        }
+        
+        .btn-primary:hover {
+            background: var(--gradient-primary);
+            opacity: 0.9;
+        }
+
+        /* ============================================
+           🃏 WOW: CARD ANIMATIONS
+           ============================================ */
+        .card {
+            border: none;
+            border-radius: var(--radius-lg);
+            background: rgba(255, 255, 255, 0.95);
+            box-shadow: var(--shadow-md);
+            transition: all var(--transition-normal);
+            backdrop-filter: blur(10px);
+        }
+
+        body.dark-mode .card {
+            background: rgba(26, 26, 26, 0.95);
+        }
+        
+        .card:hover {
+            transform: translateY(-8px);
+            box-shadow: var(--shadow-xl);
+        }
+
+        /* ============================================
+           🎬 WOW: PAGE TRANSITIONS
+           ============================================ */
+        .container-main {
+            min-height: calc(100vh - 56px);
+            padding: 2rem 0;
+            animation: pageEnter 0.5s ease;
+        }
+
+        @keyframes pageEnter {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ============================================
+           ⏳ WOW: SKELETON SCREENS
+           ============================================ */
+        .skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+            border-radius: var(--radius-md);
+        }
+
+        body.dark-mode .skeleton {
+            background: linear-gradient(90deg, #2a2a2a 25%, #1a1a1a 50%, #2a2a2a 75%);
+            background-size: 200% 100%;
+        }
+
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        .skeleton-text {
+            height: 1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .skeleton-card {
+            height: 200px;
+            border-radius: var(--radius-lg);
+        }
+
+        /* ============================================
+           🎨 MODERN ELEMENTS
+           ============================================ */
+        .alert {
+            border-radius: var(--radius-md);
+            border: none;
+            box-shadow: var(--shadow-md);
+            backdrop-filter: blur(10px);
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Form controls */
+        .form-control, .form-select {
+            border-radius: var(--radius-md);
+            border: 2px solid var(--border-color);
+            padding: 0.75rem 1rem;
+            transition: all var(--transition-fast);
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px var(--primary-glow);
+            transform: translateY(-2px);
+        }
+
+        /* ============================================
+           🎪 THEME TOGGLE (Enhanced)
+           ============================================ */
+        .theme-toggle-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-xl);
+            backdrop-filter: blur(10px);
+            transition: all var(--transition-fast);
+        }
+
+        .theme-toggle-wrapper:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+        
+        .theme-toggle-label {
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.8);
+            font-weight: 500;
+            white-space: nowrap;
+            display: none;
+        }
+
+        @media (min-width: 992px) {
+            .theme-toggle-label {
+                display: inline;
+            }
+        }
+        
+        .theme-toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 52px;
+            height: 28px;
+        }
+        
+        .theme-toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .theme-toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.3);
+            transition: 0.4s;
+            border-radius: 28px;
+            border: 2px solid rgba(255, 255, 255, 0.4);
+        }
+        
+        .theme-toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 2px;
+            bottom: 2px;
+            background: white;
+            transition: 0.4s;
+            border-radius: 50%;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+        
+        .theme-toggle-switch input:checked + .theme-toggle-slider {
+            background: rgba(139, 92, 246, 0.7);
+            border-color: rgba(139, 92, 246, 0.9);
+        }
+        
+        .theme-toggle-switch input:checked + .theme-toggle-slider:before {
+            transform: translateX(24px);
+            background: #a78bfa;
+        }
+        
+        .theme-toggle-icon {
+            font-size: 1rem;
+            color: rgba(255, 255, 255, 0.9);
+            transition: all var(--transition-fast);
+        }
+
+        .theme-toggle-icon:hover {
+            transform: scale(1.2);
+        }
+        
+        body.dark-mode .theme-toggle-icon.moon {
+            color: rgba(255, 255, 255, 0.5);
+        }
+        
+        body.dark-mode .theme-toggle-icon.sun {
+            color: #fbbf24;
+        }
+
+        /* ============================================
+           🌙 DARK MODE - Vanhat tyylit säilytetty
+           ============================================ */
+        body.dark-mode h1,
+        body.dark-mode h2,
+        body.dark-mode h3,
+        body.dark-mode h4,
+        body.dark-mode h5,
+        body.dark-mode h6,
+        body.dark-mode p {
+            color: var(--text-primary);
+        }
+        
+        body.dark-mode .card,
+        body.dark-mode .card *,
+        body.dark-mode .card h1,
+        body.dark-mode .card h2,
+        body.dark-mode .card h3,
+        body.dark-mode .card h4,
+        body.dark-mode .card h5,
+        body.dark-mode .card h6,
+        body.dark-mode .card p,
+        body.dark-mode .card span,
+        body.dark-mode .card div {
+            color: #ffffff !important;
+        }
+        
+        body.dark-mode button,
+        body.dark-mode .btn,
+        body.dark-mode input[type="text"],
+        body.dark-mode input[type="email"],
+        body.dark-mode input[type="password"],
+        body.dark-mode textarea,
+        body.dark-mode select {
+            background-color: #2d2d2d !important;
+            color: #ffffff !important;
+            border-color: #4a4a4a !important;
+        }
+
+        body.dark-mode button:hover,
+        body.dark-mode .btn:hover {
+            background-color: #3a3a3a !important;
+        }
+
+        /* Dark mode - modaalit */
+        body.dark-mode .modal-content {
+            background-color: #1a1a1a !important;
+            color: #ffffff !important;
+            border: 1px solid #2d2d2d !important;
+        }
+        
+        body.dark-mode .modal-header {
+            background-color: #2d2d2d !important;
+            color: #ffffff !important;
+            border-bottom: 1px solid #4a4a4a !important;
+        }
+        
+        body.dark-mode .modal-body {
+            background-color: #1a1a1a !important;
+            color: #ffffff !important;
+        }
+        
+        body.dark-mode .modal * {
+            color: #ffffff !important;
+        }
+
+        body.dark-mode .modal input,
+        body.dark-mode .modal select,
+        body.dark-mode .modal textarea {
+            background-color: #2d2d2d !important;
+            color: #ffffff !important;
+            border: 1px solid #4a4a4a !important;
+        }
+
+        /* Dark mode - gradient kortit */
+        body.dark-mode div[style*="gradient"] h1,
+        body.dark-mode div[style*="gradient"] h2,
+        body.dark-mode div[style*="gradient"] h3,
+        body.dark-mode div[style*="gradient"] strong {
+            color: #000000 !important;
+            text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.3) !important;
+        }
+
+        /* ============================================
+           🖨️ PRINT STYLES (Säilytetty vanhasta)
+           ============================================ */
+        @media print {
+            body::before {
+                content: "LOVe Enhanced - Kaavakirjasto";
+                display: block;
+                text-align: center;
+                font-size: 18pt;
+                font-weight: bold;
+                margin-bottom: 20px;
+                padding-bottom: 10px;
+                border-bottom: 2px solid #000;
+            }
+
+            .no-print, nav, .navbar, .btn, .card-header button, 
+            #calculatorMainTabs, footer, .alert-info,
+            .theme-toggle-wrapper {
+                display: none !important;
+            }
+
+            body {
+                background: white !important;
+                animation: none !important;
+            }
+
+            body::before {
+                background: white !important;
+            }
+            
+            .card {
+                page-break-inside: avoid;
+                border: 2px solid #000 !important;
+                margin-bottom: 20px !important;
+                box-shadow: none !important;
+            }
+        }
+
+        /* ============================================
+           🎯 UTILITY CLASSES
+           ============================================ */
+        .glass {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .glow {
+            box-shadow: var(--shadow-glow);
+        }
+
+        .gradient-text {
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* ============================================
+           🦶 FOOTER
+           ============================================ */
+        .footer {
+            background: rgba(45, 55, 72, 0.95);
+            backdrop-filter: blur(10px);
+            color: var(--medium-color);
+            padding: 2rem 0;
+            margin-top: 4rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .footer a {
+            color: var(--primary-light);
+            text-decoration: none;
+            transition: all var(--transition-fast);
+        }
+        
+        .footer a:hover {
+            color: var(--white-color);
+            transform: translateY(-2px);
+        }
+
+        /* ============================================
+           📱 RESPONSIVE & MOBILE FIRST
+           ============================================ */
+        @media (max-width: 768px) {
+            .navbar-brand {
+                font-size: 1.25rem;
+            }
+
+            .container-main {
+                padding: 1rem 0;
+            }
+
+            .card:hover {
+                transform: translateY(-4px);
+            }
+
+            .theme-toggle-wrapper {
+                padding: 0.25rem 0.5rem;
+            }
+        }
+
+        /* Laskuri-sivun parannukset (säilytetty) */
+        #formulas-section .card {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #formulas-section .card-body {
+            flex: 1;
+        }
+
+        /* Modal vilkkumisen esto (säilytetty) */
+        .modal * {
+            pointer-events: auto !important;
+        }
+
+        .modal .btn {
+            transition: all var(--transition-fast) !important;
+        }
+    </style>
+    
+    <link rel="icon" href="{{ url_for('static', filename='images/favicon.ico') }}" type="image/x-icon">
+    
+    {% block extra_head %}{% endblock %}
+    
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+</head>
+<body>
+    <!-- ============================================
+         ✨ GLASSMORPHISM NAVBAR WITH AOS
+         ============================================ -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold" href="{{ url_for('dashboard_route') }}" data-aos="fade-right">
+                <i class="fas fa-heartbeat me-2"></i>LOVe Enhanced
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item" data-aos="fade-down" data-aos-delay="100">
+                        <a class="nav-link {% if request.endpoint == 'dashboard_route' %}active{% endif %}" href="{{ url_for('dashboard_route') }}">
+                            <i class="fas fa-tachometer-alt me-1"></i>Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item" data-aos="fade-down" data-aos-delay="150">
+                        <a class="nav-link {% if request.endpoint == 'practice_route' %}active{% endif %}" href="{{ url_for('practice_route') }}">
+                            <i class="fas fa-book-open me-1"></i>Harjoittele
+                        </a>
+                    </li>
+                    <li class="nav-item" data-aos="fade-down" data-aos-delay="200">
+                        <a class="nav-link {% if request.endpoint == 'calculator_route' %}active{% endif %}" href="{{ url_for('calculator_route') }}">
+                            <i class="fas fa-calculator me-1"></i>Laskuri
+                        </a>
+                    </li>
+                    <li class="nav-item" data-aos="fade-down" data-aos-delay="250">
+                        <a class="nav-link {% if request.endpoint == 'stats_route' %}active{% endif %}" href="{{ url_for('stats_route') }}">
+                            <i class="fas fa-chart-line me-1"></i>Tilastot
+                        </a>
+                    </li>
+                    <li class="nav-item" data-aos="fade-down" data-aos-delay="300">
+                        <a class="nav-link {% if request.endpoint == 'mistakes_route' %}active{% endif %}" href="{{ url_for('mistakes_route') }}">
+                            <i class="fas fa-redo me-1"></i>Kehityskohteet
+                        </a>
+                    </li>
+                    <li class="nav-item" data-aos="fade-down" data-aos-delay="350">
+                        <a class="nav-link {% if request.endpoint == 'achievements_route' %}active{% endif %}" href="{{ url_for('achievements_route') }}">
+                            <i class="fas fa-trophy me-1"></i>Saavutukset
+                        </a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav ms-auto">
+                    <!-- Dark Mode Toggle -->
+                    <li class="nav-item d-flex align-items-center" data-aos="fade-left">
+                        <div class="theme-toggle-wrapper">
+                            <span class="theme-toggle-label">Dark Mode</span>
+                            <i class="fas fa-sun theme-toggle-icon"></i>
+                            <label class="theme-toggle-switch">
+                                <input type="checkbox" id="theme-toggle-checkbox" onchange="toggleTheme()" aria-label="Vaihda tumma/vaalea tila">
+                                <span class="theme-toggle-slider"></span>
+                            </label>
+                            <i class="fas fa-moon theme-toggle-icon"></i>
+                        </div>
+                    </li>
+                    {% if current_user.is_authenticated %}
+                        {% if current_user.is_admin() %}
+                            <li class="nav-item" data-aos="fade-left" data-aos-delay="100">
+                                <a class="nav-link {% if request.endpoint in ['admin_route', 'admin_users_route'] %}active{% endif %}" href="{{ url_for('admin_route') }}">
+                                    <i class="fas fa-user-shield me-1"></i>Admin
+                                </a>
+                            </li>
+                        {% endif %}
+                        <li class="nav-item dropdown" data-aos="fade-left" data-aos-delay="150">
+                            <a class="nav-link dropdown-toggle" href="#" id="navbarUserDropdown" role="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-user-circle me-1"></i>{{ current_user.username }}
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end glass">
+                                <li><a class="dropdown-item" href="{{ url_for('profile_route') }}">Profiili</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('settings_route') }}">Asetukset</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{{ url_for('logout_route') }}">Kirjaudu ulos</a></li>
+                            </ul>
+                        </li>
+                    {% else %}
+                        <li class="nav-item" data-aos="fade-left">
+                            <a class="nav-link" href="{{ url_for('login_route') }}">Kirjaudu sisään</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ============================================
+         🔔 FLASH MESSAGES (Will be Toastified)
+         ============================================ -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div id="flash-messages" style="display: none;">
+                {% for category, message in messages %}
+                    <div data-category="{{ category }}" data-message="{{ message }}"></div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <!-- ============================================
+         📄 PAGE CONTENT
+         ============================================ -->
+    <div class="container-main">
+        {% block content %}{% endblock %}
+    </div>
+
+    <!-- ============================================
+         🦶 FOOTER
+         ============================================ -->
+    <footer class="footer mt-auto py-4">
+        <div class="container text-center" data-aos="fade-up">
+            <small>
+                <span>© 2025 LOVe Enhanced. Kaikki oikeudet pidätetään.</span>
+                <br>
+                <a href="{{ url_for('terms_route') }}">Käyttöehdot</a> | 
+                <a href="{{ url_for('privacy_route') }}">Tietosuojaseloste</a> | 
+                <a href="mailto:support@love-enhanced.fi">Yhteystiedot</a>
+            </small>
+        </div>
+    </footer>
+
+    <!-- ============================================
+         📚 SCRIPTS
+         ============================================ -->
+    
+    <!-- Bootstrap Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- 🎨 WOW: Toastify JS -->
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+    
+    <!-- 🎨 WOW: AOS - Animate On Scroll -->
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    
+    <!-- Custom Scripts -->
+    <script>
+        // ============================================
+        // 🎨 WOW: Initialize AOS
+        // ============================================
+        AOS.init({
+            duration: 800,
+            easing: 'ease-in-out',
+            once: true,
+            offset: 100
+        });
+
+        // ============================================
+        // 🔔 WOW: Modern Toast Notifications
+        // ============================================
+        document.addEventListener('DOMContentLoaded', function() {
+            const flashContainer = document.getElementById('flash-messages');
+            if (flashContainer) {
+                const messages = flashContainer.querySelectorAll('div[data-category]');
+                messages.forEach(msg => {
+                    const category = msg.getAttribute('data-category');
+                    const message = msg.getAttribute('data-message');
+                    
+                    let backgroundColor = '#4299E1';
+                    let icon = '💡';
+                    
+                    switch(category) {
+                        case 'success':
+                            backgroundColor = 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)';
+                            icon = '✅';
+                            break;
+                        case 'danger':
+                        case 'error':
+                            backgroundColor = 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)';
+                            icon = '❌';
+                            break;
+                        case 'warning':
+                            backgroundColor = 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)';
+                            icon = '⚠️';
+                            break;
+                        case 'info':
+                            backgroundColor = 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)';
+                            icon = 'ℹ️';
+                            break;
+                    }
+                    
+                    // base.html
+
+const messageNode = document.createElement('div');
+messageNode.innerHTML = `${icon} ${message}`;
+
+Toastify({
+    node: messageNode, // Käytetään node-elementtiä tekstin sijaan
+    duration: 10000,   // Pidennetään kestoa, jotta salasanan ehtii kopioida
+    gravity: "top",
+    position: "right",
+    stopOnFocus: true,
+    escapeMarkup: false, // TÄRKEÄ: Sallii HTML-koodin
+    style: {
+        background: backgroundColor,
+        borderRadius: "12px",
+        boxShadow: "0 10px 25px rgba(0,0,0,0.2)",
+        fontWeight: "500",
+        fontSize: "0.95rem"
+    }
+}).showToast();
+                });
+            }
+        });
+
+        // ============================================
+        // 🌙 Dark Mode Toggle (Säilytetty vanha logiikka)
+        // ============================================
+        function toggleTheme() {
+            const body = document.body;
+            const isDark = body.classList.toggle('dark-mode');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            
+            const checkbox = document.getElementById('theme-toggle-checkbox');
+            if (checkbox) {
+                checkbox.checked = isDark;
+            }
+            
+            updateCardColors(isDark);
+            updateModalColors(isDark);
+            
+            // 🎨 WOW: Toast notification
+            Toastify({
+                text: isDark ? "🌙 Tumma tila aktivoitu" : "☀️ Vaalea tila aktivoitu",
+                duration: 2000,
+                gravity: "bottom",
+                position: "center",
+                style: {
+                    background: isDark ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                    borderRadius: "12px"
+                }
+            }).showToast();
+        }
+
+        // base.html - <script>-osion sisään
+
+        function copyPasswordFromToast(element) {
+            const password = element.dataset.password;
+            navigator.clipboard.writeText(password).then(() => {
+                element.textContent = '✅ Kopioitu!';
+                element.disabled = true;
+                setTimeout(() => {
+                    // Palauta nappi ennalleen, jos tarpeen
+                    element.textContent = 'Kopioi';
+                    element.disabled = false;
+                }, 3000);
+            }).catch(err => {
+                console.error('Salasanan kopiointi epäonnistui:', err);
+                element.textContent = 'Virhe';
+            });
+        }
+        
+        // Säilytetty vanha updateCardColors funktio
+        function updateCardColors(isDark) {
+            const allDivs = document.querySelectorAll('div');
+            allDivs.forEach(element => {
+                const computedStyle = window.getComputedStyle(element);
+                const bgImage = computedStyle.backgroundImage;
+                
+                if (bgImage && bgImage.includes('gradient')) {
+                    if (isDark) {
+                        if (bgImage.match(/102.*238|118.*186/)) {
+                            element.style.background = 'linear-gradient(135deg, #3730a3 0%, #312e81 100%)';
+                            forceWhiteText(element);
+                        }
+                        else if (bgImage.match(/236.*72.*153|244.*114.*182/)) {
+                            element.style.background = 'linear-gradient(135deg, #9f1239 0%, #831843 100%)';
+                            forceWhiteText(element);
+                        }
+                        else if (bgImage.match(/6.*182.*212|14.*165.*233/)) {
+                            element.style.background = 'linear-gradient(135deg, #0e7490 0%, #0c4a6e 100%)';
+                            forceWhiteText(element);
+                        }
+                    } else {
+                        element.style.background = '';
+                        removeWhiteText(element);
+                    }
+                }
+            });
+        }
+
+        function updateModalColors(isDark) {
+            if (isDark) {
+                const allElements = document.querySelectorAll('*');
+                allElements.forEach(element => {
+                    const isInModal = element.closest('.modal');
+                    if (isInModal) {
+                        const computedStyle = window.getComputedStyle(element);
+                        const bgColor = computedStyle.backgroundColor;
+                        if (bgColor.includes('255, 255, 255')) {
+                            element.style.setProperty('background-color', '#2d2d2d', 'important');
+                            element.style.setProperty('color', '#ffffff', 'important');
+                        }
+                    }
+                });
+            }
+        }
+
+        function forceWhiteText(element) {
+            element.style.setProperty('color', '#ffffff', 'important');
+            const allChildren = element.querySelectorAll('*');
+            allChildren.forEach(child => {
+                child.style.setProperty('color', '#ffffff', 'important');
+            });
+        }
+
+        function removeWhiteText(element) {
+            element.style.removeProperty('color');
+            const allChildren = element.querySelectorAll('*');
+            allChildren.forEach(child => {
+                child.style.removeProperty('color');
+            });
+        }
+        
+        // Load saved theme
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedTheme = localStorage.getItem('theme');
+            const checkbox = document.getElementById('theme-toggle-checkbox');
+            
+            if (savedTheme === 'dark') {
+                document.body.classList.add('dark-mode');
+                if (checkbox) checkbox.checked = true;
+                setTimeout(() => {
+                    updateCardColors(true);
+                    updateModalColors(true);
+                }, 100);
+            }
+
+            // MutationObserver for modals
+            const observer = new MutationObserver(function(mutations) {
+                if (document.body.classList.contains('dark-mode')) {
+                    mutations.forEach(function(mutation) {
+                        mutation.addedNodes.forEach(function(node) {
+                            if (node.nodeType === 1) {
+                                if (node.classList && node.classList.contains('modal')) {
+                                    setTimeout(() => updateModalColors(true), 50);
+                                }
+                            }
+                        });
+                    });
+                }
+            });
+            
+            observer.observe(document.body, { childList: true, subtree: true });
+        });
+
+        // ============================================
+        // 🔒 CSRF Protection (Säilytetty)
+        // ============================================
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        
+        const originalFetch = window.fetch;
+        window.fetch = function(url, options = {}) {
+            if (!options.method || options.method.toUpperCase() === 'GET') {
+                return originalFetch(url, options);
+            }
+            if (!options.headers) options.headers = {};
+            if (!options.headers['X-CSRFToken']) {
+                options.headers['X-CSRFToken'] = csrfToken;
+            }
+            return originalFetch(url, options);
+        };
+
+        // ============================================
+        // 🎯 WOW: Smooth Scroll to Top
+        // ============================================
+        let scrollBtn = document.createElement('button');
+        scrollBtn.innerHTML = '<i class="fas fa-arrow-up"></i>';
+        scrollBtn.className = 'btn btn-primary rounded-circle';
+        scrollBtn.style.cssText = 'position: fixed; bottom: 20px; right: 20px; width: 50px; height: 50px; z-index: 999; display: none;';
+        scrollBtn.onclick = () => window.scrollTo({top: 0, behavior: 'smooth'});
+        document.body.appendChild(scrollBtn);
+
+        window.addEventListener('scroll', () => {
+            scrollBtn.style.display = window.scrollY > 300 ? 'block' : 'none';
+        });
+
+        // ============================================
+        // ⏳ WOW: Loading Helper Functions
+        // ============================================
+        window.showLoading = function(element, text = 'Ladataan...') {
+            element.innerHTML = `
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary mb-3"></div>
+                    <p class="text-muted">${text}</p>
+                </div>
+            `;
+        };
+
+        window.showSkeleton = function(element, count = 3) {
+            let html = '';
+            for(let i = 0; i < count; i++) {
+                html += `<div class="skeleton skeleton-card mb-3"></div>`;
+            }
+            element.innerHTML = html;
+        };
+    </script>
+    
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

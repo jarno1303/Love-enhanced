@@ -1,19 +1,21 @@
 {% extends "base.html" %}
 
-{% block title %}Admin Dashboard - LOVe Enhanced{% endblock %}
+{% block title %}Admin Dashboard - {{ org_stats.organization_name if org_stats else 'Oma Organisaatio' }}{% endblock %}
 
 {% block extra_head %}
+{# Säilytetään tyylit, mutta niitä voi siistiä myöhemmin #}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
-    :root {
-        --admin-primary: #5b21b6;
+    /* Säilytetään aiemmat tyylit (.dashboard-header, .kpi-card, .section-header jne.) */
+     :root {
+        --admin-primary: #5b21b6; /* Violetti */
         --admin-secondary: #7c3aed;
-        --admin-success: #10b981;
-        --admin-warning: #f59e0b;
-        --admin-danger: #ef4444;
-        --admin-info: #3b82f6;
-        --admin-dark: #1f2937;
-        --admin-light-bg: #f9fafb;
+        --admin-success: #10b981; /* Vihreä */
+        --admin-warning: #f59e0b; /* Keltainen */
+        --admin-danger: #ef4444; /* Punainen */
+        --admin-info: #3b82f6; /* Sininen */
+        --admin-dark: #1f2937; /* Tummanharmaa */
+        --admin-light-bg: #f9fafb; /* Vaaleanharmaa tausta */
         --card-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
         --card-shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
     }
@@ -175,648 +177,151 @@
         color: #9ca3af;
     }
 
-    .export-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 1rem;
-    }
-
-    .export-card {
-        background: white;
-        border: 1px solid #e5e7eb;
-        border-radius: 10px;
-        padding: 1.25rem;
-        text-align: center;
-        transition: all 0.3s;
-        display: flex;
-        flex-direction: column;
-        height: 100%;
-    }
-
-    .export-card:hover {
-        box-shadow: var(--card-shadow-hover);
-        transform: translateY(-2px);
-    }
-
-    .export-icon {
-        font-size: 3rem;
-        margin-bottom: 0.75rem;
-    }
-
-    .export-title {
-        font-weight: 600;
-        font-size: 1rem;
-        margin-bottom: 0.5rem;
-        color: var(--admin-dark);
-    }
-
-    .export-description {
-        font-size: 0.8rem;
-        color: #6b7280;
-        margin-bottom: 0.75rem;
-        flex-grow: 1;
-    }
-
-    .export-badge {
-        display: inline-block;
-        background: #e5e7eb;
-        color: #4b5563;
-        padding: 0.25rem 0.75rem;
-        border-radius: 20px;
-        font-size: 0.75rem;
-        margin-bottom: 0.75rem;
-    }
-
-    .btn-modern {
-        padding: 0.625rem 1.25rem;
-        border-radius: 8px;
-        font-weight: 500;
-        border: none;
-        cursor: pointer;
-        transition: all 0.2s;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0.5rem;
-        text-decoration: none;
-        width: 100%;
-        font-size: 0.9rem;
-    }
-
-    .btn-modern-primary {
-        background: var(--admin-primary);
-        color: white;
-    }
-
-    .btn-modern-primary:hover {
-        background: var(--admin-secondary);
-        color: white;
-        text-decoration: none;
-    }
-
-    .btn-modern-success {
-        background: var(--admin-success);
-        color: white;
-    }
-
-    .btn-modern-success:hover {
-        background: #059669;
-        color: white;
-    }
-
-    .btn-modern-danger {
-        background: var(--admin-danger);
-        color: white;
-    }
-
-    .btn-modern-danger:hover {
-        background: #dc2626;
-        color: white;
-    }
-
-    .btn-modern-info {
-        background: var(--admin-info);
-        color: white;
-    }
-
-    .btn-modern-info:hover {
-        background: #2563eb;
-        color: white;
-    }
-
-    .btn-modern-warning {
-        background: var(--admin-warning);
-        color: white;
-    }
-
-    .btn-modern-warning:hover {
-        background: #d97706;
-        color: white;
-    }
-
-    .upload-area {
-        border: 2px dashed #d1d5db;
-        border-radius: 12px;
-        padding: 2rem 1.5rem;
-        text-align: center;
-        cursor: pointer;
-        transition: all 0.3s;
-        background: var(--admin-light-bg);
-    }
-
-    .upload-area:hover {
-        border-color: var(--admin-primary);
-        background: #faf5ff;
-    }
-
-    .upload-area.dragover {
-        border-color: var(--admin-primary);
-        background: #faf5ff;
-        transform: scale(1.02);
-    }
-
-    .btn-export-loading {
-        position: relative;
-        pointer-events: none;
-        opacity: 0.6;
-    }
-
-    .danger-zone {
-        background: #fef2f2;
-        border: 2px solid #fecaca;
-        border-radius: 12px;
-        padding: 1.5rem;
-    }
-
-    .danger-zone-header {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        margin-bottom: 1rem;
-        color: var(--admin-danger);
-    }
-
-    .danger-zone-title {
-        font-size: 1.1rem;
-        font-weight: 600;
-        margin: 0;
-    }
-
-    .danger-actions {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.75rem;
-        margin-top: 1rem;
-    }
-
     /* Responsive optimizations */
     @media (max-width: 768px) {
         .dashboard-title {
             font-size: 1.5rem;
         }
-        
+
         .kpi-value {
             font-size: 1.5rem;
         }
-        
+
         .quick-actions {
             grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
         }
-        
-        .export-grid {
-            grid-template-columns: 1fr;
-        }
-    }
-
-    @keyframes spinner {
-        to { transform: rotate(360deg); }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid py-3">
-    <!-- Header -->
+<div class="container-fluid py-3"> {# Käytä fluidia, jos haluat leveämmän #}
     <div class="dashboard-header">
-        <div class="container">
+        <div class="container"> {# Tai container-fluid #}
             <h1 class="dashboard-title">
-                <i class="fas fa-tachometer-alt me-2" style="color: var(--admin-primary);"></i>
-                Admin Dashboard
+                <i class="fas fa-school me-2" style="color: var(--admin-primary);"></i>
+                {# Näytä organisaation nimi #}
+                {{ org_stats.organization_name if org_stats and org_stats.organization_name else 'Oma Organisaatio' }} - Hallintanäkymä
             </h1>
-            <p class="dashboard-subtitle">Hallinnoi kysymyksiä ja järjestelmän asetuksia</p>
+            <p class="dashboard-subtitle">Hallinnoi organisaatiosi käyttäjiä ja seuraa edistymistä</p>
         </div>
     </div>
 
-    <!-- KPI Cards -->
     <div class="row g-3 mb-4">
-        <div class="col-6 col-md-3">
-            <div class="kpi-card">
-                <div class="kpi-icon" style="background: #ddd6fe; color: #5b21b6;">
-                    <i class="fas fa-question-circle"></i>
-                </div>
-                <h2 class="kpi-value">{{ question_count }}</h2>
-                <p class="kpi-label">Kysymystä tietokannassa</p>
-            </div>
-        </div>
-        <div class="col-6 col-md-3">
+        <div class="col-md-4"> {# Käytetään 3 korttia #}
             <div class="kpi-card">
                 <div class="kpi-icon" style="background: #d1fae5; color: #065f46;">
                     <i class="fas fa-users"></i>
                 </div>
-                <h2 class="kpi-value">{{ user_count }}</h2>
-                <p class="kpi-label">Rekisteröitynyttä käyttäjää</p>
+                {# Näytä aktiivisten opiskelijoiden määrä #}
+                <h2 class="kpi-value">{{ org_stats.active_students if org_stats else 'N/A' }}</h2>
+                <p class="kpi-label">Aktiivista opiskelijaa</p>
             </div>
         </div>
-        <div class="col-6 col-md-3">
-            <div class="kpi-card">
-                <div class="kpi-icon" style="background: #fef3c7; color: #92400e;">
-                    <i class="fas fa-folder"></i>
-                </div>
-                <h2 class="kpi-value">{{ category_count }}</h2>
-                <p class="kpi-label">Kategoriaa käytössä</p>
-            </div>
+        <div class="col-md-4">
+             <div class="kpi-card">
+                 <div class="kpi-icon" style="background: #dbeafe; color: #1d4ed8;">
+                     <i class="fas fa-percentage"></i>
+                 </div>
+                 {# Näytä organisaation keskim. onnistumisprosentti #}
+                 <h2 class="kpi-value">{{ org_stats.avg_success_rate_org if org_stats else 'N/A' }}</h2>
+                 <p class="kpi-label">Keskim. onnistuminen (Organisaatio)</p>
+             </div>
+         </div>
+        <div class="col-md-4">
+             <div class="kpi-card">
+                 <div class="kpi-icon" style="background: #fef3c7; color: #92400e;">
+                     <i class="fas fa-question-circle"></i>
+                 </div>
+                 {# Voit näyttää yleisen kysymysmäärän tiedoksi #}
+                 <h2 class="kpi-value">{{ general_stats.total_questions if general_stats else 'N/A' }}</h2>
+                 <p class="kpi-label">Kysymystä yhteensä (järjestelmässä)</p>
+             </div>
         </div>
-        <div class="col-6 col-md-3">
-            <div class="kpi-card">
-                <div class="kpi-icon" style="background: #dbeafe; color: #1d4ed8;">
-                    <i class="fas fa-chart-line"></i>
-                </div>
-                <h2 class="kpi-value">{{ attempt_count }}</h2>
-                <p class="kpi-label">Kysymysyritystä yhteensä</p>
-            </div>
-        </div>
+        {# Poistettu ylimääräiset kortit #}
     </div>
 
-    <!-- Quick Actions -->
     <div class="content-card">
         <div class="section-header">
             <i class="fas fa-bolt section-icon"></i>
             <h3 class="section-title">Pikavalinta</h3>
         </div>
         <div class="quick-actions">
-            <a href="/admin/add_question" class="quick-action-btn">
-                <span class="quick-action-icon">➕</span>
-                <strong class="quick-action-title">Lisää kysymys</strong>
-                <small class="quick-action-subtitle">Luo uusi kysymys</small>
-            </a>
-            <a href="/admin/questions" class="quick-action-btn">
-                <span class="quick-action-icon">📋</span>
-                <strong class="quick-action-title">Kaikki kysymykset</strong>
-                <small class="quick-action-subtitle">Selaa ja muokkaa</small>
-            </a>
-            <a href="/admin/validation" class="quick-action-btn">
-                <span class="quick-action-icon">✅</span>
-                <strong class="quick-action-title">Validoi kysymyksiä</strong>
-                <small class="quick-action-subtitle">Tarkista kysymykset</small>
-            </a>
-            <a href="/admin/users" class="quick-action-btn">
-                <span class="quick-action-icon">👥</span>
+            {# Linkki oman organisaation käyttäjähallintaan #}
+            <a href="{{ url_for('admin_users_route') }}" class="quick-action-btn">
+                <span class="quick-action-icon"><i class="fas fa-users-cog"></i></span>
                 <strong class="quick-action-title">Käyttäjähallinta</strong>
-                <small class="quick-action-subtitle">Hallinnoi käyttäjiä</small>
+                <small class="quick-action-subtitle">Hallinnoi opiskelijoita</small>
             </a>
-            <a href="/admin/find_duplicates" class="quick-action-btn">
-                <span class="quick-action-icon">🔍</span>
-                <strong class="quick-action-title">Etsi duplikaatit</strong>
-                <small class="quick-action-subtitle">Poista kaksoiskappaleet</small>
+            {# Lisää linkki raportteihin, kun ne on toteutettu #}
+            <a href="#" class="quick-action-btn disabled" aria-disabled="true"> {# Esim. raportit #}
+                <span class="quick-action-icon"><i class="fas fa-chart-pie"></i></span>
+                <strong class="quick-action-title">Raportit</strong>
+                <small class="quick-action-subtitle">(Tulossa)</small>
             </a>
+            {# Linkki omaan profiiliin/asetuksiin? #}
+             <a href="{{ url_for('settings_route') }}" class="quick-action-btn">
+                 <span class="quick-action-icon"><i class="fas fa-user-cog"></i></span>
+                 <strong class="quick-action-title">Omat Asetukset</strong>
+                 <small class="quick-action-subtitle">Vaihda salasana jne.</small>
+             </a>
+             {# Voit lisätä muita adminille relevantteja linkkejä #}
+             {# POISTETTU: Kysymysten hallintalinkit, ne ovat Superuserilla #}
         </div>
     </div>
 
-    <!-- JSON Upload -->
+    {# POISTETTU: JSON Upload, Export Section ja Danger Zone -osiot #}
+    {# Nämä toiminnot ovat nyt Superuserin vastuulla #}
+
+    {# Voit lisätä tähän muita organisaation adminille hyödyllisiä osioita, #}
+    {# esim. viimeisimmän aktiivisuuden yhteenveto, heikoimmat kategoriat organisaatiossa jne. #}
     <div class="content-card">
-        <div class="content-card-header">
-            <h3 class="content-card-title">
-                <i class="fas fa-file-upload"></i> 
-                Lataa kysymyksiä JSON-tiedostosta
-            </h3>
-        </div>
-        
-        <form id="upload-form" action="{{ url_for('admin_bulk_upload_route') }}" method="POST" enctype="multipart/form-data">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <div class="upload-area" onclick="document.getElementById('json-file-input').click()">
-                <i class="fas fa-cloud-upload-alt" style="font-size: 2.5rem; color: var(--admin-primary);"></i>
-                <p class="mt-2 mb-1" style="font-weight: 600; color: var(--admin-dark);">
-                    <span id="file-name-display">Raahaa tiedosto tähän tai klikkaa valitaksesi</span>
-                </p>
-                <p class="text-muted small mb-0">Tuetut tiedostot: .json</p>
-            </div>
-            <input type="file" id="json-file-input" name="json_file" accept=".json" style="display: none;">
-            
-            <div class="d-flex justify-content-end mt-3">
-                <button type="submit" id="upload-button" class="btn-modern btn-modern-primary" style="width: auto;">
-                    <i class="fas fa-upload"></i> Lataa JSON
-                </button>
-            </div>
-            <div id="loading-spinner" class="text-center mt-3" style="display: none;">
-                <div class="spinner-border text-primary" role="status">
-                    <span class="visually-hidden">Ladataan...</span>
-                </div>
-            </div>
-        </form>
+         <div class="section-header">
+             <i class="fas fa-chart-bar section-icon"></i>
+             <h3 class="section-title">Organisaation Edistyminen (Esimerkki)</h3>
+         </div>
+         <p class="text-muted mb-3">Tähän voitaisiin lisätä visualisointeja organisaation oppimistuloksista.</p>
+         {# Esim. Chart.js-kaavio #}
+         <canvas id="organizationProgressChart" height="100"></canvas>
     </div>
 
-    <!-- Export Section -->
-    <div class="content-card">
-        <div class="section-header">
-            <i class="fas fa-download section-icon"></i>
-            <h3 class="section-title">Vie kysymykset</h3>
-        </div>
-        <p class="text-muted mb-3" style="font-size: 0.9rem;">
-            Lataa kaikki kysymykset tietokannasta eri formaateissa. Tiedostot sisältävät kaikki kysymykset, vastausvaihtoehdot ja selitykset.
-        </p>
-
-        <div class="export-grid">
-            <div class="export-card">
-                <i class="fas fa-file-pdf export-icon" style="color: #dc2626;"></i>
-                <h5 class="export-title">PDF-dokumentti</h5>
-                <p class="export-description">Ammattimainen tulostettava dokumentti kategorisoituna ja selityksin.</p>
-                <span class="export-badge">{{ question_count }} kysymystä</span>
-                <a href="/admin/export_pdf" class="btn-modern btn-modern-danger export-btn" data-format="PDF">
-                    <i class="fas fa-file-pdf"></i>Lataa PDF
-                </a>
-            </div>
-
-            <div class="export-card">
-                <i class="fas fa-file-word export-icon" style="color: #2563eb;"></i>
-                <h5 class="export-title">Word-dokumentti</h5>
-                <p class="export-description">Muokattava Word-tiedosto (.docx) jota voit editoida vapaasti.</p>
-                <span class="export-badge">{{ question_count }} kysymystä</span>
-                <a href="/admin/export_word" class="btn-modern btn-modern-info export-btn" data-format="Word">
-                    <i class="fas fa-file-word"></i>Lataa Word
-                </a>
-            </div>
-
-            <div class="export-card">
-                <i class="fas fa-file-code export-icon" style="color: #059669;"></i>
-                <h5 class="export-title">JSON-data</h5>
-                <p class="export-description">Strukturoitu data. Sopii varmuuskopiointiin ja datan siirtoon.</p>
-                <span class="export-badge">{{ question_count }} kysymystä</span>
-                <a href="/admin/export_json" class="btn-modern btn-modern-success export-btn" data-format="JSON">
-                    <i class="fas fa-file-code"></i>Lataa JSON
-                </a>
-            </div>
-        </div>
-    </div>
-
-    <!-- Danger Zone -->
-    <div class="content-card" style="padding: 0; overflow: hidden;">
-        <div class="danger-zone">
-            <div class="danger-zone-header">
-                <i class="fas fa-exclamation-triangle" style="font-size: 1.5rem;"></i>
-                <h3 class="danger-zone-title">Vaaralliset toiminnot</h3>
-            </div>
-            <div class="alert alert-danger mb-3" style="font-size: 0.9rem;">
-                <strong><i class="fas fa-warning me-2"></i>Varoitus!</strong> 
-                Nämä toiminnot ovat peruuttamattomia. Varmista että tiedät mitä teet!
-            </div>
-            
-            <div class="danger-actions">
-                <form action="{{ url_for('admin_merge_categories_route') }}" method="POST" onsubmit="return confirm('Oletko varma? Tämä yhdistää kaikki samankaltaiset kategoriat standardimuotoon.')">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn-modern btn-modern-warning" style="width: auto;">
-                        <i class="fas fa-sync"></i>Yhdistä kategoriat
-                    </button>
-                </form>
-                
-                <form id="clear-db-form" action="{{ url_for('admin_clear_database_route') }}" method="POST">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <input type="hidden" name="confirmation" id="clear-db-confirmation">
-                    <button type="button" id="clear-db-button" class="btn-modern btn-modern-danger" style="width: auto;">
-                        <i class="fas fa-trash"></i>Tyhjennä kysymykset
-                    </button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Upload Progress Modal -->
-<div class="modal fade" id="uploadProgressModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title">
-                    <i class="fas fa-cloud-upload-alt me-2"></i>
-                    Ladataan kysymyksiä
-                </h5>
-            </div>
-            <div class="modal-body">
-                <div class="text-center mb-4" id="upload-spinner">
-                    <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
-                        <span class="visually-hidden">Ladataan...</span>
-                    </div>
-                    <p class="mt-3 text-muted">Käsitellään tiedostoa...</p>
-                </div>
-                
-                <div id="upload-progress-content" style="display: none;">
-                    <div class="alert alert-info mb-3">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span><i class="fas fa-file-code me-2"></i>Tiedosto käsitelty</span>
-                            <span class="badge bg-info" id="upload-total-count">0</span>
-                        </div>
-                    </div>
-                    
-                    <div class="progress mb-3" style="height: 25px;">
-                        <div id="upload-progress-bar" class="progress-bar progress-bar-striped progress-bar-animated bg-success" 
-                             role="progressbar" style="width: 0%">
-                            <strong id="upload-progress-text">0%</strong>
-                        </div>
-                    </div>
-                    
-                    <div class="row g-2 mb-3">
-                        <div class="col-4">
-                            <div class="border rounded p-2">
-                                <div class="text-success fs-3" id="upload-added-count">0</div>
-                                <small class="text-muted">Lisätty</small>
-                            </div>
-                        </div>
-                        <div class="col-4">
-                            <div class="border rounded p-2">
-                                <div class="text-warning fs-3" id="upload-duplicate-count">0</div>
-                                <small class="text-muted">Duplikaatit</small>
-                            </div>
-                        </div>
-                        <div class="col-4">
-                            <div class="border rounded p-2">
-                                <div class="text-danger fs-3" id="upload-error-count">0</div>
-                                <small class="text-muted">Virheet</small>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div id="upload-errors-container" style="display: none;">
-                        <div class="alert alert-warning">
-                            <h6 class="alert-heading">
-                                <i class="fas fa-exclamation-triangle me-2"></i>
-                                Virheelliset rivit:
-                            </h6>
-                            <div id="upload-errors-list" class="small" style="max-height: 200px; overflow-y: auto;"></div>
-                        </div>
-                    </div>
-                    
-                    <div id="upload-success-message" class="alert alert-success mt-3" style="display: none;">
-                        <i class="fas fa-check-circle me-2"></i>
-                        <strong>Valmis!</strong> Kysymykset on lisätty tietokantaan.
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="upload-close-btn" disabled>
-                    Sulje
-                </button>
-                <button type="button" class="btn btn-primary" onclick="window.location.reload()" id="upload-reload-btn" style="display: none;">
-                    <i class="fas fa-sync me-2"></i>Päivitä sivu
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Toast Container -->
-<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
-    <div id="exportToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
-        <div class="toast-header">
-            <i class="fas fa-download me-2 text-success"></i>
-            <strong class="me-auto">Vienti onnistui</strong>
-            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
-        </div>
-        <div class="toast-body" id="exportToastBody">
-            Tiedosto on ladattu onnistuneesti!
-        </div>
-    </div>
 </div>
 
 {% endblock %}
 
 {% block scripts %}
-{{ super() }}
+{{ super() }} {# Sisällytä base.html:n skriptit #}
+{# Voit lisätä Chart.js-kirjaston ja piirtää kaavion, jos haluat #}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    // JSON Upload
-    const uploadForm = document.getElementById('upload-form');
-    if (uploadForm) {
-        const fileInput = document.getElementById('json-file-input');
-        const uploadButton = document.getElementById('upload-button');
-        const loadingSpinner = document.getElementById('loading-spinner');
-        const fileNameDisplay = document.getElementById('file-name-display');
-        const uploadArea = document.querySelector('.upload-area');
-
-        fileInput.addEventListener('change', () => {
-            fileNameDisplay.textContent = fileInput.files.length > 0 ? fileInput.files[0].name : 'Raahaa tiedosto tähän tai klikkaa valitaksesi';
-        });
-
-        uploadArea.addEventListener('dragover', e => { e.preventDefault(); uploadArea.classList.add('dragover'); });
-        uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('dragover'));
-        uploadArea.addEventListener('drop', e => {
-            e.preventDefault();
-            uploadArea.classList.remove('dragover');
-            if (e.dataTransfer.files.length > 0) {
-                fileInput.files = e.dataTransfer.files;
-                fileInput.dispatchEvent(new Event('change'));
-            }
-        });
-
-        uploadForm.addEventListener('submit', function(event) {
-            event.preventDefault();
-            if (fileInput.files.length === 0) {
-                alert('Valitse ensin JSON-tiedosto.');
-                return;
-            }
-
-            const modal = new bootstrap.Modal(document.getElementById('uploadProgressModal'));
-            modal.show();
-
-            uploadButton.disabled = true;
-            uploadButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Ladataan...';
-            loadingSpinner.style.display = 'block';
-
-            const formData = new FormData(uploadForm);
-
-            fetch(uploadForm.action, {
-                method: 'POST',
-                body: formData,
-                headers: { 'X-CSRFToken': formData.get('csrf_token') }
-            })
-            .then(response => {
-                const contentType = response.headers.get('content-type');
-                if (contentType && contentType.includes('application/json')) {
-                    return response.json();
-                } else {
-                    if (response.redirected) {
-                        window.location.href = response.url;
-                        return null;
-                    }
-                    window.location.reload();
-                    return null;
-                }
-            })
-            .then(data => {
-                if (!data) return;
-
-                document.getElementById('upload-spinner').style.display = 'none';
-                document.getElementById('upload-progress-content').style.display = 'block';
-
-                const total = data.added + data.duplicates + data.skipped;
-                const percentage = total > 0 ? Math.round(((data.added + data.duplicates) / total) * 100) : 100;
-
-                document.getElementById('upload-total-count').textContent = total;
-                document.getElementById('upload-added-count').textContent = data.added;
-                document.getElementById('upload-duplicate-count').textContent = data.duplicates;
-                document.getElementById('upload-error-count').textContent = data.skipped;
-
-                const progressBar = document.getElementById('upload-progress-bar');
-                progressBar.style.width = percentage + '%';
-                document.getElementById('upload-progress-text').textContent = percentage + '%';
-
-                if (data.errors && data.errors.length > 0) {
-                    document.getElementById('upload-errors-container').style.display = 'block';
-                    const errorsList = document.getElementById('upload-errors-list');
-                    errorsList.innerHTML = data.errors.slice(0, 10).map(err => 
-                        `<div class="mb-1">• ${err}</div>`
-                    ).join('');
-                    if (data.errors.length > 10) {
-                        errorsList.innerHTML += `<div class="mt-2 text-muted">...ja ${data.errors.length - 10} muuta virhettä</div>`;
-                    }
-                }
-
-                if (data.added > 0 || data.duplicates > 0) {
-                    document.getElementById('upload-success-message').style.display = 'block';
-                }
-
-                document.getElementById('upload-close-btn').disabled = false;
-                document.getElementById('upload-reload-btn').style.display = 'inline-block';
-
-                uploadButton.disabled = false;
-                uploadButton.innerHTML = '<i class="fas fa-upload"></i> Lataa JSON';
-                loadingSpinner.style.display = 'none';
-            })
-            .catch(error => {
-                console.error('Latausvirhe:', error);
-                alert('Tiedoston latauksessa tapahtui virhe: ' + error.message);
-                
-                const modal = bootstrap.Modal.getInstance(document.getElementById('uploadProgressModal'));
-                if (modal) modal.hide();
-
-                uploadButton.disabled = false;
-                uploadButton.innerHTML = '<i class="fas fa-upload"></i> Lataa JSON';
-                loadingSpinner.style.display = 'none';
-            });
-        });
-    }
-
-    // Export buttons
-    document.querySelectorAll('.export-btn').forEach(btn => {
-        btn.addEventListener('click', function(e) {
-            const format = this.dataset.format;
-            const originalHtml = this.innerHTML;
-            
-            this.classList.add('btn-export-loading');
-            this.innerHTML = `<i class="fas fa-spinner fa-spin me-2"></i>Luodaan ${format}...`;
-            
-            setTimeout(() => {
-                const toast = new bootstrap.Toast(document.getElementById('exportToast'));
-                document.getElementById('exportToastBody').textContent = `${format}-tiedosto ladattu onnistuneesti!`;
-                toast.show();
-                
-                this.classList.remove('btn-export-loading');
-                this.innerHTML = originalHtml;
-            }, 1500);
-        });
-    });
-
-    // Clear database
-    const clearDbButton = document.getElementById('clear-db-button');
-    if(clearDbButton) {
-        clearDbButton.addEventListener('click', function() {
-            const confirmationText = prompt("⚠️ VAROITUS! Tämä poistaa KAIKKI kysymykset pysyvästi.\n\nVahvista kirjoittamalla 'TYHJENNA KAIKKI' alla olevaan kenttään:");
-            if (confirmationText === 'TYHJENNA KAIKKI') {
-                document.getElementById('clear-db-confirmation').value = confirmationText;
-                document.getElementById('clear-db-form').submit();
-            } else if (confirmationText !== null) {
-                alert('❌ Vahvistus epäonnistui. Toiminto peruttu.');
+    // Voit alustaa Chart.js-kaavion tässä, jos haet datan API:sta tai välität sen templatessa
+    // Esimerkki:
+    /*
+    const ctx = document.getElementById('organizationProgressChart')?.getContext('2d');
+    if (ctx) {
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Kategoria A', 'Kategoria B', 'Kategoria C'], // Hae oikeat kategoriat
+                datasets: [{
+                    label: 'Keskim. Onnistuminen (%)',
+                    data: [75, 62, 88], // Hae oikea data
+                    backgroundColor: 'rgba(90, 103, 216, 0.6)',
+                    borderColor: 'rgba(90, 103, 216, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: { beginAtZero: true, max: 100 }
+                },
+                responsive: true,
+                maintainAspectRatio: false
             }
         });
     }
+    */
 });
 </script>
 {% endblock %}
