@@ -1,3 +1,4 @@
+# update 26.10.25 klo 13:12
 # app.py
 
 # ============================================================================
@@ -764,7 +765,7 @@ def get_incorrect_questions_api():
                 p.times_shown, p.times_correct, p.last_shown,
                 -- Laske onnistumisprosentti turvallisesti (vältä nollalla jako)
                 CASE
-                    WHEN p.times_shown > 0 THEN ROUND((CAST(p.times_correct AS REAL) * 100.0) / p.times_shown, 1)
+                    WHEN p.times_shown > 0 THEN ROUND(CAST((CAST(p.times_correct AS REAL) * 100.0) / p.times_shown AS NUMERIC), 1)
                     ELSE 0.0
                 END as success_rate
             FROM questions q
