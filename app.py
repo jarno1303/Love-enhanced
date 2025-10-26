@@ -38,6 +38,7 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from werkzeug.middleware.proxy_fix import ProxyFix
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
+import constants 
 
 # ReportLab (PDF-generointi) - Jos käytät näitä, varmista importit
 try:
@@ -1557,7 +1558,7 @@ def practice_route():
     """Näyttää yleisen harjoittelusivun."""
     # Välitä kategoriat valintaa varten
     categories = db_manager.get_categories()
-    return render_template("practice.html", categories=categories)
+    return render_template("practice.html", categories=categories, constants=constants)
 
 @app.route("/practice/<category>")
 @login_required
