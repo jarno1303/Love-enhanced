@@ -698,36 +698,36 @@ class DatabaseManager:
             return None
 
     def get_categories(self):
-        """
-        Hakee kaikki kategoriat tietokannasta.
-        Palauttaa listan dictionaryja muodossa [{'id': 1, 'name': 'Kategoria'}, ...]
-        """
-        try:
-            rows = self._execute(
-                "SELECT id, name FROM categories ORDER BY name",
-                fetch='all'
-            )
-            
-            if not rows:
-                self.logger.warning("Ei kategorioita tietokannassa!")
-                return []
-            
-            # Muunna dict-muotoon jos tarvitaan
-            categories = []
-            for row in rows:
-                if isinstance(row, dict):
-                    # Jos jo dictionary
-                    categories.append({'id': row['id'], 'name': row['name']})
-                else:
-                    # Jos tuple (id, name)
-                    categories.append({'id': row[0], 'name': row[1]})
-            
-            self.logger.info(f"Haettiin {len(categories)} kategoriaa")
-            return categories
-            
-        except Exception as e:
-            self.logger.error(f"Virhe kategorioiden haussa: {e}", exc_info=True)
+    """
+    Hakee kaikki kategoriat tietokannasta.
+    Palauttaa listan dictionaryja muodossa [{'id': 1, 'name': 'Kategoria'}, ...]
+    """
+    try:
+        rows = self._execute(
+            "SELECT id, name FROM categories ORDER BY name",
+            fetch='all'
+        )
+        
+        if not rows:
+            print("VAROITUS: Ei kategorioita tietokannassa!")  # MUUTETTU
             return []
+        
+        # Muunna dict-muotoon
+        categories = []
+        for row in rows:
+            if isinstance(row, dict):
+                categories.append({'id': row['id'], 'name': row['name']})
+            else:
+                categories.append({'id': row[0], 'name': row[1]})
+        
+        print(f"INFO: Haettiin {len(categories)} kategoriaa")  # MUUTETTU
+        return categories
+        
+    except Exception as e:
+        print(f"VIRHE: Kategorioiden haussa: {e}")  # MUUTETTU
+        import traceback
+        traceback.print_exc()
+        return []
 
     def get_questions(self, user_id, categories=None, difficulties=None, limit=10):
         """Hakee satunnaisia validoituja kysymyksiä tehokkaasti annettujen suodattimien perusteella."""
