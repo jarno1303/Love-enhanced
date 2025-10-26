@@ -1426,7 +1426,7 @@ def reset_password_route(token):
         flash('Virheellinen tai vanhentunut palautuslinkki.', 'danger')
         return redirect(url_for('forgot_password_route'))
     
-    if request.method == 'POST'):
+    if request.method == 'POST':
         password = request.form.get('password', '').strip()
         password_confirm = request.form.get('password_confirm', '').strip()
         
