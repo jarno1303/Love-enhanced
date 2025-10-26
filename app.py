@@ -1557,22 +1557,48 @@ def dashboard_route():
 @login_required
 def practice_route():
     """Näyttää yleisen harjoittelusivun."""
-    # Välitä kategoriat valintaa varten
+    # Hae kategoriat
     categories = db_manager.get_categories()
+    
+    # DEBUG: Tulosta mitä saadaan
+    app.logger.info(f"=== PRACTICE ROUTE DEBUG ===")
+    app.logger.info(f"Categories type: {type(categories)}")
+    app.logger.info(f"Categories count: {len(categories) if categories else 0}")
+    if categories:
+        app.logger.info(f"First category: {categories[0]}")
+        app.logger.info(f"First category type: {type(categories[0])}")
+    app.logger.info(f"Constants available: {hasattr(constants, 'DISTRACTORS')}")
+    app.logger.info(f"============================")
+    
     return render_template("practice.html", categories=categories, constants=constants)
+
 
 @app.route("/practice/<category>")
 @login_required
 def practice_category_route(category):
     """Näyttää harjoittelusivun esivalitulla kategorialla."""
-    # Varmista, että kategoria on validi (turvallisuussyistä)
+    # Hae kaikki kategoriat
     all_categories = db_manager.get_categories()
-    if category not in all_categories and category != "Kaikki kategoriat":
+    
+    # Muuta kategoriat vertailukelpoisiksi
+    if all_categories and len(all_categories) > 0:
+        # Tarkista onko dict vai tuple
+        if isinstance(all_categories[0], dict):
+            category_names = [cat.get('name') for cat in all_categories]
+        else:
+            # Jos tuple (id, name)
+            category_names = [cat[1] for cat in all_categories]
+    else:
+        category_names = []
+    
+    # Varmista, että kategoria on validi
+    if category not in category_names and category != "Kaikki kategoriat":
+        app.logger.warning(f"Tuntematon kategoria: {category}. Validit: {category_names}")
         flash(f"Tuntematon kategoria: {category}", "warning")
         return redirect(url_for('practice_route'))
-
-    return render_template("practice.html", selected_category=category, categories=all_categories)
-
+    
+    app.logger.info(f"Avataan practice kategorialla: {category}")
+    return render_template("practice.html", selected_category=category, categories=all_categories, constants=constants)
 
 @app.route("/review")
 @login_required
