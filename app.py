@@ -1737,6 +1737,10 @@ def profile_route():
         
         # Varmista, että templates/profile.html on olemassa
         return render_template("profile.html", stats=stats)
+    except Exception as e:
+        app.logger.error(f"Virhe profiilisivun latauksessa käyttäjälle {current_user.id}: {e}", exc_info=True)
+        flash("Virhe profiilin latauksessa.", "danger")
+        return redirect(url_for('dashboard_route'))
 
 @app.route("/settings", methods=['GET', 'POST'])
 @login_required
