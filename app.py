@@ -837,7 +837,7 @@ def acknowledge_mistakes_api():
         return jsonify({'success': False, 'error': 'Virhe kuittauksessa.'}), 500
 
 
-@app.route("/api/question_progress/<int:question_id>")
+@app.route("/api/question-progress/<int:question_id>")
 @login_required
 @limiter.limit("60 per minute")
 def get_question_progress_api(question_id):
