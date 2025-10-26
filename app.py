@@ -395,8 +395,8 @@ def get_csrf_token():
 
 # --- Kysymykset ---
 @app.route("/api/questions")
-@login_required # Vaatii kirjautumisen
-@limiter.limit("60 per minute") # Rajoita kyselytiheyttä
+@login_required
+@limiter.limit("60 per minute")
 def get_questions_api():
     """
     Hakee harjoituskysymyksiä valintojen mukaan.
@@ -405,55 +405,62 @@ def get_questions_api():
     """
     try:
         # Hae parametrit turvallisesti oletusarvoilla
-        categories = request.args.getlist('categories') or None
+        category_ids = request.args.getlist('categories') or None
         difficulties = request.args.getlist('difficulties') or None
         limit = request.args.get('count', default=10, type=int)
         simulation = request.args.get('simulation') == 'true'
 
         # Rajoita maksimimäärää järkeväksi (estää DoS)
-        limit = max(1, min(limit, 100)) # 1-100 kysymystä kerralla
+        limit = max(1, min(limit, 100))
 
-        app.logger.debug(f"API /api/questions: user={current_user.id}, sim={simulation}, cat={categories}, diff={difficulties}, limit={limit}")
+        app.logger.debug(f"API /api/questions: user={current_user.id}, sim={simulation}, cat_ids={category_ids}, diff={difficulties}, limit={limit}")
 
-        # Freemium-rajoitus (lisää myöhemmin)
-        # if current_user.subscription_tier == 'free': ...
+        # ============================================
+        # UUSI: Muunna kategoria-ID:t nimiksi
+        # ============================================
+        category_names = None
+        if category_ids and not simulation:
+            all_categories = db_manager.get_categories()
+            id_to_name = {str(cat['id']): cat['name'] for cat in all_categories}
+            category_names = [id_to_name.get(cat_id, cat_id) for cat_id in category_ids]
+            app.logger.info(f"Muunnettu kategoria-ID:t ({category_ids}) nimiksi: {category_names}")
+        # ============================================
 
         questions = []
         if simulation:
             # Simulaatiotila: Hae 50 satunnaista validoitua ID:tä
             question_ids = db_manager.get_random_question_ids(limit=50)
             if not question_ids:
-                 app.logger.warning(f"Ei kysymyksiä simulaatioon käyttäjälle {current_user.id}")
-                 return jsonify({'questions': [], 'message': 'Ei riittävästi kysymyksiä simulaatioon.'}), 200
+                app.logger.warning(f"Ei kysymyksiä simulaatioon käyttäjälle {current_user.id}")
+                return jsonify({'questions': [], 'message': 'Ei riittävästi kysymyksiä simulaatioon.'}), 200
 
-            # Hae kysymykset ID-listan perusteella käyttäjän progressin kanssa
             questions_objs = [db_manager.get_question_by_id(qid, current_user.id) for qid in question_ids]
-            questions = [q for q in questions_objs if q is not None] # Suodata pois mahdolliset None-arvot
+            questions = [q for q in questions_objs if q is not None]
             app.logger.info(f"Haettiin {len(questions)} kysymystä simulaatioon käyttäjälle {current_user.id}")
         else:
-            # Normaali harjoittelu: Hae suodatettuja kysymyksiä
+            # Normaali harjoittelu: Hae suodatettuja kysymyksiä NIMILLÄ
             questions = db_manager.get_questions(
                 user_id=current_user.id,
-                categories=categories,
+                categories=category_names,  # MUUTETTU: Käytä nimiä eikä ID:itä
                 difficulties=difficulties,
                 limit=limit
             )
             app.logger.info(f"Haettiin {len(questions)} harjoituskysymystä käyttäjälle {current_user.id}")
 
+        if not questions:
+            return jsonify({'error': 'Ei kysymyksiä saatavilla valituilla kriteereillä.'}), 404
 
         # Prosessoi kysymykset JSON-muotoon
-        # HUOM: ÄLÄ paljasta 'correct'-indeksiä tai 'explanation'-kenttää tässä vaiheessa!
-        # Ne palautetaan vasta /api/submit_answer -vastauksessa.
+        # TURVALLISUUS: ÄLÄ paljasta 'correct' tai 'explanation' tässä!
         questions_list = []
         for q in questions:
-            if not isinstance(q, Question): continue # Varmistus
-            q_dict = asdict(q) # Jos Question on dataclass
-            # Poista arkaluontoiset tiedot ennen lähetystä clientille
+            if not isinstance(q, Question):
+                continue
+            q_dict = asdict(q)
+            # Poista arkaluontoiset tiedot
             q_dict.pop('correct', None)
             q_dict.pop('explanation', None)
-            q_dict.pop('question_normalized', None) # Ei tarvita clientilla
-            # Sekoita vastausvaihtoehdot vasta client-puolella, jos halutaan
-            # TAI sekoita tässä ja tallenna sekoitettu järjestys sessioon/clientille
+            q_dict.pop('question_normalized', None)
             questions_list.append(q_dict)
 
         return jsonify({'questions': questions_list})
