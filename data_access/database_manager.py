@@ -709,7 +709,7 @@ class DatabaseManager:
             )
             
             if not rows:
-                print("VAROITUS: Ei kategorioita tietokannassa!")  # MUUTETTU
+                print("VAROITUS: Ei kategorioita tietokannassa!")
                 return []
             
             # Muunna dict-muotoon
@@ -720,14 +720,13 @@ class DatabaseManager:
                 else:
                     categories.append({'id': row[0], 'name': row[1]})
             
-            print(f"INFO: Haettiin {len(categories)} kategoriaa")  # MUUTETTU
+            print(f"INFO: Haettiin {len(categories)} kategoriaa")
             return categories
-        
-    except Exception as e:
-        print(f"VIRHE: Kategorioiden haussa: {e}")  # MUUTETTU
-        import traceback
-        traceback.print_exc()
-        return []
+        except Exception as e:
+            print(f"VIRHE: Kategorioiden haussa: {e}")
+            import traceback
+            traceback.print_exc()
+            return []
 
     def get_questions(self, user_id, categories=None, difficulties=None, limit=10):
         """Hakee satunnaisia validoituja kysymyksiä tehokkaasti annettujen suodattimien perusteella."""
@@ -795,8 +794,8 @@ class DatabaseManager:
                         try:
                             row_data['options'] = json.loads(row_data.get('options', '[]'))
                             questions.append(Question(**row_data))
-                        except (json.JSONDecodeError, TypeError, ValueError) as e:
-                            logger.error(f"Error processing question data for ID {q_id}: {e}")
+                        except Exception as e:
+                            logger.error(f"Virhe Question-objektin luonnissa (ID {q_id}): {e}", exc_info=True)
 
             logger.info(f"Hettiin {len(questions)} kysymystä käyttäjälle {user_id} suodattimilla: C={categories}, D={difficulties}")
             return questions
