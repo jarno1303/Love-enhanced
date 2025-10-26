@@ -1298,6 +1298,174 @@ def terms_route():
     return render_template("terms.html")
 
 # --- Kirjautuminen, Rekisteröinti, Uloskirjautuminen ---
+
+@app.route("/login", methods=['GET', 'POST'])
+def login_route():
+    """Kirjautumissivu."""
+    if current_user.is_authenticated:
+        return redirect(url_for('index_route'))
+    
+    if request.method == 'POST':
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '').strip()
+        
+        if not username or not password:
+            flash('Käyttäjänimi ja salasana vaaditaan.', 'danger')
+            return render_template('login.html')
+        
+        user = db_manager.get_user_by_username(username)
+        
+        if user and bcrypt.check_password_hash(user.get('password', ''), password):
+            # Tarkista onko käyttäjä aktiivinen
+            if user.get('status') == 'inactive':
+                flash('Käyttäjätilisi on deaktivoitu. Ota yhteyttä ylläpitoon.', 'danger')
+                return render_template('login.html')
+            
+            # Tarkista onko käyttäjä vanhentunut
+            if user.get('expires_at'):
+                if isinstance(user['expires_at'], str):
+                    expires_at = datetime.fromisoformat(user['expires_at'].replace('Z', '+00:00'))
+                else:
+                    expires_at = user['expires_at']
+                
+                if expires_at < datetime.now(timezone.utc):
+                    flash('Käyttäjätilisi on vanhentunut. Ota yhteyttä ylläpitoon.', 'danger')
+                    return render_template('login.html')
+            
+            # Kirjaudu sisään
+            user_obj = User(
+                id=user['id'],
+                username=user['username'],
+                email=user['email'],
+                role=user.get('role', 'user'),
+                organization_id=user.get('organization_id')
+            )
+            login_user(user_obj, remember=False)
+            app.logger.info(f"Käyttäjä {username} kirjautui sisään (ID: {user['id']}, Rooli: {user.get('role')})")
+            
+            # Ohjaa oikealle sivulle roolin mukaan
+            next_page = request.args.get('next')
+            if next_page:
+                return redirect(next_page)
+            return redirect(url_for('index_route'))
+        else:
+            flash('Virheellinen käyttäjänimi tai salasana.', 'danger')
+            app.logger.warning(f"Epäonnistunut kirjautumisyritys: {username}")
+            return render_template('login.html')
+    
+    return render_template('login.html')
+
+
+@app.route("/logout")
+@login_required
+def logout_route():
+    """Kirjaa käyttäjän ulos."""
+    username = current_user.username if hasattr(current_user, 'username') else 'Unknown'
+    logout_user()
+    flash('Olet kirjautunut ulos onnistuneesti.', 'success')
+    app.logger.info(f"Käyttäjä {username} kirjautui ulos")
+    return redirect(url_for('login_route'))
+
+
+@app.route("/register", methods=['GET', 'POST'])
+def register_route():
+    """Rekisteröitymissivu - ESTETTY. Vain adminit voivat luoda käyttäjiä."""
+    flash('Rekisteröityminen on suljettu. Pyydä käyttäjätili järjestelmän ylläpitäjältä.', 'info')
+    return redirect(url_for('login_route'))
+
+
+# ===================================================================================
+# SALASANAN PALAUTUS REITIT
+# ===================================================================================
+
+@app.route("/forgot_password", methods=['GET', 'POST'])
+def forgot_password_route():
+    """Salasanan palautussivu."""
+    if current_user.is_authenticated:
+        return redirect(url_for('index_route'))
+    
+    if request.method == 'POST':
+        email = request.form.get('email', '').strip().lower()
+        
+        if not email:
+            flash('Sähköpostiosoite vaaditaan.', 'danger')
+            return render_template('forgot_password.html')
+        
+        user = db_manager.get_user_by_email(email)
+        
+        # Älä paljasta onko käyttäjää olemassa (turvallisuus)
+        flash('Jos sähköpostiosoite on järjestelmässä, lähetämme salasanan palautusohjeet.', 'info')
+        
+        if user:
+            # Luo palautustokeni
+            reset_token = generate_reset_token(email)
+            reset_url = url_for('reset_password_route', token=reset_token, _external=True)
+            
+            # Lähetä sähköposti (jos SMTP konfiguroitu)
+            try:
+                send_reset_email(email, reset_url)
+                app.logger.info(f"Salasanan palautuslinkki lähetetty: {email}")
+            except Exception as e:
+                app.logger.error(f"Virhe salasanan palautussähköpostin lähetyksessä: {e}")
+                # Älä kerro käyttäjälle - turvallisuus
+        
+        return redirect(url_for('login_route'))
+    
+    return render_template('forgot_password.html')
+
+
+@app.route("/reset_password/<token>", methods=['GET', 'POST'])
+def reset_password_route(token):
+    """Salasanan nollaussivu tokenilla."""
+    if current_user.is_authenticated:
+        return redirect(url_for('index_route'))
+    
+    # Tarkista token
+    email = verify_reset_token(token)
+    if not email:
+        flash('Virheellinen tai vanhentunut palautuslinkki.', 'danger')
+        return redirect(url_for('forgot_password_route'))
+    
+    if request.method == 'POST'):
+        password = request.form.get('password', '').strip()
+        password_confirm = request.form.get('password_confirm', '').strip()
+        
+        if not password or not password_confirm:
+            flash('Molemmat salasanakentät vaaditaan.', 'danger')
+            return render_template('reset_password.html', token=token)
+        
+        if password != password_confirm:
+            flash('Salasanat eivät täsmää.', 'danger')
+            return render_template('reset_password.html', token=token)
+        
+        if len(password) < 8:
+            flash('Salasanan tulee olla vähintään 8 merkkiä.', 'danger')
+            return render_template('reset_password.html', token=token)
+        
+        # Hae käyttäjä ja päivitä salasana
+        user = db_manager.get_user_by_email(email)
+        if not user:
+            flash('Käyttäjää ei löytynyt.', 'danger')
+            return redirect(url_for('login_route'))
+        
+        # Hashaa uusi salasana
+        hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
+        success, error = db_manager.update_user_password(user['id'], hashed_password)
+        
+        if success:
+            flash('Salasana vaihdettu onnistuneesti. Voit nyt kirjautua sisään.', 'success')
+            app.logger.info(f"Käyttäjän {email} salasana vaihdettu palautuslinkillä")
+            return redirect(url_for('login_route'))
+        else:
+            flash(f'Virhe salasanan vaihdossa: {error}', 'danger')
+            return render_template('reset_password.html', token=token)
+    
+    return render_template('reset_password.html', token=token)
+
+# ===================================================================================
+# LOPPU - Lisää yllä oleva koodi app.py:hysi
+# ===================================================================================
+
 # (Nämä ovat jo osiossa 2, Flask-Login ja Apufunktiot)
 # Varmista, että ne ovat tässä tiedostossa vain kerran.
 
