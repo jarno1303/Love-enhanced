@@ -1713,24 +1713,30 @@ def simulation_route():
 @app.route("/profile")
 @login_required
 def profile_route():
-    """Näyttää käyttäjän profiilisivun."""
+    """Näyttää käyttäjän profiilisivun tilastoineen."""
     try:
         # Hae perustilastot näytettäväksi
         analytics = stats_manager.get_learning_analytics(current_user.id)
         
         # Turvallinen tarkistus analytics-datalle
-        if analytics and isinstance(analytics, dict) and 'general' in analytics:
-            stats = analytics['general']
+        if analytics and isinstance(analytics, dict):
+            if 'general' in analytics:
+                stats = analytics['general']
+            else:
+                # Jos 'general' ei ole, mutta analytics sisältää dataa suoraan
+                stats = analytics
         else:
-            stats = {}
+            # Tyhjä stats jos ei dataa
+            stats = {
+                'total_attempts': 0,
+                'correct_answers': 0,
+                'success_rate': 0,
+                'current_streak': 0
+            }
             app.logger.warning(f"Analytics-data puutteellinen käyttäjälle {current_user.id}: {analytics}")
         
         # Varmista, että templates/profile.html on olemassa
         return render_template("profile.html", stats=stats)
-    except Exception as e:
-        app.logger.error(f"Virhe profiilisivun latauksessa käyttäjälle {current_user.id}: {e}", exc_info=True)
-        flash("Virhe profiilin latauksessa.", "danger")
-        return redirect(url_for('dashboard_route'))
 
 @app.route("/settings", methods=['GET', 'POST'])
 @login_required
