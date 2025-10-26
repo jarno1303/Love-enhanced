@@ -100,6 +100,12 @@ from constants import DISTRACTORS
 
 app = Flask(__name__)
 
+@app.context_processor
+def inject_now():
+    """Välitä 'now' kaikille templateille footeria varten"""
+    from datetime import datetime
+    return {'now': datetime.now()}
+
 # --- Konfiguraatio ---
 # Hae SECRET_KEY ympäristömuuttujasta (PAKOLLINEN tuotannossa!)
 SECRET_KEY = os.environ.get('SECRET_KEY')
@@ -1483,6 +1489,11 @@ def dashboard_route():
     try:
         # Hae analytiikkatiedot
         analytics = stats_manager.get_learning_analytics(current_user.id)
+        
+        # Turvallinen tarkistus analytics-datalle
+        if not analytics or not isinstance(analytics, dict):
+            analytics = {'categories': [], 'general': {}}
+            app.logger.warning(f"Analytics-data puutteellinen käyttäjälle {current_user.id}")
 
         # Etsi suositukset (coach pick, strength pick)
         coach_pick = None
@@ -1525,7 +1536,7 @@ def dashboard_route():
 
         return render_template(
             'dashboard.html',
-            analytics=analytics, # Välitä koko analytics-dict templatelle
+            analytics=analytics,  # ✅ KORJATTU: Lisätty pilkku
             coach_pick=coach_pick,
             strength_pick=strength_pick,
             mistake_count=mistake_count,
@@ -1539,7 +1550,6 @@ def dashboard_route():
         flash("Virhe näkymän latauksessa. Yritä myöhemmin uudelleen.", "danger")
         # Yritä ohjata johonkin turvalliseen paikkaan, esim. profiiliin
         return redirect(url_for('profile_route'))
-
 
 @app.route("/practice")
 @login_required
@@ -1705,13 +1715,20 @@ def profile_route():
     try:
         # Hae perustilastot näytettäväksi
         analytics = stats_manager.get_learning_analytics(current_user.id)
+        
+        # Turvallinen tarkistus analytics-datalle
+        if analytics and isinstance(analytics, dict) and 'general' in analytics:
+            stats = analytics['general']
+        else:
+            stats = {}
+            app.logger.warning(f"Analytics-data puutteellinen käyttäjälle {current_user.id}: {analytics}")
+        
         # Varmista, että templates/profile.html on olemassa
-        return render_template("profile.html", stats=analytics.get('general', {}))
+        return render_template("profile.html", stats=stats)
     except Exception as e:
         app.logger.error(f"Virhe profiilisivun latauksessa käyttäjälle {current_user.id}: {e}", exc_info=True)
         flash("Virhe profiilin latauksessa.", "danger")
         return redirect(url_for('dashboard_route'))
-
 
 @app.route("/settings", methods=['GET', 'POST'])
 @login_required
