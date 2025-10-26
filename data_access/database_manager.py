@@ -698,30 +698,30 @@ class DatabaseManager:
             return None
 
     def get_categories(self):
-    """
-    Hakee kaikki kategoriat tietokannasta.
-    Palauttaa listan dictionaryja muodossa [{'id': 1, 'name': 'Kategoria'}, ...]
-    """
-    try:
-        rows = self._execute(
-            "SELECT id, name FROM categories ORDER BY name",
-            fetch='all'
-        )
-        
-        if not rows:
-            print("VAROITUS: Ei kategorioita tietokannassa!")  # MUUTETTU
-            return []
-        
-        # Muunna dict-muotoon
-        categories = []
-        for row in rows:
-            if isinstance(row, dict):
-                categories.append({'id': row['id'], 'name': row['name']})
-            else:
-                categories.append({'id': row[0], 'name': row[1]})
-        
-        print(f"INFO: Haettiin {len(categories)} kategoriaa")  # MUUTETTU
-        return categories
+        """
+        Hakee kaikki kategoriat tietokannasta.
+        Palauttaa listan dictionaryja muodossa [{'id': 1, 'name': 'Kategoria'}, ...]
+        """
+        try:
+            rows = self._execute(
+                "SELECT id, name FROM categories ORDER BY name",
+                fetch='all'
+            )
+            
+            if not rows:
+                print("VAROITUS: Ei kategorioita tietokannassa!")  # MUUTETTU
+                return []
+            
+            # Muunna dict-muotoon
+            categories = []
+            for row in rows:
+                if isinstance(row, dict):
+                    categories.append({'id': row['id'], 'name': row['name']})
+                else:
+                    categories.append({'id': row[0], 'name': row[1]})
+            
+            print(f"INFO: Haettiin {len(categories)} kategoriaa")  # MUUTETTU
+            return categories
         
     except Exception as e:
         print(f"VIRHE: Kategorioiden haussa: {e}")  # MUUTETTU
