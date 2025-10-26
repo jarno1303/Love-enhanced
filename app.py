@@ -836,20 +836,20 @@ def acknowledge_mistakes_api():
         app.logger.error(f"Virhe kehityskohteiden kuittauksessa käyttäjälle {current_user.id}: {e}", exc_info=True)
         return jsonify({'success': False, 'error': 'Virhe kuittauksessa.'}), 500
 
-
 @app.route("/api/question-progress/<int:question_id>")
 @login_required
 @limiter.limit("60 per minute")
 def get_question_progress_api(question_id):
     """Hakee käyttäjän edistymisen tietyssä kysymyksessä."""
     try:
+        # PostgreSQL-yhteensopiva kysely (käytä NUMERIC, ei REAL)
         progress = db_manager._execute("""
             SELECT
                 times_shown,
                 times_correct,
                 last_shown,
                 CASE
-                    WHEN times_shown > 0 THEN ROUND((CAST(times_correct AS REAL) * 100.0) / times_shown, 1)
+                    WHEN times_shown > 0 THEN ROUND((times_correct::NUMERIC * 100.0) / times_shown, 1)
                     ELSE 0.0
                 END as success_rate,
                 mistake_acknowledged
@@ -875,7 +875,6 @@ def get_question_progress_api(question_id):
     except Exception as e:
         app.logger.error(f"Virhe kysymyksen {question_id} edistymisen haussa käyttäjälle {current_user.id}: {e}", exc_info=True)
         return jsonify({'error': 'Virhe edistymisen haussa.'}), 500
-
 
 # --- Saavutukset ---
 @app.route("/api/achievements")
